@@ -15,6 +15,7 @@ import { Route as DivesIndexRouteImport } from './routes/dives/index'
 import { Route as ApiExportCsvRouteImport } from './routes/api/export/csv'
 import { Route as ApiExportJsonRouteImport } from './routes/api/export/json'
 import { Route as ApiExportUddfRouteImport } from './routes/api/export/uddf'
+import { Route as DivesDiveIdIndexRouteImport } from './routes/dives/$diveId/index'
 import { Route as SettingsExportIndexRouteImport } from './routes/settings/export/index'
 import { Route as SettingsSyncIndexRouteImport } from './routes/settings/sync/index'
 import { Route as SettingsSyncLogsIndexRouteImport } from './routes/settings/sync/logs/index'
@@ -49,6 +50,11 @@ const ApiExportUddfRoute = ApiExportUddfRouteImport.update({
   path: '/api/export/uddf',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DivesDiveIdIndexRoute = DivesDiveIdIndexRouteImport.update({
+  id: '/dives/$diveId/',
+  path: '/dives/$diveId/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsExportIndexRoute = SettingsExportIndexRouteImport.update({
   id: '/settings/export/',
   path: '/settings/export/',
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
+  '/dives/$diveId/': typeof DivesDiveIdIndexRoute
   '/settings/export/': typeof SettingsExportIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
   '/settings/sync/logs/': typeof SettingsSyncLogsIndexRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
+  '/dives/$diveId': typeof DivesDiveIdIndexRoute
   '/settings/export': typeof SettingsExportIndexRoute
   '/settings/sync': typeof SettingsSyncIndexRoute
   '/settings/sync/logs': typeof SettingsSyncLogsIndexRoute
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
+  '/dives/$diveId/': typeof DivesDiveIdIndexRoute
   '/settings/export/': typeof SettingsExportIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
   '/settings/sync/logs/': typeof SettingsSyncLogsIndexRoute
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/api/export/csv'
     | '/api/export/json'
     | '/api/export/uddf'
+    | '/dives/$diveId/'
     | '/settings/export/'
     | '/settings/sync/'
     | '/settings/sync/logs/'
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/api/export/csv'
     | '/api/export/json'
     | '/api/export/uddf'
+    | '/dives/$diveId'
     | '/settings/export'
     | '/settings/sync'
     | '/settings/sync/logs'
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/api/export/csv'
     | '/api/export/json'
     | '/api/export/uddf'
+    | '/dives/$diveId/'
     | '/settings/export/'
     | '/settings/sync/'
     | '/settings/sync/logs/'
@@ -142,6 +154,7 @@ export interface RootRouteChildren {
   ApiExportCsvRoute: typeof ApiExportCsvRoute
   ApiExportJsonRoute: typeof ApiExportJsonRoute
   ApiExportUddfRoute: typeof ApiExportUddfRoute
+  DivesDiveIdIndexRoute: typeof DivesDiveIdIndexRoute
   SettingsExportIndexRoute: typeof SettingsExportIndexRoute
   SettingsSyncIndexRoute: typeof SettingsSyncIndexRoute
   SettingsSyncLogsIndexRoute: typeof SettingsSyncLogsIndexRoute
@@ -191,6 +204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExportUddfRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dives/$diveId/': {
+      id: '/dives/$diveId/'
+      path: '/dives/$diveId'
+      fullPath: '/dives/$diveId/'
+      preLoaderRoute: typeof DivesDiveIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/export/': {
       id: '/settings/export/'
       path: '/settings/export'
@@ -222,6 +242,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExportCsvRoute: ApiExportCsvRoute,
   ApiExportJsonRoute: ApiExportJsonRoute,
   ApiExportUddfRoute: ApiExportUddfRoute,
+  DivesDiveIdIndexRoute: DivesDiveIdIndexRoute,
   SettingsExportIndexRoute: SettingsExportIndexRoute,
   SettingsSyncIndexRoute: SettingsSyncIndexRoute,
   SettingsSyncLogsIndexRoute: SettingsSyncLogsIndexRoute,

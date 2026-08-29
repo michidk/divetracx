@@ -93,9 +93,11 @@ export function OverviewPage({ data }: { data: DashboardData }) {
             </div>
           ) : (
             data.recentDives.map((dive, index) => (
-              <div
+              <Link
                 key={dive.id}
-                className={`flex items-center justify-between gap-4 p-4 md:px-6 ${index > 0 ? 'border-t border-border' : ''}`}
+                to="/dives/$diveId"
+                params={{ diveId: dive.id }}
+                className={`flex min-h-20 items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary md:px-6 ${index > 0 ? 'border-t border-border' : ''}`}
               >
                 <div>
                   <p className="font-semibold">{dive.siteName ?? 'Unknown dive site'}</p>
@@ -111,7 +113,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
                     {Math.round(dive.durationSeconds / 60)} min
                   </p>
                 </div>
-              </div>
+              </Link>
             ))
           )}
         </div>

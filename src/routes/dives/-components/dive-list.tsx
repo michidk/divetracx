@@ -1,3 +1,11 @@
+import { Link } from '@tanstack/react-router'
+import { ChevronRight } from 'lucide-react'
+import {
+  formatDiveDate,
+  formatDuration,
+  formatMeters,
+  formatTemperature,
+} from '@/modules/dives/format'
 import type { getDives } from '@/modules/dives/server/queries'
 
 type DiveListData = Awaited<ReturnType<typeof getDives>>
@@ -14,44 +22,59 @@ export function DiveList({ dives }: { dives: DiveListData }) {
           Your latest {dives.length} recorded dives.
         </p>
       </header>
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-        <table className="w-full min-w-[680px] text-left text-sm">
-          <thead className="border-b border-border bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="px-5 py-4">Dive</th>
-              <th className="px-5 py-4">Site</th>
-              <th className="px-5 py-4">Date</th>
-              <th className="px-5 py-4 text-right">Time</th>
-              <th className="px-5 py-4 text-right">Depth</th>
-              <th className="px-5 py-4 text-right">Water</th>
-            </tr>
-          </thead>
-          <tbody>
-            {dives.map((dive) => (
-              <tr key={dive.id} className="border-b border-border last:border-0">
-                <td className="px-5 py-4 font-mono text-muted-foreground">
-                  #{dive.number ?? '—'}
-                </td>
-                <td className="px-5 py-4">
-                  <p className="font-semibold">{dive.siteName ?? 'Unknown site'}</p>
-                  <p className="text-xs text-muted-foreground">{dive.country ?? '—'}</p>
-                </td>
-                <td className="px-5 py-4">{dive.diveDate}</td>
-                <td className="px-5 py-4 text-right font-mono">
-                  {Math.round(dive.durationSeconds / 60)} min
-                </td>
-                <td className="px-5 py-4 text-right font-mono">
-                  {Number(dive.maximumDepthMeters ?? 0).toFixed(1)} m
-                </td>
-                <td className="px-5 py-4 text-right font-mono">
-                  {dive.waterTemperatureCelsius
-                    ? `${Number(dive.waterTemperatureCelsius).toFixed(0)} °C`
-                    : '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="hidden grid-cols-[5rem_minmax(12rem,1fr)_10rem_7rem_7rem_7rem_2rem] border-b border-border bg-muted/50 px-5 py-4 text-xs uppercase tracking-wider text-muted-foreground md:grid">
+          <span>Dive</span>
+          <span>Site</span>
+          <span>Date</span>
+          <span className="text-right">Time</span>
+          <span className="text-right">Depth</span>
+          <span className="text-right">Water</span>
+          <span />
+        </div>
+        {dives.map((dive) => (
+          <Link
+            key={dive.id}
+            to="/dives/$diveId"
+            params={{ diveId: dive.id }}
+            className="group grid min-h-20 grid-cols-[minmax(0,1fr)_auto_1.25rem] items-center gap-4 border-b border-border px-5 py-4 transition-colors last:border-0 hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary md:grid-cols-[5rem_minmax(12rem,1fr)_10rem_7rem_7rem_7rem_2rem]"
+          >
+            <span className="hidden font-mono text-sm text-muted-foreground md:block">
+              #{dive.number ?? '—'}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate font-semibold">
+                {dive.siteName ?? 'Unknown site'}
+              </span>
+              <span className="mt-1 block truncate text-xs text-muted-foreground md:hidden">
+                #{dive.number ?? '—'} · {formatDiveDate(dive.diveDate, 'medium')}
+              </span>
+              <span className="mt-1 hidden truncate text-xs text-muted-foreground md:block">
+                {dive.country ?? 'Country not set'}
+              </span>
+            </span>
+            <span className="hidden text-sm md:block">
+              {formatDiveDate(dive.diveDate, 'medium')}
+            </span>
+            <span className="hidden text-right font-mono text-sm md:block">
+              {formatDuration(dive.durationSeconds)}
+            </span>
+            <span className="text-right font-mono text-sm">
+              <span className="block">{formatMeters(dive.maximumDepthMeters)}</span>
+              <span className="mt-1 block text-xs text-muted-foreground md:hidden">
+                {formatDuration(dive.durationSeconds)}
+              </span>
+            </span>
+            <span className="hidden text-right font-mono text-sm md:block">
+              {formatTemperature(dive.waterTemperatureCelsius)}
+            </span>
+            <ChevronRight
+              className="text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
+              size={18}
+              aria-hidden="true"
+            />
+          </Link>
+        ))}
         {dives.length === 0 ? (
           <p className="p-10 text-center text-sm text-muted-foreground">
             No dives imported yet.
