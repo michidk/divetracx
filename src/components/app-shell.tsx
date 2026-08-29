@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Anchor, Database, RefreshCw, ScrollText } from 'lucide-react'
+import { Anchor, Database, Download, RefreshCw, ScrollText } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 const navigation = [
@@ -7,6 +7,7 @@ const navigation = [
   { to: '/dives', label: 'Dives', icon: Database },
   { to: '/settings/sync', label: 'Sync', icon: RefreshCw },
   { to: '/settings/sync/logs', label: 'Sync logs', icon: ScrollText },
+  { to: '/settings/export', label: 'Export', icon: Download },
 ] as const
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -18,7 +19,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
               <Anchor size={18} aria-hidden="true" />
             </span>
-            <span>Divetracx</span>
+            <span className="hidden md:inline">Divetracx</span>
           </Link>
           <nav className="flex items-center gap-1" aria-label="Main navigation">
             {navigation.map((item) => (

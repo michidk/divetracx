@@ -12,6 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as DivesIndexRouteImport } from './routes/dives/index'
+import { Route as ApiExportCsvRouteImport } from './routes/api/export/csv'
+import { Route as ApiExportJsonRouteImport } from './routes/api/export/json'
+import { Route as ApiExportUddfRouteImport } from './routes/api/export/uddf'
+import { Route as SettingsExportIndexRouteImport } from './routes/settings/export/index'
 import { Route as SettingsSyncIndexRouteImport } from './routes/settings/sync/index'
 import { Route as SettingsSyncLogsIndexRouteImport } from './routes/settings/sync/logs/index'
 
@@ -30,6 +34,26 @@ const DivesIndexRoute = DivesIndexRouteImport.update({
   path: '/dives/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiExportCsvRoute = ApiExportCsvRouteImport.update({
+  id: '/api/export/csv',
+  path: '/api/export/csv',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExportJsonRoute = ApiExportJsonRouteImport.update({
+  id: '/api/export/json',
+  path: '/api/export/json',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExportUddfRoute = ApiExportUddfRouteImport.update({
+  id: '/api/export/uddf',
+  path: '/api/export/uddf',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsExportIndexRoute = SettingsExportIndexRouteImport.update({
+  id: '/settings/export/',
+  path: '/settings/export/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsSyncIndexRoute = SettingsSyncIndexRouteImport.update({
   id: '/settings/sync/',
   path: '/settings/sync/',
@@ -45,6 +69,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
   '/dives/': typeof DivesIndexRoute
+  '/api/export/csv': typeof ApiExportCsvRoute
+  '/api/export/json': typeof ApiExportJsonRoute
+  '/api/export/uddf': typeof ApiExportUddfRoute
+  '/settings/export/': typeof SettingsExportIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
   '/settings/sync/logs/': typeof SettingsSyncLogsIndexRoute
 }
@@ -52,6 +80,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
   '/dives': typeof DivesIndexRoute
+  '/api/export/csv': typeof ApiExportCsvRoute
+  '/api/export/json': typeof ApiExportJsonRoute
+  '/api/export/uddf': typeof ApiExportUddfRoute
+  '/settings/export': typeof SettingsExportIndexRoute
   '/settings/sync': typeof SettingsSyncIndexRoute
   '/settings/sync/logs': typeof SettingsSyncLogsIndexRoute
 }
@@ -60,20 +92,45 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
   '/dives/': typeof DivesIndexRoute
+  '/api/export/csv': typeof ApiExportCsvRoute
+  '/api/export/json': typeof ApiExportJsonRoute
+  '/api/export/uddf': typeof ApiExportUddfRoute
+  '/settings/export/': typeof SettingsExportIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
   '/settings/sync/logs/': typeof SettingsSyncLogsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/api/health' | '/dives/' | '/settings/sync/' | '/settings/sync/logs/'
+    | '/'
+    | '/api/health'
+    | '/dives/'
+    | '/api/export/csv'
+    | '/api/export/json'
+    | '/api/export/uddf'
+    | '/settings/export/'
+    | '/settings/sync/'
+    | '/settings/sync/logs/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/health' | '/dives' | '/settings/sync' | '/settings/sync/logs'
+  to:
+    | '/'
+    | '/api/health'
+    | '/dives'
+    | '/api/export/csv'
+    | '/api/export/json'
+    | '/api/export/uddf'
+    | '/settings/export'
+    | '/settings/sync'
+    | '/settings/sync/logs'
   id:
     | '__root__'
     | '/'
     | '/api/health'
     | '/dives/'
+    | '/api/export/csv'
+    | '/api/export/json'
+    | '/api/export/uddf'
+    | '/settings/export/'
     | '/settings/sync/'
     | '/settings/sync/logs/'
   fileRoutesById: FileRoutesById
@@ -82,6 +139,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiHealthRoute: typeof ApiHealthRoute
   DivesIndexRoute: typeof DivesIndexRoute
+  ApiExportCsvRoute: typeof ApiExportCsvRoute
+  ApiExportJsonRoute: typeof ApiExportJsonRoute
+  ApiExportUddfRoute: typeof ApiExportUddfRoute
+  SettingsExportIndexRoute: typeof SettingsExportIndexRoute
   SettingsSyncIndexRoute: typeof SettingsSyncIndexRoute
   SettingsSyncLogsIndexRoute: typeof SettingsSyncLogsIndexRoute
 }
@@ -109,6 +170,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DivesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/export/csv': {
+      id: '/api/export/csv'
+      path: '/api/export/csv'
+      fullPath: '/api/export/csv'
+      preLoaderRoute: typeof ApiExportCsvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/export/json': {
+      id: '/api/export/json'
+      path: '/api/export/json'
+      fullPath: '/api/export/json'
+      preLoaderRoute: typeof ApiExportJsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/export/uddf': {
+      id: '/api/export/uddf'
+      path: '/api/export/uddf'
+      fullPath: '/api/export/uddf'
+      preLoaderRoute: typeof ApiExportUddfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/export/': {
+      id: '/settings/export/'
+      path: '/settings/export'
+      fullPath: '/settings/export/'
+      preLoaderRoute: typeof SettingsExportIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/sync/': {
       id: '/settings/sync/'
       path: '/settings/sync'
@@ -130,6 +219,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiHealthRoute: ApiHealthRoute,
   DivesIndexRoute: DivesIndexRoute,
+  ApiExportCsvRoute: ApiExportCsvRoute,
+  ApiExportJsonRoute: ApiExportJsonRoute,
+  ApiExportUddfRoute: ApiExportUddfRoute,
+  SettingsExportIndexRoute: SettingsExportIndexRoute,
   SettingsSyncIndexRoute: SettingsSyncIndexRoute,
   SettingsSyncLogsIndexRoute: SettingsSyncLogsIndexRoute,
 }

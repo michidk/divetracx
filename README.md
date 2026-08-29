@@ -30,6 +30,19 @@ Open <http://localhost:3000>. Synchronization can also be triggered from
 **Settings → DiveMate sync**. The **Sync logs** menu shows manual, scheduled,
 and command-line attempts with their imported counts and failures.
 
+## Data export
+
+The **Export** menu provides three direct downloads:
+
+- a complete, versioned Divetracx JSON backup;
+- a UTF-8 CSV with one joined row per dive; and
+- a UDDF 3.2.3 document for compatible dive-log applications.
+
+Export responses are private and never cached. They can contain personal and
+location data, so store downloaded files securely. Divetracx does not generate
+DiveMate's proprietary `.ddb` format; use UDDF for interoperability and JSON
+for a lossless Divetracx backup.
+
 ## DiveMate synchronization
 
 The importer downloads the configured `.ddb` backup, verifies that it is a
