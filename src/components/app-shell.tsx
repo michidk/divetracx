@@ -1,11 +1,12 @@
 import { Link } from '@tanstack/react-router'
-import { Anchor, Database, RefreshCw } from 'lucide-react'
+import { Anchor, Database, RefreshCw, ScrollText } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 const navigation = [
   { to: '/', label: 'Overview', icon: Anchor },
   { to: '/dives', label: 'Dives', icon: Database },
   { to: '/settings/sync', label: 'Sync', icon: RefreshCw },
+  { to: '/settings/sync/logs', label: 'Sync logs', icon: ScrollText },
 ] as const
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -24,7 +25,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={item.to}
                 to={item.to}
-                activeOptions={{ exact: item.to === '/' }}
+                aria-label={item.label}
+                activeOptions={{ exact: true }}
                 activeProps={{ className: 'bg-accent text-foreground' }}
                 inactiveProps={{
                   className: 'text-muted-foreground hover:text-foreground',

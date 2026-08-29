@@ -1,8 +1,8 @@
+import { Database } from 'bun:sqlite'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { DatabaseSync } from 'node:sqlite'
 import { parseDiveMateDatabase } from './parser'
 
 const temporaryDirectories: string[] = []
@@ -11,7 +11,7 @@ function fixtureDatabase() {
   const directory = mkdtempSync(join(tmpdir(), 'divetracx-parser-test-'))
   temporaryDirectories.push(directory)
   const path = join(directory, 'DiveMate.ddb')
-  return { database: new DatabaseSync(path), path }
+  return { database: new Database(path), path }
 }
 
 afterEach(() => {

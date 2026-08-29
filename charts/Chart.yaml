@@ -1,0 +1,16 @@
+apiVersion: v2
+name: divetracx
+description: A self-hosted dive log with DiveMate synchronization
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/michidk/divetracx
+sources:
+  - https://github.com/michidk/divetracx
+maintainers:
+  - name: michidk
+    url: https://github.com/michidk
+keywords:
+  - diving
+  - divemate
+  - self-hosted

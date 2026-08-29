@@ -30,3 +30,7 @@ bun run verify
 
 Change `src/db/schema.ts` first, then run `bun run db:generate` and commit the
 generated migration and metadata together. Never edit `src/routeTree.gen.ts`.
+
+Helm changes must pass `bun run check:helm`. Image/runtime changes must also be
+verified with a Docker build. The daily CronJob and the manual button must call
+the same synchronization service and record distinct trigger values.

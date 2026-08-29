@@ -1,0 +1,149 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "divetracx.fullname" . }}
+  labels:
+    {{- include "divetracx.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "divetracx.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "divetracx.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      serviceAccountName: {{ include "divetracx.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: divetracx
+          image: {{ include "divetracx.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.postgresql.existingSecret }}
+                  name: {{ .Values.postgresql.existingSecret }}
+                  key: {{ .Values.postgresql.existingSecretKey }}
+                  {{- else if .Values.postgresql.enabled }}
+                  name: {{ include "divetracx.postgresqlSecretName" . }}
+                  key: url
+                  {{- else }}
+                  name: {{ include "divetracx.dbSecretName" . }}
+                  key: url
+                  {{- end }}
+            {{- if or .Values.divemate.existingSecret .Values.divemate.backupUrl }}
+            - name: DIVEMATE_BACKUP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "divetracx.divemateSecretName" . }}
+                  key: {{ .Values.divemate.existingSecretKey }}
+            - name: DIVEMATE_MAX_BACKUP_BYTES
+              value: {{ .Values.divemate.maxBackupBytes | quote }}
+            {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: temporary
+              mountPath: /tmp
+        {{- if .Values.hodor.enabled }}
+        - name: hodor
+          {{- if .Values.hodor.image.digest }}
+          image: "{{ .Values.hodor.image.repository }}@{{ .Values.hodor.image.digest }}"
+          {{- else }}
+          image: "{{ .Values.hodor.image.repository }}:{{ required "hodor.image.tag or hodor.image.digest is required" .Values.hodor.image.tag }}"
+          {{- end }}
+          imagePullPolicy: {{ .Values.hodor.image.pullPolicy }}
+          ports:
+            - name: gate
+              containerPort: 8080
+          env:
+            - name: PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.hodor.existingSecret }}
+                  name: {{ .Values.hodor.existingSecret }}
+                  key: {{ .Values.hodor.existingSecretPasswordKey }}
+                  {{- else }}
+                  name: {{ include "divetracx.fullname" . }}-hodor
+                  key: password
+                  {{- end }}
+            - name: SECRET
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.hodor.existingSecret }}
+                  name: {{ .Values.hodor.existingSecret }}
+                  key: {{ .Values.hodor.existingSecretSecretKey }}
+                  {{- else }}
+                  name: {{ include "divetracx.fullname" . }}-hodor
+                  key: secret
+                  {{- end }}
+            - name: UPSTREAM
+              value: http://localhost:3000
+            - name: TITLE
+              value: {{ .Values.hodor.title | quote }}
+            - name: SESSION_TTL
+              value: {{ .Values.hodor.sessionTtl | quote }}
+            - name: SECURE_COOKIE
+              value: {{ or .Values.hodor.secureCookie (not (empty .Values.ingress.tls)) | quote }}
+            - name: LOG_FORMAT
+              value: {{ .Values.hodor.logFormat | quote }}
+          readinessProbe:
+            httpGet:
+              path: /_gate/health
+              port: gate
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /_gate/health
+              port: gate
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.hodor.resources | nindent 12 }}
+        {{- end }}
+      volumes:
+        - name: temporary
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

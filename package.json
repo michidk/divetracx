@@ -15,9 +15,10 @@
     "check:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "verify": "bun run check && bun run typecheck && bun run test && bun run build",
+    "check:helm": "bash scripts/verify-helm.sh",
+    "verify": "bun run check && bun run typecheck && bun run test && bun run build && bun run check:helm",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "bun run scripts/migrate.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "sync:divemate": "bun run scripts/sync-divemate.ts"

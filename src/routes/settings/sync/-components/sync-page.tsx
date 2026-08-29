@@ -1,5 +1,5 @@
-import { useRouter } from '@tanstack/react-router'
-import { CheckCircle2, Database, RefreshCw, ShieldCheck } from 'lucide-react'
+import { Link, useRouter } from '@tanstack/react-router'
+import { CheckCircle2, Database, RefreshCw, ScrollText, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import type { getDiveMateSyncStatus } from '@/modules/divemate/server/status'
 import { runDiveMateSync } from '@/modules/divemate/server/sync'
@@ -36,6 +36,12 @@ export function SyncPage({ status }: { status: SyncStatus }) {
           Import your DiveMate SQLite backup into PostgreSQL. Existing source records are
           updated and missing records are retained.
         </p>
+        <Link
+          to="/settings/sync/logs"
+          className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary"
+        >
+          <ScrollText size={16} aria-hidden="true" /> View sync logs
+        </Link>
       </header>
 
       <section className="rounded-2xl border border-border bg-card p-6 md:p-8">

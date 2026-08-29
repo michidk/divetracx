@@ -1,0 +1,6 @@
+.git
+.env
+.output
+.artifacts
+node_modules
+/logs

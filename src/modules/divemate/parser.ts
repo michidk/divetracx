@@ -1,4 +1,4 @@
-import { DatabaseSync } from 'node:sqlite'
+import { Database } from 'bun:sqlite'
 import type {
   DiveMateBuddy,
   DiveMateCertification,
@@ -15,7 +15,7 @@ import type {
 
 type SourceRow = Record<string, unknown>
 
-function hasTable(database: DatabaseSync, name: string): boolean {
+function hasTable(database: Database, name: string): boolean {
   return Boolean(
     database
       .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1")
@@ -23,7 +23,7 @@ function hasTable(database: DatabaseSync, name: string): boolean {
   )
 }
 
-function readRows(database: DatabaseSync, table: string): SourceRow[] {
+function readRows(database: Database, table: string): SourceRow[] {
   if (!hasTable(database, table)) return []
   return database.prepare(`SELECT * FROM "${table}"`).all() as SourceRow[]
 }
@@ -329,7 +329,7 @@ function compact<T>(items: Array<T | null>): T[] {
 }
 
 export function parseDiveMateDatabase(databasePath: string): DiveMateSnapshot {
-  const database = new DatabaseSync(databasePath, { readOnly: true })
+  const database = new Database(databasePath, { readonly: true })
   try {
     const info = readRows(database, 'DBInfo')[0]
     return {

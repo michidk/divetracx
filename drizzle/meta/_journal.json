@@ -8,6 +8,13 @@
       "when": 1788025199717,
       "tag": "0000_familiar_supreme_intelligence",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788026316847,
+      "tag": "0001_powerful_giant_girl",
+      "breakpoints": true
     }
   ]
 }

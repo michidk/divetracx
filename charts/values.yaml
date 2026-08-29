@@ -1,0 +1,168 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/michidk/divetracx
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1001
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: divetracx.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /api/health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /api/health
+    port: http
+  initialDelaySeconds: 3
+  periodSeconds: 5
+
+startupProbe:
+  httpGet:
+    path: /api/health
+    port: http
+  periodSeconds: 2
+  failureThreshold: 30
+
+terminationGracePeriodSeconds: 30
+
+migrations:
+  enabled: true
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  hook:
+    enabled: true
+  resources:
+    limits:
+      cpu: 250m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+sync:
+  # Enable after configuring divemate.backupUrl or divemate.existingSecret.
+  enabled: false
+  schedule: "0 3 * * *"
+  timeZone: "Etc/UTC"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  backoffLimit: 2
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+divemate:
+  # Prefer an existing Secret so the backup URL never enters Helm release values.
+  existingSecret: ""
+  existingSecretKey: "backup-url"
+  backupUrl: ""
+  maxBackupBytes: 52428800
+
+postgresql:
+  enabled: false
+  image:
+    repository: postgres
+    tag: "17.6-alpine"
+    pullPolicy: IfNotPresent
+  service:
+    port: 5432
+  auth:
+    database: divetracx
+    username: divetracx
+    password: ""
+  primary:
+    resources: {}
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: ""
+  external:
+    url: ""
+  existingSecret: ""
+  existingSecretKey: "url"
+
+hodor:
+  enabled: true
+  existingSecret: ""
+  password: ""
+  secret: ""
+  existingSecretPasswordKey: "password"
+  existingSecretSecretKey: "secret"
+  image:
+    repository: ghcr.io/michidk/hodor
+    tag: ""
+    digest: "sha256:7cdb5de7ee2c776ee6c2ae049e1b2050caa60288d7b3148e26117a5d6bba18b2"
+    pullPolicy: IfNotPresent
+  title: "Divetracx Login"
+  sessionTtl: "86400"
+  secureCookie: false
+  logFormat: compact
+  resources:
+    limits:
+      cpu: 100m
+      memory: 64Mi
+    requests:
+      cpu: 10m
+      memory: 32Mi
+
+networkPolicy:
+  enabled: true
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

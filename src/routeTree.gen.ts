@@ -10,12 +10,19 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as DivesIndexRouteImport } from './routes/dives/index'
 import { Route as SettingsSyncIndexRouteImport } from './routes/settings/sync/index'
+import { Route as SettingsSyncLogsIndexRouteImport } from './routes/settings/sync/logs/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DivesIndexRoute = DivesIndexRouteImport.update({
@@ -28,35 +35,55 @@ const SettingsSyncIndexRoute = SettingsSyncIndexRouteImport.update({
   path: '/settings/sync/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsSyncLogsIndexRoute = SettingsSyncLogsIndexRouteImport.update({
+  id: '/settings/sync/logs/',
+  path: '/settings/sync/logs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/health': typeof ApiHealthRoute
   '/dives/': typeof DivesIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
+  '/settings/sync/logs/': typeof SettingsSyncLogsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/health': typeof ApiHealthRoute
   '/dives': typeof DivesIndexRoute
   '/settings/sync': typeof SettingsSyncIndexRoute
+  '/settings/sync/logs': typeof SettingsSyncLogsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/health': typeof ApiHealthRoute
   '/dives/': typeof DivesIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
+  '/settings/sync/logs/': typeof SettingsSyncLogsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dives/' | '/settings/sync/'
+  fullPaths:
+    '/' | '/api/health' | '/dives/' | '/settings/sync/' | '/settings/sync/logs/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dives' | '/settings/sync'
-  id: '__root__' | '/' | '/dives/' | '/settings/sync/'
+  to: '/' | '/api/health' | '/dives' | '/settings/sync' | '/settings/sync/logs'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/health'
+    | '/dives/'
+    | '/settings/sync/'
+    | '/settings/sync/logs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   DivesIndexRoute: typeof DivesIndexRoute
   SettingsSyncIndexRoute: typeof SettingsSyncIndexRoute
+  SettingsSyncLogsIndexRoute: typeof SettingsSyncLogsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -66,6 +93,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dives/': {
@@ -82,13 +116,22 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsSyncIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/sync/logs/': {
+      id: '/settings/sync/logs/'
+      path: '/settings/sync/logs'
+      fullPath: '/settings/sync/logs/'
+      preLoaderRoute: typeof SettingsSyncLogsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiHealthRoute: ApiHealthRoute,
   DivesIndexRoute: DivesIndexRoute,
   SettingsSyncIndexRoute: SettingsSyncIndexRoute,
+  SettingsSyncLogsIndexRoute: SettingsSyncLogsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

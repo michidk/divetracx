@@ -33,6 +33,12 @@ export interface DiveMateSyncResult {
   counts: Record<string, number>
 }
 
+export type DiveMateSyncTrigger = 'manual' | 'schedule' | 'cli'
+
+export interface DiveMateSyncOptions {
+  trigger?: DiveMateSyncTrigger
+}
+
 function directDownloadUrl(configuredUrl: string): string {
   const match = configuredUrl.match(/\/file\/d\/([A-Za-z0-9_-]+)/)
   if (match?.[1]) {
@@ -391,7 +397,9 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
   })
 }
 
-export async function syncDiveMate(): Promise<DiveMateSyncResult> {
+export async function syncDiveMate(
+  options: DiveMateSyncOptions = {},
+): Promise<DiveMateSyncResult> {
   const environment = getServerEnv()
   if (!environment.DIVEMATE_BACKUP_URL) {
     throw new Error('DIVEMATE_BACKUP_URL is not configured')
@@ -400,7 +408,7 @@ export async function syncDiveMate(): Promise<DiveMateSyncResult> {
   const db = getDb()
   const [run] = await db
     .insert(syncRuns)
-    .values({ sourceKey: SOURCE_KEY })
+    .values({ sourceKey: SOURCE_KEY, trigger: options.trigger ?? 'cli' })
     .returning({ id: syncRuns.id })
   if (!run) throw new Error('Could not create the DiveMate sync run')
 

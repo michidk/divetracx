@@ -306,11 +306,14 @@ export const tanks = pgTable(
 
 export const syncRunStatus = pgEnum('sync_run_status', ['running', 'succeeded', 'failed'])
 
+export const syncRunTrigger = pgEnum('sync_run_trigger', ['manual', 'schedule', 'cli'])
+
 export const syncRuns = pgTable(
   'sync_runs',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     sourceKey: text('source_key').notNull(),
+    trigger: syncRunTrigger('trigger').notNull().default('manual'),
     status: syncRunStatus('status').notNull().default('running'),
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
     finishedAt: timestamp('finished_at', { withTimezone: true }),

@@ -12,6 +12,7 @@ does not understand yet.
 - React 19 and Tailwind CSS 4
 - PostgreSQL 17, Drizzle ORM, and committed migrations
 - Zod-validated server configuration
+- Docker and Helm deployment with optional Hodor authentication
 
 ## Quick start
 
@@ -26,7 +27,8 @@ bun run dev
 ```
 
 Open <http://localhost:3000>. Synchronization can also be triggered from
-**Settings → DiveMate sync**.
+**Settings → DiveMate sync**. The **Sync logs** menu shows manual, scheduled,
+and command-line attempts with their imported counts and failures.
 
 ## DiveMate synchronization
 
@@ -38,6 +40,15 @@ JSONB so migration can become more complete without re-reading an old backup.
 
 Sync never deletes a Divetracx record merely because it disappeared from a
 later backup. This protects manual edits and makes repeated imports safe.
+
+## Helm and scheduled synchronization
+
+The chart in `charts/` deploys the application, database migrations, optional
+Hodor authentication, and external or bundled PostgreSQL. Set
+`sync.enabled=true` after configuring the DiveMate backup Secret to run the
+same idempotent importer every day at 03:00 UTC. See
+[the chart documentation](charts/README.md) for values and installation
+examples.
 
 The DiveMate backup contains personal data. Prefer a private authenticated URL;
 do not commit a real backup URL or `.ddb` file.
