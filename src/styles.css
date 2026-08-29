@@ -1,0 +1,55 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  :root {
+    --background: #f4f8f8;
+    --foreground: #102c31;
+    --card: #ffffff;
+    --primary: #087f8c;
+    --primary-foreground: #f5ffff;
+    --muted: #e9f1f1;
+    --muted-foreground: #597176;
+    --accent: #d9eeef;
+    --border: #d3e1e2;
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    background:
+      radial-gradient(circle at 85% 0%, rgb(8 127 140 / 9%), transparent 28rem),
+      var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  a {
+    outline-offset: 3px;
+  }
+
+  button:focus-visible,
+  a:focus-visible {
+    outline: 2px solid var(--primary);
+  }
+}
