@@ -6,7 +6,7 @@ function fixture(): ExportSnapshot {
   const timestamp = new Date('2026-08-29T10:15:00.000Z')
   return {
     format: 'divetracx-backup',
-    version: 1,
+    version: 2,
     exportedAt: timestamp.toISOString(),
     data: {
       divers: [
@@ -103,6 +103,36 @@ function fixture(): ExportSnapshot {
       ],
       diveBuddies: [],
       diveEquipment: [],
+      diveProfileSamples: [
+        {
+          id: 'sample-1',
+          diveId: 'dive-1',
+          sampleIndex: 0,
+          elapsedSeconds: 0,
+          depthMeters: '0.00',
+          sourceKey: 'divemate',
+          externalId: '11:0',
+          externalUuid: null,
+          sourceUpdatedAt: null,
+          sourcePayload: null,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        },
+        {
+          id: 'sample-2',
+          diveId: 'dive-1',
+          sampleIndex: 1,
+          elapsedSeconds: 30,
+          depthMeters: '12.30',
+          sourceKey: 'divemate',
+          externalId: '11:1',
+          externalUuid: null,
+          sourceUpdatedAt: null,
+          sourcePayload: null,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        },
+      ],
       tanks: [],
       syncRuns: [],
     },
@@ -119,7 +149,7 @@ describe('export formats', () => {
     }
 
     expect(parsed.format).toBe('divetracx-backup')
-    expect(parsed.version).toBe(1)
+    expect(parsed.version).toBe(2)
     expect(parsed.data.dives).toHaveLength(1)
     expect(parsed.data.divers[0]?.createdAt).toBe('2026-08-29T10:15:00.000Z')
   })
@@ -131,10 +161,11 @@ describe('export formats', () => {
     expect(output).toContain('"Blue, ""Deep"" Hole"')
     expect(output).toContain('"\'=HYPERLINK(""bad"")\notherwise memorable"')
     expect(output).toContain('"-24.1234567"')
+    expect(output).toContain('"2","0:0.00;30:12.30"')
     expect(output).toEndWith('\r\n')
   })
 
-  test('creates escaped UDDF without inventing profile samples', () => {
+  test('creates escaped UDDF with real profile samples', () => {
     const output = buildUddfExport(fixture())
 
     expect(output).toContain(
@@ -147,7 +178,8 @@ describe('export formats', () => {
     expect(output).toContain('<lowesttemperature>295.15</lowesttemperature>')
     expect(output).toContain('<diveduration>2910</diveduration>')
     expect(output).toContain('<notes>\n            <para>')
-    expect(output).not.toContain('<samples>')
-    expect(output).not.toContain('<waypoint>')
+    expect(output).toContain('<samples>')
+    expect(output).toContain('<divetime>30</divetime>')
+    expect(output).toContain('<depth>12.30</depth>')
   })
 })

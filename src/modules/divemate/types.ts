@@ -123,6 +123,13 @@ export interface DiveMateTank extends DiveMateSourceRecord {
   breathingTimeSeconds: number | null
 }
 
+export interface DiveMateProfileSample extends DiveMateSourceRecord {
+  diveExternalId: string
+  sampleIndex: number
+  elapsedSeconds: number
+  depthMeters: string
+}
+
 export interface DiveMateSnapshot {
   databaseVersion: string | null
   divers: DiveMateDiver[]
@@ -134,4 +141,5 @@ export interface DiveMateSnapshot {
   diveTypes: DiveMateDiveType[]
   dives: DiveMateDive[]
   tanks: DiveMateTank[]
+  profileSamples: DiveMateProfileSample[]
 }

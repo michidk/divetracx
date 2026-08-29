@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import {
+  Activity,
   Award,
   Building2,
   ChevronRight,
@@ -28,6 +29,7 @@ const entityIcons = {
   shops: Building2,
   'dive-types': Tags,
   tanks: Database,
+  'profile-samples': Activity,
   'sync-runs': RefreshCw,
 } satisfies Record<EntityKey, typeof Waves>
 

@@ -10,14 +10,9 @@ function formatUpdated(value: string) {
   return new Date(value).toLocaleDateString('en-US', { dateStyle: 'medium' })
 }
 
-export function EntityListPage({
-  entity,
-  records,
-}: {
-  entity: EntityKey
-  records: ListData
-}) {
+export function EntityListPage({ entity, list }: { entity: EntityKey; list: ListData }) {
   const definition = entityDefinitions[entity]
+  const { records } = list
 
   return (
     <div className="space-y-7">
@@ -31,7 +26,7 @@ export function EntityListPage({
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
-              Database · {records.length.toLocaleString()} records
+              Database · {list.total.toLocaleString()} records
             </p>
             <h1 className="mt-2 text-4xl font-semibold tracking-tight">
               {definition.plural}
@@ -94,6 +89,41 @@ export function EntityListPage({
           ))
         )}
       </section>
+
+      {list.pageCount > 1 ? (
+        <nav
+          aria-label={`${definition.plural} pages`}
+          className="flex items-center justify-between gap-4"
+        >
+          {list.page > 1 ? (
+            <Link
+              to="/data/$entity"
+              params={{ entity }}
+              search={{ page: list.page - 1 }}
+              className="inline-flex min-h-11 items-center rounded-xl border border-border px-4 text-sm font-semibold transition hover:bg-muted"
+            >
+              Previous
+            </Link>
+          ) : (
+            <span />
+          )}
+          <p className="text-sm text-muted-foreground">
+            Page {list.page.toLocaleString()} of {list.pageCount.toLocaleString()}
+          </p>
+          {list.page < list.pageCount ? (
+            <Link
+              to="/data/$entity"
+              params={{ entity }}
+              search={{ page: list.page + 1 }}
+              className="inline-flex min-h-11 items-center rounded-xl border border-border px-4 text-sm font-semibold transition hover:bg-muted"
+            >
+              Next
+            </Link>
+          ) : (
+            <span />
+          )}
+        </nav>
+      ) : null}
     </div>
   )
 }

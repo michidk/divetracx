@@ -6,6 +6,7 @@ import {
   buddies,
   diveBuddies,
   diveEquipment,
+  diveProfileSamples,
   divers,
   diveSites,
   dives,
@@ -195,11 +196,26 @@ export async function loadDive(diveId: string) {
         .where(eq(tanks.diveId, diveId))
         .orderBy(asc(tanks.sortOrder))
 
+      const profileSamples = await transaction
+        .select({
+          id: diveProfileSamples.id,
+          sampleIndex: diveProfileSamples.sampleIndex,
+          elapsedSeconds: diveProfileSamples.elapsedSeconds,
+          depthMeters: diveProfileSamples.depthMeters,
+        })
+        .from(diveProfileSamples)
+        .where(eq(diveProfileSamples.diveId, diveId))
+        .orderBy(
+          asc(diveProfileSamples.elapsedSeconds),
+          asc(diveProfileSamples.sampleIndex),
+        )
+
       return {
         ...dive,
         buddies: diveBuddiesData,
         equipment: diveEquipmentData,
         tanks: diveTanks,
+        profileSamples,
       }
     },
     { isolationLevel: 'repeatable read', accessMode: 'read only' },

@@ -21,6 +21,7 @@ import {
   formatTemperature,
 } from '@/modules/dives/format'
 import type { getDive } from '@/modules/dives/server/queries'
+import { DiveProfileChart } from './dive-profile-chart'
 
 type DiveData = NonNullable<Awaited<ReturnType<typeof getDive>>>
 
@@ -139,6 +140,8 @@ export function DivePage({ dive }: { dive: DiveData }) {
           value={formatTemperature(dive.waterTemperatureCelsius)}
         />
       </section>
+
+      <DiveProfileChart samples={dive.profileSamples} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(18rem,0.8fr)]">
         <div className="space-y-6">

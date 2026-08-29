@@ -11,6 +11,7 @@ import {
   certifications,
   diveBuddies,
   diveEquipment,
+  diveProfileSamples,
   divers,
   diveSites,
   dives,
@@ -277,6 +278,13 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
     }
 
     const diveIds = new Map<string, string>()
+    const profileSamplesByDive = new Map<string, DiveMateSnapshot['profileSamples']>()
+    for (const sample of snapshot.profileSamples) {
+      const samples = profileSamplesByDive.get(sample.diveExternalId) ?? []
+      samples.push(sample)
+      profileSamplesByDive.set(sample.diveExternalId, samples)
+    }
+
     for (const item of snapshot.dives) {
       const values = {
         ...sourceValues(item),
@@ -356,6 +364,27 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
           })),
         )
       }
+
+      await tx
+        .delete(diveProfileSamples)
+        .where(
+          and(
+            eq(diveProfileSamples.diveId, row.id),
+            eq(diveProfileSamples.sourceKey, SOURCE_KEY),
+          ),
+        )
+      const importedProfileSamples = profileSamplesByDive.get(item.externalId) ?? []
+      if (importedProfileSamples.length > 0) {
+        await tx.insert(diveProfileSamples).values(
+          importedProfileSamples.map((sample) => ({
+            ...sourceValues(sample),
+            diveId: row.id,
+            sampleIndex: sample.sampleIndex,
+            elapsedSeconds: sample.elapsedSeconds,
+            depthMeters: sample.depthMeters,
+          })),
+        )
+      }
     }
 
     for (const item of snapshot.tanks) {
@@ -393,6 +422,7 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
       diveTypes: snapshot.diveTypes.length,
       dives: snapshot.dives.length,
       tanks: snapshot.tanks.length,
+      profileSamples: snapshot.profileSamples.length,
     }
   })
 }

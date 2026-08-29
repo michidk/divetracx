@@ -14,6 +14,14 @@ export interface DataListItem {
   updatedAt: string
 }
 
+export interface DataListPage {
+  records: DataListItem[]
+  total: number
+  page: number
+  pageSize: number
+  pageCount: number
+}
+
 export interface EditorOption {
   value: string
   label: string

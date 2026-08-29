@@ -16,7 +16,9 @@ export function SyncPage({ status }: { status: SyncStatus }) {
     setMessage(null)
     try {
       const result = await runDiveMateSync()
-      setMessage(`Imported ${result.counts.dives ?? 0} dives successfully.`)
+      setMessage(
+        `Imported ${result.counts.dives ?? 0} dives and ${result.counts.profileSamples ?? 0} profile samples successfully.`,
+      )
       await router.invalidate()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'DiveMate sync failed')

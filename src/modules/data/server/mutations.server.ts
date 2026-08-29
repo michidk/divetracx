@@ -8,6 +8,7 @@ import {
   certifications,
   diveBuddies,
   diveEquipment,
+  diveProfileSamples,
   divers,
   diveSites,
   dives,
@@ -426,6 +427,32 @@ async function saveTank(id: string, values: EditorValues) {
   return row.id
 }
 
+async function saveProfileSample(id: string, values: EditorValues) {
+  const depthMeters = optionalDecimal(values, 'depthMeters', { min: 0 })
+  if (depthMeters === null) throw new Error('depthMeters is required')
+  const fields = {
+    diveId: requiredUuid(values, 'diveId'),
+    sampleIndex: requiredInteger(values, 'sampleIndex', { min: 0 }),
+    elapsedSeconds: requiredInteger(values, 'elapsedSeconds', { min: 0 }),
+    depthMeters,
+    updatedAt: new Date(),
+  }
+
+  const [row] =
+    id === 'new'
+      ? await getDb()
+          .insert(diveProfileSamples)
+          .values({ ...fields, sourceKey: 'manual' })
+          .returning({ id: diveProfileSamples.id })
+      : await getDb()
+          .update(diveProfileSamples)
+          .set(fields)
+          .where(eq(diveProfileSamples.id, recordId(id)))
+          .returning({ id: diveProfileSamples.id })
+  if (!row) throw new Error('Profile sample was not found')
+  return row.id
+}
+
 export async function saveDataRecord(
   entity: EntityKey,
   id: string,
@@ -450,6 +477,8 @@ export async function saveDataRecord(
       return saveDiveType(id, values)
     case 'tanks':
       return saveTank(id, values)
+    case 'profile-samples':
+      return saveProfileSample(id, values)
     case 'sync-runs':
       throw new Error('Synchronization history is read-only')
   }

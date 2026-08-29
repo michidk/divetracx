@@ -6,6 +6,7 @@ import type {
   DiveMateDiver,
   DiveMateDiveType,
   DiveMateEquipment,
+  DiveMateProfileSample,
   DiveMateShop,
   DiveMateSite,
   DiveMateSnapshot,
@@ -324,6 +325,49 @@ function mapTank(row: SourceRow): DiveMateTank | null {
   }
 }
 
+const PROFILE_SAMPLE_WIDTH = 12
+const PROFILE_DEPTH_WIDTH = 4
+
+function mapProfileSamples(row: SourceRow): DiveMateProfileSample[] {
+  const diveExternalId = externalId(row.ID)
+  const profile = text(row.Profile)
+  const profileIntervalSeconds = integer(row.ProfileInt)
+  if (
+    !diveExternalId ||
+    !profile ||
+    !profileIntervalSeconds ||
+    profileIntervalSeconds <= 0 ||
+    profile.length % PROFILE_SAMPLE_WIDTH !== 0 ||
+    !/^\d+$/.test(profile)
+  ) {
+    return []
+  }
+
+  const externalUuid = text(row.UUID)
+  const sourceUpdatedAt = text(row.Updated)
+  return Array.from(
+    { length: profile.length / PROFILE_SAMPLE_WIDTH },
+    (_, sampleIndex) => {
+      const offset = sampleIndex * PROFILE_SAMPLE_WIDTH
+      const rawSample = profile.slice(offset, offset + PROFILE_SAMPLE_WIDTH)
+      const depthTenths = Number(rawSample.slice(0, PROFILE_DEPTH_WIDTH))
+      return {
+        diveExternalId,
+        sampleIndex,
+        elapsedSeconds: sampleIndex * profileIntervalSeconds,
+        depthMeters: (depthTenths / 10).toFixed(1),
+        externalId: `${diveExternalId}:${sampleIndex}`,
+        externalUuid,
+        sourceUpdatedAt,
+        sourcePayload: {
+          rawSample,
+          profileIntervalSeconds,
+        },
+      }
+    },
+  )
+}
+
 function compact<T>(items: Array<T | null>): T[] {
   return items.filter((item): item is T => item !== null)
 }
@@ -343,6 +387,7 @@ export function parseDiveMateDatabase(databasePath: string): DiveMateSnapshot {
       diveTypes: compact(readRows(database, 'Divetype').map(mapDiveType)),
       dives: compact(readRows(database, 'Logbook').map(mapDive)),
       tanks: compact(readRows(database, 'Tank').map(mapTank)),
+      profileSamples: readRows(database, 'Logbook').flatMap(mapProfileSamples),
     }
   } finally {
     database.close()

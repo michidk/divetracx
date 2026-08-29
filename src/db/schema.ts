@@ -246,6 +246,32 @@ export const dives = pgTable(
   ],
 )
 
+export const diveProfileSamples = pgTable(
+  'dive_profile_samples',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    diveId: uuid('dive_id')
+      .notNull()
+      .references(() => dives.id, { onDelete: 'cascade' }),
+    sampleIndex: integer('sample_index').notNull(),
+    elapsedSeconds: integer('elapsed_seconds').notNull(),
+    depthMeters: numeric('depth_meters', { precision: 7, scale: 2 }).notNull(),
+    ...sourceColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    uniqueIndex('dive_profile_samples_dive_source_index_unique').on(
+      table.diveId,
+      table.sourceKey,
+      table.sampleIndex,
+    ),
+    index('dive_profile_samples_dive_elapsed_index').on(
+      table.diveId,
+      table.elapsedSeconds,
+    ),
+  ],
+)
+
 export const diveBuddies = pgTable(
   'dive_buddies',
   {

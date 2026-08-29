@@ -88,13 +88,14 @@ describe('parseDiveMateDatabase', () => {
         Weight REAL, VisHor TEXT, UWCurrent TEXT, Waves TEXT, Weather TEXT,
         Water INTEGER, Entry INTEGER, Rating INTEGER, Computer TEXT,
         Divesuit TEXT, Boat TEXT, Divemaster TEXT, Comments TEXT,
-        UUID TEXT, Updated TEXT
+        UUID TEXT, Updated TEXT, ProfileInt INTEGER, Profile TEXT
       );
       INSERT INTO Logbook VALUES (
         11, 1, 7, 2, 5, '4', '9', 42, '2026-07-26', '14:29:00',
         120, 48.5, '01:30', 31.2, 16.4, 26, 22, 6.5, '15 m', 'low',
         'calm', 'sunny', 1, 2, 5, 'Computer', '5 mm', 'Boat', 'Guide',
-        'great dive', 'dive-uuid', '2026-07-26'
+        'great dive', 'dive-uuid', '2026-07-26', 30,
+        '000000000000001500000000012300000000'
       );
       CREATE TABLE Tank (
         ID INTEGER, LogID INTEGER, Name TEXT, SortOrd INTEGER, Tanktype INTEGER,
@@ -131,6 +132,31 @@ describe('parseDiveMateDatabase', () => {
       diveExternalId: '11',
       oxygenPercent: '32',
     })
+    expect(snapshot.profileSamples).toEqual([
+      expect.objectContaining({
+        externalId: '11:0',
+        diveExternalId: '11',
+        sampleIndex: 0,
+        elapsedSeconds: 0,
+        depthMeters: '0.0',
+      }),
+      expect.objectContaining({
+        externalId: '11:1',
+        sampleIndex: 1,
+        elapsedSeconds: 30,
+        depthMeters: '1.5',
+      }),
+      expect.objectContaining({
+        externalId: '11:2',
+        sampleIndex: 2,
+        elapsedSeconds: 60,
+        depthMeters: '12.3',
+      }),
+    ])
+    expect(snapshot.profileSamples[2]?.sourcePayload).toEqual({
+      rawSample: '012300000000',
+      profileIntervalSeconds: 30,
+    })
     expect(snapshot.equipment[0]?.sourcePayload.Photo).toEqual({
       omittedBinaryBytes: 2,
     })
@@ -149,5 +175,23 @@ describe('parseDiveMateDatabase', () => {
     expect(snapshot.dives).toEqual([])
     expect(snapshot.sites).toEqual([])
     expect(snapshot.certifications).toEqual([])
+    expect(snapshot.profileSamples).toEqual([])
+  })
+
+  test('ignores malformed fixed-width profiles instead of inventing samples', () => {
+    const { database, path } = fixtureDatabase()
+    database.exec(`
+      CREATE TABLE Logbook (
+        ID INTEGER, Divedate TEXT, ProfileInt INTEGER, Profile TEXT
+      );
+      INSERT INTO Logbook VALUES (1, '2026-01-01', 10, '00100000000x');
+      INSERT INTO Logbook VALUES (2, '2026-01-02', 0, '001000000000');
+    `)
+    database.close()
+
+    const snapshot = parseDiveMateDatabase(path)
+
+    expect(snapshot.dives).toHaveLength(2)
+    expect(snapshot.profileSamples).toEqual([])
   })
 })

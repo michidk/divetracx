@@ -10,8 +10,13 @@ const editorValueSchema = z.union([z.string(), z.boolean(), z.array(z.string())]
 export const getDataOverview = createServerFn({ method: 'GET' }).handler(loadDataOverview)
 
 export const getDataList = createServerFn({ method: 'GET' })
-  .validator(z.object({ entity: entityKeySchema }))
-  .handler(({ data }) => loadDataList(data.entity))
+  .validator(
+    z.object({
+      entity: entityKeySchema,
+      page: z.number().int().min(1).optional(),
+    }),
+  )
+  .handler(({ data }) => loadDataList(data.entity, data.page))
 
 export const getDataEditor = createServerFn({ method: 'GET' })
   .validator(z.object({ entity: entityKeySchema, recordId: recordIdSchema }))

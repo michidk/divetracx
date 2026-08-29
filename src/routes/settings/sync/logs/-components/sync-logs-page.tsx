@@ -28,6 +28,7 @@ function importedSummary(counts: Record<string, number> | null) {
   if (!counts) return 'No import counts recorded'
   const preferredKeys = [
     'dives',
+    'profileSamples',
     'sites',
     'buddies',
     'equipment',
@@ -36,7 +37,7 @@ function importedSummary(counts: Record<string, number> | null) {
   ]
   return preferredKeys
     .filter((key) => counts[key] !== undefined)
-    .map((key) => `${counts[key]} ${key}`)
+    .map((key) => `${counts[key]} ${key === 'profileSamples' ? 'profile samples' : key}`)
     .join(' · ')
 }
 

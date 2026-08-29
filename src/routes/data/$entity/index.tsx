@@ -1,15 +1,20 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
+import { z } from 'zod'
 import { entityDefinitions, entityKeySchema } from '@/modules/data/entities'
 import { getDataList } from '@/modules/data/server/records'
 import { EntityListPage } from './-components/entity-list-page'
 
 export const Route = createFileRoute('/data/$entity/')({
-  loader: async ({ params }) => {
+  validateSearch: z.object({ page: z.coerce.number().int().min(1).catch(1).optional() }),
+  loaderDeps: ({ search }) => ({ page: search.page ?? 1 }),
+  loader: async ({ params, deps }) => {
     const entity = entityKeySchema.safeParse(params.entity)
     if (!entity.success) throw notFound()
     return {
       entity: entity.data,
-      records: await getDataList({ data: { entity: entity.data } }),
+      list: await getDataList({
+        data: { entity: entity.data, page: deps.page },
+      }),
     }
   },
   head: ({ loaderData }) => ({
@@ -26,5 +31,5 @@ export const Route = createFileRoute('/data/$entity/')({
 
 function EntityRoute() {
   const data = Route.useLoaderData()
-  return <EntityListPage entity={data.entity} records={data.records} />
+  return <EntityListPage entity={data.entity} list={data.list} />
 }

@@ -8,6 +8,7 @@ import {
   certifications,
   diveBuddies,
   diveEquipment,
+  diveProfileSamples,
   divers,
   diveSites,
   dives,
@@ -23,6 +24,7 @@ import type {
   DataEditorPayload,
   DataEditorRecord,
   DataListItem,
+  DataListPage,
   DataOverviewItem,
   EditorOption,
 } from '../types'
@@ -104,6 +106,7 @@ export async function loadDataOverview(): Promise<DataOverviewItem[]> {
     tableCount(shops),
     tableCount(diveTypes),
     tableCount(tanks),
+    tableCount(diveProfileSamples),
     tableCount(syncRuns),
   ])
   const entities: EntityKey[] = [
@@ -116,12 +119,18 @@ export async function loadDataOverview(): Promise<DataOverviewItem[]> {
     'shops',
     'dive-types',
     'tanks',
+    'profile-samples',
     'sync-runs',
   ]
   return entities.map((entity, index) => ({ entity, count: values[index] ?? 0 }))
 }
 
-export async function loadDataList(entity: EntityKey): Promise<DataListItem[]> {
+const PROFILE_SAMPLE_PAGE_SIZE = 250
+
+async function loadDataListRecords(
+  entity: EntityKey,
+  page: number,
+): Promise<DataListItem[]> {
   const db = getDb()
   switch (entity) {
     case 'dives': {
@@ -237,6 +246,31 @@ export async function loadDataList(entity: EntityKey): Promise<DataListItem[]> {
         ),
       )
     }
+    case 'profile-samples': {
+      const rows = await db
+        .select({
+          sample: diveProfileSamples,
+          diveNumber: dives.number,
+          diveDate: dives.diveDate,
+        })
+        .from(diveProfileSamples)
+        .innerJoin(dives, eq(diveProfileSamples.diveId, dives.id))
+        .orderBy(
+          desc(dives.diveDate),
+          asc(diveProfileSamples.elapsedSeconds),
+          asc(diveProfileSamples.sampleIndex),
+        )
+        .limit(PROFILE_SAMPLE_PAGE_SIZE)
+        .offset((page - 1) * PROFILE_SAMPLE_PAGE_SIZE)
+      return rows.map(({ sample, diveNumber, diveDate }) =>
+        sourceListItem(
+          sample,
+          `${sample.depthMeters} m at ${sample.elapsedSeconds} s`,
+          `Dive #${diveNumber ?? '—'} · ${diveDate}`,
+          `Sample ${sample.sampleIndex + 1}`,
+        ),
+      )
+    }
     case 'sync-runs': {
       const rows = await db.select().from(syncRuns).orderBy(desc(syncRuns.startedAt))
       return rows.map((row) => ({
@@ -251,9 +285,29 @@ export async function loadDataList(entity: EntityKey): Promise<DataListItem[]> {
   }
 }
 
+export async function loadDataList(
+  entity: EntityKey,
+  requestedPage = 1,
+): Promise<DataListPage> {
+  const total = entity === 'profile-samples' ? await tableCount(diveProfileSamples) : null
+  const pageSize =
+    entity === 'profile-samples' ? PROFILE_SAMPLE_PAGE_SIZE : Math.max(total ?? 0, 1)
+  const pageCount = Math.max(1, Math.ceil((total ?? 0) / pageSize))
+  const page = Math.min(Math.max(1, requestedPage), pageCount)
+  const records = await loadDataListRecords(entity, page)
+  const resolvedTotal = total ?? records.length
+  return {
+    records,
+    total: resolvedTotal,
+    page,
+    pageSize: entity === 'profile-samples' ? pageSize : Math.max(resolvedTotal, 1),
+    pageCount: entity === 'profile-samples' ? pageCount : 1,
+  }
+}
+
 async function referenceOptions(entity: EntityKey): Promise<EditorOption[]> {
-  const rows = await loadDataList(entity)
-  return rows.map((row) => ({
+  const { records } = await loadDataList(entity)
+  return records.map((row) => ({
     value: row.id,
     label: [row.title, row.subtitle].filter(Boolean).join(' · '),
   }))
@@ -334,6 +388,14 @@ async function loadRecord(
     }
     case 'tanks': {
       const [row] = await db.select().from(tanks).where(eq(tanks.id, id)).limit(1)
+      return row ? editorRecord(entity, row) : null
+    }
+    case 'profile-samples': {
+      const [row] = await db
+        .select()
+        .from(diveProfileSamples)
+        .where(eq(diveProfileSamples.id, id))
+        .limit(1)
       return row ? editorRecord(entity, row) : null
     }
     case 'sync-runs': {

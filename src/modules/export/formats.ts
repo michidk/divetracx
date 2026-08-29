@@ -100,6 +100,16 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
     tanksByDive.set(tank.diveId, diveTanks)
   }
 
+  const profileSamplesByDive = new Map<
+    string,
+    ExportSnapshot['data']['diveProfileSamples']
+  >()
+  for (const sample of data.diveProfileSamples) {
+    const samples = profileSamplesByDive.get(sample.diveId) ?? []
+    samples.push(sample)
+    profileSamplesByDive.set(sample.diveId, samples)
+  }
+
   const headers = [
     'dive_number',
     'date',
@@ -132,6 +142,8 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
     'buddies',
     'equipment',
     'tanks',
+    'profile_sample_count',
+    'profile_samples_seconds_depth_meters',
     'notes',
     'source',
     'source_id',
@@ -164,6 +176,13 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
         .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0))
         .map(tankSummary)
         .join('; ')
+      const profileSamples = (profileSamplesByDive.get(dive.id) ?? [])
+        .slice()
+        .sort(
+          (left, right) =>
+            left.elapsedSeconds - right.elapsedSeconds ||
+            left.sampleIndex - right.sampleIndex,
+        )
 
       return [
         csvCell(dive.number),
@@ -197,6 +216,12 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
         csvCell(buddyNames, true),
         csvCell(equipmentNames, true),
         csvCell(tankNames, true),
+        csvCell(profileSamples.length),
+        csvCell(
+          profileSamples
+            .map((sample) => `${sample.elapsedSeconds}:${sample.depthMeters}`)
+            .join(';'),
+        ),
         csvCell(dive.notes, true),
         csvCell(dive.sourceKey, true),
         csvCell(dive.externalId, true),
@@ -213,6 +238,15 @@ export function buildUddfExport(snapshot: ExportSnapshot) {
     data.dives.flatMap((dive) => (dive.siteId ? [dive.siteId] : [])),
   )
   const relevantSites = data.diveSites.filter((site) => siteIds.has(site.id))
+  const profileSamplesByDive = new Map<
+    string,
+    ExportSnapshot['data']['diveProfileSamples']
+  >()
+  for (const sample of data.diveProfileSamples) {
+    const samples = profileSamplesByDive.get(sample.diveId) ?? []
+    samples.push(sample)
+    profileSamplesByDive.set(sample.diveId, samples)
+  }
 
   const diverXml = diver
     ? [
@@ -252,41 +286,62 @@ export function buildUddfExport(snapshot: ExportSnapshot) {
   const divesXml = data.dives
     .slice()
     .sort((left, right) => left.diveDate.localeCompare(right.diveDate))
-    .flatMap((dive) => [
-      `      <dive id="${xmlId('dive', dive.id)}">`,
-      '        <informationbeforedive>',
-      ...(dive.siteId ? [`          <link ref="${xmlId('site', dive.siteId)}"/>`] : []),
-      ...(dive.number !== null && dive.number > 0
-        ? [`          <divenumber>${dive.number}</divenumber>`]
-        : []),
-      `          <datetime>${xml(diveDateTime(dive.diveDate, dive.entryTime, dive.utcOffsetMinutes))}</datetime>`,
-      ...(dive.airTemperatureCelsius
-        ? [
-            `          <airtemperature>${kelvin(dive.airTemperatureCelsius)}</airtemperature>`,
-          ]
-        : []),
-      '        </informationbeforedive>',
-      '        <informationafterdive>',
-      ...(dive.waterTemperatureCelsius
-        ? [
-            `          <lowesttemperature>${kelvin(dive.waterTemperatureCelsius)}</lowesttemperature>`,
-          ]
-        : []),
-      `          <greatestdepth>${xml(dive.maximumDepthMeters ?? 0)}</greatestdepth>`,
-      ...(dive.averageDepthMeters
-        ? [`          <averagedepth>${xml(dive.averageDepthMeters)}</averagedepth>`]
-        : []),
-      `          <diveduration>${dive.durationSeconds}</diveduration>`,
-      ...(dive.notes
-        ? [
-            '          <notes>',
-            `            <para>${xml(dive.notes)}</para>`,
-            '          </notes>',
-          ]
-        : []),
-      '        </informationafterdive>',
-      '      </dive>',
-    ])
+    .flatMap((dive) => {
+      const samples = (profileSamplesByDive.get(dive.id) ?? [])
+        .slice()
+        .sort(
+          (left, right) =>
+            left.elapsedSeconds - right.elapsedSeconds ||
+            left.sampleIndex - right.sampleIndex,
+        )
+      return [
+        `      <dive id="${xmlId('dive', dive.id)}">`,
+        '        <informationbeforedive>',
+        ...(dive.siteId ? [`          <link ref="${xmlId('site', dive.siteId)}"/>`] : []),
+        ...(dive.number !== null && dive.number > 0
+          ? [`          <divenumber>${dive.number}</divenumber>`]
+          : []),
+        `          <datetime>${xml(diveDateTime(dive.diveDate, dive.entryTime, dive.utcOffsetMinutes))}</datetime>`,
+        ...(dive.airTemperatureCelsius
+          ? [
+              `          <airtemperature>${kelvin(dive.airTemperatureCelsius)}</airtemperature>`,
+            ]
+          : []),
+        '        </informationbeforedive>',
+        ...(samples.length > 0
+          ? [
+              '        <samples>',
+              ...samples.flatMap((sample) => [
+                '          <waypoint>',
+                `            <divetime>${sample.elapsedSeconds}</divetime>`,
+                `            <depth>${xml(sample.depthMeters)}</depth>`,
+                '          </waypoint>',
+              ]),
+              '        </samples>',
+            ]
+          : []),
+        '        <informationafterdive>',
+        ...(dive.waterTemperatureCelsius
+          ? [
+              `          <lowesttemperature>${kelvin(dive.waterTemperatureCelsius)}</lowesttemperature>`,
+            ]
+          : []),
+        `          <greatestdepth>${xml(dive.maximumDepthMeters ?? 0)}</greatestdepth>`,
+        ...(dive.averageDepthMeters
+          ? [`          <averagedepth>${xml(dive.averageDepthMeters)}</averagedepth>`]
+          : []),
+        `          <diveduration>${dive.durationSeconds}</diveduration>`,
+        ...(dive.notes
+          ? [
+              '          <notes>',
+              `            <para>${xml(dive.notes)}</para>`,
+              '          </notes>',
+            ]
+          : []),
+        '        </informationafterdive>',
+        '      </dive>',
+      ]
+    })
 
   const profileXml =
     divesXml.length > 0
