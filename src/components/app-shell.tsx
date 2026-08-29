@@ -1,10 +1,18 @@
 import { Link } from '@tanstack/react-router'
-import { Anchor, Database, Download, RefreshCw, ScrollText } from 'lucide-react'
+import {
+  Anchor,
+  Database,
+  Download,
+  RefreshCw,
+  ScrollText,
+  TableProperties,
+} from 'lucide-react'
 import type { ReactNode } from 'react'
 
 const navigation = [
   { to: '/', label: 'Overview', icon: Anchor },
   { to: '/dives', label: 'Dives', icon: Database },
+  { to: '/data', label: 'Data', icon: TableProperties },
   { to: '/settings/sync', label: 'Sync', icon: RefreshCw },
   { to: '/settings/sync/logs', label: 'Sync logs', icon: ScrollText },
   { to: '/settings/export', label: 'Export', icon: Download },
@@ -32,7 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 inactiveProps={{
                   className: 'text-muted-foreground hover:text-foreground',
                 }}
-                className="flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-medium transition-colors"
+                className="flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-medium transition-colors sm:px-3"
               >
                 <item.icon size={16} aria-hidden="true" />
                 <span className="hidden sm:inline">{item.label}</span>

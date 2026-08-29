@@ -43,6 +43,17 @@ location data, so store downloaded files securely. Divetracx does not generate
 DiveMate's proprietary `.ddb` format; use UDDF for interoperability and JSON
 for a lossless Divetracx backup.
 
+## Data management
+
+The **Data** menu lists dives, sites, divers, buddies, equipment,
+certifications, shops, dive types, tanks, and synchronization history. Each
+mutable collection supports creating manual records and editing existing ones.
+Dive editors also manage the buddy and equipment relationship tables.
+
+Synchronization history is intentionally read-only. Records imported from
+DiveMate can be edited, but their editor warns when source-owned fields may be
+refreshed by a later synchronization.
+
 ## DiveMate synchronization
 
 The importer downloads the configured `.ddb` backup, verifies that it is a

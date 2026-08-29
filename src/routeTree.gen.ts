@@ -11,13 +11,16 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as DataIndexRouteImport } from './routes/data/index'
 import { Route as DivesIndexRouteImport } from './routes/dives/index'
 import { Route as ApiExportCsvRouteImport } from './routes/api/export/csv'
 import { Route as ApiExportJsonRouteImport } from './routes/api/export/json'
 import { Route as ApiExportUddfRouteImport } from './routes/api/export/uddf'
+import { Route as DataEntityIndexRouteImport } from './routes/data/$entity/index'
 import { Route as DivesDiveIdIndexRouteImport } from './routes/dives/$diveId/index'
 import { Route as SettingsExportIndexRouteImport } from './routes/settings/export/index'
 import { Route as SettingsSyncIndexRouteImport } from './routes/settings/sync/index'
+import { Route as DataEntityRecordIdIndexRouteImport } from './routes/data/$entity/$recordId/index'
 import { Route as SettingsSyncLogsIndexRouteImport } from './routes/settings/sync/logs/index'
 
 const IndexRoute = IndexRouteImport.update({
@@ -28,6 +31,11 @@ const IndexRoute = IndexRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DataIndexRoute = DataIndexRouteImport.update({
+  id: '/data/',
+  path: '/data/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DivesIndexRoute = DivesIndexRouteImport.update({
@@ -50,6 +58,11 @@ const ApiExportUddfRoute = ApiExportUddfRouteImport.update({
   path: '/api/export/uddf',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DataEntityIndexRoute = DataEntityIndexRouteImport.update({
+  id: '/data/$entity/',
+  path: '/data/$entity/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DivesDiveIdIndexRoute = DivesDiveIdIndexRouteImport.update({
   id: '/dives/$diveId/',
   path: '/dives/$diveId/',
@@ -65,6 +78,11 @@ const SettingsSyncIndexRoute = SettingsSyncIndexRouteImport.update({
   path: '/settings/sync/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DataEntityRecordIdIndexRoute = DataEntityRecordIdIndexRouteImport.update({
+  id: '/data/$entity/$recordId/',
+  path: '/data/$entity/$recordId/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsSyncLogsIndexRoute = SettingsSyncLogsIndexRouteImport.update({
   id: '/settings/sync/logs/',
   path: '/settings/sync/logs/',
@@ -74,38 +92,47 @@ const SettingsSyncLogsIndexRoute = SettingsSyncLogsIndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
+  '/data/': typeof DataIndexRoute
   '/dives/': typeof DivesIndexRoute
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
+  '/data/$entity/': typeof DataEntityIndexRoute
   '/dives/$diveId/': typeof DivesDiveIdIndexRoute
   '/settings/export/': typeof SettingsExportIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
+  '/data/$entity/$recordId/': typeof DataEntityRecordIdIndexRoute
   '/settings/sync/logs/': typeof SettingsSyncLogsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
+  '/data': typeof DataIndexRoute
   '/dives': typeof DivesIndexRoute
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
+  '/data/$entity': typeof DataEntityIndexRoute
   '/dives/$diveId': typeof DivesDiveIdIndexRoute
   '/settings/export': typeof SettingsExportIndexRoute
   '/settings/sync': typeof SettingsSyncIndexRoute
+  '/data/$entity/$recordId': typeof DataEntityRecordIdIndexRoute
   '/settings/sync/logs': typeof SettingsSyncLogsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
+  '/data/': typeof DataIndexRoute
   '/dives/': typeof DivesIndexRoute
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
+  '/data/$entity/': typeof DataEntityIndexRoute
   '/dives/$diveId/': typeof DivesDiveIdIndexRoute
   '/settings/export/': typeof SettingsExportIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
+  '/data/$entity/$recordId/': typeof DataEntityRecordIdIndexRoute
   '/settings/sync/logs/': typeof SettingsSyncLogsIndexRoute
 }
 export interface FileRouteTypes {
@@ -113,50 +140,62 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/api/health'
+    | '/data/'
     | '/dives/'
     | '/api/export/csv'
     | '/api/export/json'
     | '/api/export/uddf'
+    | '/data/$entity/'
     | '/dives/$diveId/'
     | '/settings/export/'
     | '/settings/sync/'
+    | '/data/$entity/$recordId/'
     | '/settings/sync/logs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/api/health'
+    | '/data'
     | '/dives'
     | '/api/export/csv'
     | '/api/export/json'
     | '/api/export/uddf'
+    | '/data/$entity'
     | '/dives/$diveId'
     | '/settings/export'
     | '/settings/sync'
+    | '/data/$entity/$recordId'
     | '/settings/sync/logs'
   id:
     | '__root__'
     | '/'
     | '/api/health'
+    | '/data/'
     | '/dives/'
     | '/api/export/csv'
     | '/api/export/json'
     | '/api/export/uddf'
+    | '/data/$entity/'
     | '/dives/$diveId/'
     | '/settings/export/'
     | '/settings/sync/'
+    | '/data/$entity/$recordId/'
     | '/settings/sync/logs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  DataIndexRoute: typeof DataIndexRoute
   DivesIndexRoute: typeof DivesIndexRoute
   ApiExportCsvRoute: typeof ApiExportCsvRoute
   ApiExportJsonRoute: typeof ApiExportJsonRoute
   ApiExportUddfRoute: typeof ApiExportUddfRoute
+  DataEntityIndexRoute: typeof DataEntityIndexRoute
   DivesDiveIdIndexRoute: typeof DivesDiveIdIndexRoute
   SettingsExportIndexRoute: typeof SettingsExportIndexRoute
   SettingsSyncIndexRoute: typeof SettingsSyncIndexRoute
+  DataEntityRecordIdIndexRoute: typeof DataEntityRecordIdIndexRoute
   SettingsSyncLogsIndexRoute: typeof SettingsSyncLogsIndexRoute
 }
 
@@ -174,6 +213,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/data/': {
+      id: '/data/'
+      path: '/data'
+      fullPath: '/data/'
+      preLoaderRoute: typeof DataIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dives/': {
@@ -204,6 +250,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExportUddfRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/data/$entity/': {
+      id: '/data/$entity/'
+      path: '/data/$entity'
+      fullPath: '/data/$entity/'
+      preLoaderRoute: typeof DataEntityIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dives/$diveId/': {
       id: '/dives/$diveId/'
       path: '/dives/$diveId'
@@ -225,6 +278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsSyncIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/data/$entity/$recordId/': {
+      id: '/data/$entity/$recordId/'
+      path: '/data/$entity/$recordId'
+      fullPath: '/data/$entity/$recordId/'
+      preLoaderRoute: typeof DataEntityRecordIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/sync/logs/': {
       id: '/settings/sync/logs/'
       path: '/settings/sync/logs'
@@ -238,13 +298,16 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiHealthRoute: ApiHealthRoute,
+  DataIndexRoute: DataIndexRoute,
   DivesIndexRoute: DivesIndexRoute,
   ApiExportCsvRoute: ApiExportCsvRoute,
   ApiExportJsonRoute: ApiExportJsonRoute,
   ApiExportUddfRoute: ApiExportUddfRoute,
+  DataEntityIndexRoute: DataEntityIndexRoute,
   DivesDiveIdIndexRoute: DivesDiveIdIndexRoute,
   SettingsExportIndexRoute: SettingsExportIndexRoute,
   SettingsSyncIndexRoute: SettingsSyncIndexRoute,
+  DataEntityRecordIdIndexRoute: DataEntityRecordIdIndexRoute,
   SettingsSyncLogsIndexRoute: SettingsSyncLogsIndexRoute,
 }
 export const routeTree = rootRouteImport

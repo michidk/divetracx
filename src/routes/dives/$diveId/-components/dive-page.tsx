@@ -6,6 +6,7 @@ import {
   Gauge,
   MapPin,
   Navigation,
+  Pencil,
   Snowflake,
   Star,
   UserRound,
@@ -81,15 +82,24 @@ export function DivePage({ dive }: { dive: DiveData }) {
         >
           <ArrowLeft size={16} aria-hidden="true" /> Back to dives
         </Link>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <span className="rounded-full bg-primary/10 px-3 py-1 font-mono text-sm font-semibold text-primary">
-            Dive #{dive.number ?? '—'}
-          </span>
-          {dive.diveTypeName ? (
-            <span className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
-              {dive.diveTypeName}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="rounded-full bg-primary/10 px-3 py-1 font-mono text-sm font-semibold text-primary">
+              Dive #{dive.number ?? '—'}
             </span>
-          ) : null}
+            {dive.diveTypeName ? (
+              <span className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
+                {dive.diveTypeName}
+              </span>
+            ) : null}
+          </div>
+          <Link
+            to="/data/$entity/$recordId"
+            params={{ entity: 'dives', recordId: dive.id }}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border px-4 text-sm font-semibold transition hover:bg-muted"
+          >
+            <Pencil size={15} aria-hidden="true" /> Edit dive
+          </Link>
         </div>
         <h1 className="mt-3 text-balance text-4xl font-semibold tracking-tight md:text-5xl">
           {dive.site?.name ?? 'Unknown dive site'}
