@@ -184,6 +184,7 @@ export async function loadDive(diveId: string) {
           id: tanks.id,
           name: tanks.name,
           sortOrder: tanks.sortOrder,
+          computerTankNumber: tanks.computerTankNumber,
           tankType: tanks.tankType,
           volumeLiters: tanks.volumeLiters,
           startPressureBar: tanks.startPressureBar,
@@ -202,6 +203,10 @@ export async function loadDive(diveId: string) {
           sampleIndex: diveProfileSamples.sampleIndex,
           elapsedSeconds: diveProfileSamples.elapsedSeconds,
           depthMeters: diveProfileSamples.depthMeters,
+          temperatureCelsius: diveProfileSamples.temperatureCelsius,
+          pressureBar: diveProfileSamples.pressureBar,
+          decoCeilingMeters: diveProfileSamples.decoCeilingMeters,
+          tankNumber: diveProfileSamples.tankNumber,
         })
         .from(diveProfileSamples)
         .where(eq(diveProfileSamples.diveId, diveId))

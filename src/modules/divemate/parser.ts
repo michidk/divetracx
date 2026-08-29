@@ -315,6 +315,10 @@ function mapTank(row: SourceRow): DiveMateTank | null {
     diveExternalId,
     name: text(row.Name),
     sortOrder: integer(row.SortOrd),
+    computerTankNumber: (() => {
+      const value = integer(row.TankID)
+      return value !== null && value > 0 ? value : null
+    })(),
     tankType: integer(row.Tanktype),
     volumeLiters: decimal(row.Tanksize),
     startPressureBar: decimal(row.PresS),
@@ -327,45 +331,67 @@ function mapTank(row: SourceRow): DiveMateTank | null {
 
 const PROFILE_SAMPLE_WIDTH = 12
 const PROFILE_DEPTH_WIDTH = 4
+const PROFILE_AUXILIARY_WIDTH = 11
+const PROFILE_DECOMPRESSION_WIDTH = 9
+
+function fixedWidthSamples(value: unknown, width: number): string[] {
+  const profile = text(value)
+  if (!profile || profile.length % width !== 0 || !/^\d+$/.test(profile)) return []
+  return Array.from({ length: profile.length / width }, (_, index) =>
+    profile.slice(index * width, (index + 1) * width),
+  )
+}
 
 function mapProfileSamples(row: SourceRow): DiveMateProfileSample[] {
   const diveExternalId = externalId(row.ID)
-  const profile = text(row.Profile)
   const profileIntervalSeconds = integer(row.ProfileInt)
+  const profileSamples = fixedWidthSamples(row.Profile, PROFILE_SAMPLE_WIDTH)
   if (
     !diveExternalId ||
-    !profile ||
     !profileIntervalSeconds ||
     profileIntervalSeconds <= 0 ||
-    profile.length % PROFILE_SAMPLE_WIDTH !== 0 ||
-    !/^\d+$/.test(profile)
+    profileSamples.length === 0
   ) {
     return []
   }
 
+  const auxiliarySamples = fixedWidthSamples(row.Profile2, PROFILE_AUXILIARY_WIDTH)
+  const decompressionSamples = fixedWidthSamples(
+    row.Profile4,
+    PROFILE_DECOMPRESSION_WIDTH,
+  )
   const externalUuid = text(row.UUID)
   const sourceUpdatedAt = text(row.Updated)
-  return Array.from(
-    { length: profile.length / PROFILE_SAMPLE_WIDTH },
-    (_, sampleIndex) => {
-      const offset = sampleIndex * PROFILE_SAMPLE_WIDTH
-      const rawSample = profile.slice(offset, offset + PROFILE_SAMPLE_WIDTH)
-      const depthTenths = Number(rawSample.slice(0, PROFILE_DEPTH_WIDTH))
-      return {
-        diveExternalId,
-        sampleIndex,
-        elapsedSeconds: sampleIndex * profileIntervalSeconds,
-        depthMeters: (depthTenths / 10).toFixed(1),
-        externalId: `${diveExternalId}:${sampleIndex}`,
-        externalUuid,
-        sourceUpdatedAt,
-        sourcePayload: {
-          rawSample,
-          profileIntervalSeconds,
-        },
-      }
-    },
-  )
+  return profileSamples.map((rawSample, sampleIndex) => {
+    const auxiliarySample = auxiliarySamples[sampleIndex] ?? null
+    const decompressionSample = decompressionSamples[sampleIndex] ?? null
+    const depthTenths = Number(rawSample.slice(0, PROFILE_DEPTH_WIDTH))
+    const pressureTenths = auxiliarySample ? Number(auxiliarySample.slice(3, 7)) : 0
+    const ceilingMeters = decompressionSample
+      ? Number(decompressionSample.slice(6, 9))
+      : 0
+    return {
+      diveExternalId,
+      sampleIndex,
+      elapsedSeconds: sampleIndex * profileIntervalSeconds,
+      depthMeters: (depthTenths / 10).toFixed(1),
+      temperatureCelsius: auxiliarySample
+        ? (Number(auxiliarySample.slice(0, 3)) / 10).toFixed(1)
+        : null,
+      pressureBar: pressureTenths > 0 ? (pressureTenths / 10).toFixed(1) : null,
+      decoCeilingMeters: ceilingMeters > 0 ? String(ceilingMeters) : null,
+      tankNumber: auxiliarySample ? Number(auxiliarySample.slice(7, 8)) + 1 : null,
+      externalId: `${diveExternalId}:${sampleIndex}`,
+      externalUuid,
+      sourceUpdatedAt,
+      sourcePayload: {
+        rawSample,
+        ...(auxiliarySample ? { rawAuxiliarySample: auxiliarySample } : {}),
+        ...(decompressionSample ? { rawDecompressionSample: decompressionSample } : {}),
+        profileIntervalSeconds,
+      },
+    }
+  })
 }
 
 function compact<T>(items: Array<T | null>): T[] {

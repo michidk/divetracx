@@ -141,7 +141,7 @@ export function DivePage({ dive }: { dive: DiveData }) {
         />
       </section>
 
-      <DiveProfileChart samples={dive.profileSamples} />
+      <DiveProfileChart samples={dive.profileSamples} tanks={dive.tanks} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(18rem,0.8fr)]">
         <div className="space-y-6">

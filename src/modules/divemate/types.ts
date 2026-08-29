@@ -114,6 +114,7 @@ export interface DiveMateTank extends DiveMateSourceRecord {
   diveExternalId: string
   name: string | null
   sortOrder: number | null
+  computerTankNumber: number | null
   tankType: number | null
   volumeLiters: string | null
   startPressureBar: string | null
@@ -128,6 +129,10 @@ export interface DiveMateProfileSample extends DiveMateSourceRecord {
   sampleIndex: number
   elapsedSeconds: number
   depthMeters: string
+  temperatureCelsius: string | null
+  pressureBar: string | null
+  decoCeilingMeters: string | null
+  tankNumber: number | null
 }
 
 export interface DiveMateSnapshot {

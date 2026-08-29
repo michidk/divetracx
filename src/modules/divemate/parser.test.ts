@@ -88,22 +88,25 @@ describe('parseDiveMateDatabase', () => {
         Weight REAL, VisHor TEXT, UWCurrent TEXT, Waves TEXT, Weather TEXT,
         Water INTEGER, Entry INTEGER, Rating INTEGER, Computer TEXT,
         Divesuit TEXT, Boat TEXT, Divemaster TEXT, Comments TEXT,
-        UUID TEXT, Updated TEXT, ProfileInt INTEGER, Profile TEXT
+        UUID TEXT, Updated TEXT, ProfileInt INTEGER, Profile TEXT,
+        Profile2 TEXT, Profile4 TEXT
       );
       INSERT INTO Logbook VALUES (
         11, 1, 7, 2, 5, '4', '9', 42, '2026-07-26', '14:29:00',
         120, 48.5, '01:30', 31.2, 16.4, 26, 22, 6.5, '15 m', 'low',
         'calm', 'sunny', 1, 2, 5, 'Computer', '5 mm', 'Boat', 'Guide',
         'great dive', 'dive-uuid', '2026-07-26', 30,
-        '000000000000001500000000012300000000'
+        '000000000000001500000000012300000000',
+        '220200000002151500100020000001000',
+        '000099000010002003005001006'
       );
       CREATE TABLE Tank (
-        ID INTEGER, LogID INTEGER, Name TEXT, SortOrd INTEGER, Tanktype INTEGER,
+        ID INTEGER, LogID INTEGER, TankID INTEGER, Name TEXT, SortOrd INTEGER, Tanktype INTEGER,
         Tanksize REAL, PresS REAL, PresE REAL, O2 REAL, He REAL,
         BreathingTime INTEGER, UUID TEXT, Updated TEXT
       );
       INSERT INTO Tank VALUES (
-        12, 11, 'Back gas', 1, 0, 12, 200, 50, 32, 0, 2900,
+        12, 11, 2, 'Back gas', 1, 0, 12, 200, 50, 32, 0, 2900,
         'tank-uuid', '2026-07-26'
       );
     `)
@@ -130,6 +133,7 @@ describe('parseDiveMateDatabase', () => {
     })
     expect(snapshot.tanks[0]).toMatchObject({
       diveExternalId: '11',
+      computerTankNumber: 2,
       oxygenPercent: '32',
     })
     expect(snapshot.profileSamples).toEqual([
@@ -139,22 +143,36 @@ describe('parseDiveMateDatabase', () => {
         sampleIndex: 0,
         elapsedSeconds: 0,
         depthMeters: '0.0',
+        temperatureCelsius: '22.0',
+        pressureBar: '200.0',
+        decoCeilingMeters: null,
+        tankNumber: 1,
       }),
       expect.objectContaining({
         externalId: '11:1',
         sampleIndex: 1,
         elapsedSeconds: 30,
         depthMeters: '1.5',
+        temperatureCelsius: '21.5',
+        pressureBar: '150.0',
+        decoCeilingMeters: '3',
+        tankNumber: 2,
       }),
       expect.objectContaining({
         externalId: '11:2',
         sampleIndex: 2,
         elapsedSeconds: 60,
         depthMeters: '12.3',
+        temperatureCelsius: '20.0',
+        pressureBar: null,
+        decoCeilingMeters: '6',
+        tankNumber: 2,
       }),
     ])
     expect(snapshot.profileSamples[2]?.sourcePayload).toEqual({
       rawSample: '012300000000',
+      rawAuxiliarySample: '20000001000',
+      rawDecompressionSample: '005001006',
       profileIntervalSeconds: 30,
     })
     expect(snapshot.equipment[0]?.sourcePayload.Photo).toEqual({

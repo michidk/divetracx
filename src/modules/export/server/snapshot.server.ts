@@ -22,7 +22,7 @@ export async function loadExportSnapshot(): Promise<ExportSnapshot> {
   return getDb().transaction(
     async (transaction) => ({
       format: 'divetracx-backup',
-      version: 2,
+      version: 3,
       exportedAt: new Date().toISOString(),
       data: {
         divers: await transaction.select().from(divers),

@@ -403,6 +403,7 @@ async function saveTank(id: string, values: EditorValues) {
     diveId: requiredUuid(values, 'diveId'),
     name: optionalText(values, 'name'),
     sortOrder: optionalInteger(values, 'sortOrder'),
+    computerTankNumber: optionalInteger(values, 'computerTankNumber', { min: 1 }),
     tankType: optionalInteger(values, 'tankType'),
     volumeLiters: optionalDecimal(values, 'volumeLiters', { min: 0 }),
     startPressureBar,
@@ -435,6 +436,10 @@ async function saveProfileSample(id: string, values: EditorValues) {
     sampleIndex: requiredInteger(values, 'sampleIndex', { min: 0 }),
     elapsedSeconds: requiredInteger(values, 'elapsedSeconds', { min: 0 }),
     depthMeters,
+    temperatureCelsius: optionalDecimal(values, 'temperatureCelsius'),
+    pressureBar: optionalDecimal(values, 'pressureBar', { min: 0 }),
+    decoCeilingMeters: optionalDecimal(values, 'decoCeilingMeters', { min: 0 }),
+    tankNumber: optionalInteger(values, 'tankNumber', { min: 1 }),
     updatedAt: new Date(),
   }
 

@@ -382,6 +382,10 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
             sampleIndex: sample.sampleIndex,
             elapsedSeconds: sample.elapsedSeconds,
             depthMeters: sample.depthMeters,
+            temperatureCelsius: sample.temperatureCelsius,
+            pressureBar: sample.pressureBar,
+            decoCeilingMeters: sample.decoCeilingMeters,
+            tankNumber: sample.tankNumber,
           })),
         )
       }
@@ -395,6 +399,7 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
         diveId,
         name: item.name,
         sortOrder: item.sortOrder,
+        computerTankNumber: item.computerTankNumber,
         tankType: item.tankType,
         volumeLiters: item.volumeLiters,
         startPressureBar: item.startPressureBar,

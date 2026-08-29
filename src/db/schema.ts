@@ -256,6 +256,10 @@ export const diveProfileSamples = pgTable(
     sampleIndex: integer('sample_index').notNull(),
     elapsedSeconds: integer('elapsed_seconds').notNull(),
     depthMeters: numeric('depth_meters', { precision: 7, scale: 2 }).notNull(),
+    temperatureCelsius: numeric('temperature_celsius', { precision: 5, scale: 2 }),
+    pressureBar: numeric('pressure_bar', { precision: 7, scale: 2 }),
+    decoCeilingMeters: numeric('deco_ceiling_meters', { precision: 7, scale: 2 }),
+    tankNumber: integer('tank_number'),
     ...sourceColumns,
     ...auditColumns,
   },
@@ -311,6 +315,7 @@ export const tanks = pgTable(
       .references(() => dives.id, { onDelete: 'cascade' }),
     name: text('name'),
     sortOrder: integer('sort_order'),
+    computerTankNumber: integer('computer_tank_number'),
     tankType: integer('tank_type'),
     volumeLiters: numeric('volume_liters', { precision: 7, scale: 2 }),
     startPressureBar: numeric('start_pressure_bar', {

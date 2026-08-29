@@ -267,7 +267,15 @@ async function loadDataListRecords(
           sample,
           `${sample.depthMeters} m at ${sample.elapsedSeconds} s`,
           `Dive #${diveNumber ?? '—'} · ${diveDate}`,
-          `Sample ${sample.sampleIndex + 1}`,
+          [
+            `Sample ${sample.sampleIndex + 1}`,
+            sample.temperatureCelsius ? `${sample.temperatureCelsius} °C` : null,
+            sample.pressureBar ? `${sample.pressureBar} bar` : null,
+            sample.decoCeilingMeters ? `${sample.decoCeilingMeters} m ceiling` : null,
+            sample.tankNumber ? `Tank ${sample.tankNumber}` : null,
+          ]
+            .filter(Boolean)
+            .join(' · '),
         ),
       )
     }

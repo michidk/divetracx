@@ -24,6 +24,9 @@ function displayName(
 
 function tankSummary(tank: ExportSnapshot['data']['tanks'][number]) {
   const parts = [tank.name || 'Tank']
+  if (tank.computerTankNumber !== null) {
+    parts.push(`channel ${tank.computerTankNumber}`)
+  }
   if (tank.volumeLiters) parts.push(`${tank.volumeLiters} L`)
   if (tank.startPressureBar || tank.endPressureBar) {
     parts.push(`${tank.startPressureBar ?? '?'}-${tank.endPressureBar ?? '?'} bar`)
@@ -143,7 +146,7 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
     'equipment',
     'tanks',
     'profile_sample_count',
-    'profile_samples_seconds_depth_meters',
+    'profile_samples_seconds_depth_meters_temperature_celsius_pressure_bar_deco_ceiling_meters_tank_channel',
     'notes',
     'source',
     'source_id',
@@ -219,7 +222,16 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
         csvCell(profileSamples.length),
         csvCell(
           profileSamples
-            .map((sample) => `${sample.elapsedSeconds}:${sample.depthMeters}`)
+            .map((sample) =>
+              [
+                sample.elapsedSeconds,
+                sample.depthMeters,
+                sample.temperatureCelsius ?? '',
+                sample.pressureBar ?? '',
+                sample.decoCeilingMeters ?? '',
+                sample.tankNumber ?? '',
+              ].join(':'),
+            )
             .join(';'),
         ),
         csvCell(dive.notes, true),
