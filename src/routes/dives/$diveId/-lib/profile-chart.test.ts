@@ -92,6 +92,10 @@ describe('dive profile chart geometry', () => {
     expect(geometry.tank2PressurePath.match(/M/g)).toHaveLength(2)
     expect(geometry.pressurePath).toBe('')
     expect(geometry.ceilingPath).toContain('L')
+    expect(geometry.ceilingAreaPath).toStartWith(
+      `M ${geometry.points[1]?.x} ${PROFILE_CHART_VIEWBOX.top}`,
+    )
+    expect(geometry.ceilingAreaPath).toEndWith('Z')
     expect(geometry.tankSwitches.map((point) => point.tankNumber)).toEqual([1, 2])
     expect(geometry.pressureRange).toEqual({ minimum: 0, maximum: 200 })
   })

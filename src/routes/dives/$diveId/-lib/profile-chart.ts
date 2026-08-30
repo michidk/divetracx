@@ -83,6 +83,38 @@ export function createSegmentedPath<T>(
     .join(' ')
 }
 
+function createSegmentedAreaPath<T>(
+  points: T[],
+  position: (point: T) => { x: number; y: number } | null,
+  baselineY: number,
+) {
+  const paths: string[] = []
+  let segment: Array<{ x: number; y: number }> = []
+
+  function closeSegment() {
+    const first = segment[0]
+    const last = segment.at(-1)
+    if (!first || !last) return
+    paths.push(
+      `M ${first.x} ${baselineY} L ${segment
+        .map((point) => `${point.x} ${point.y}`)
+        .join(' L ')} L ${last.x} ${baselineY} Z`,
+    )
+    segment = []
+  }
+
+  for (const point of points) {
+    const positioned = position(point)
+    if (positioned) {
+      segment.push(positioned)
+    } else {
+      closeSegment()
+    }
+  }
+  closeSegment()
+  return paths.join(' ')
+}
+
 export function createProfileGeometry(samples: DiveProfilePoint[]) {
   const points = samples
     .filter(
@@ -191,6 +223,11 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
   const ceilingPath = createSegmentedPath(positionedPoints, (point) =>
     point.ceilingY === null ? null : { x: point.x, y: point.ceilingY },
   )
+  const ceilingAreaPath = createSegmentedAreaPath(
+    positionedPoints,
+    (point) => (point.ceilingY === null ? null : { x: point.x, y: point.ceilingY }),
+    PROFILE_CHART_VIEWBOX.top,
+  )
   const firstPoint = positionedPoints[0]
   const lastPoint = positionedPoints.at(-1)
   const depthAreaPath =
@@ -212,6 +249,7 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
     tank1PressurePath,
     tank2PressurePath,
     ceilingPath,
+    ceilingAreaPath,
     tankSwitches,
     maximumElapsedSeconds,
     maximumDepthMeters,

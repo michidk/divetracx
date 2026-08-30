@@ -97,6 +97,11 @@ export function DivePage({ dive }: { dive: DiveData }) {
                 {dive.diveTypeName}
               </span>
             ) : null}
+            {dive.decompressionDive ? (
+              <span className="rounded-full bg-red-500/10 px-3 py-1 text-sm font-bold tracking-wide text-red-600 ring-1 ring-inset ring-red-500/25 dark:text-red-400">
+                DECO
+              </span>
+            ) : null}
           </div>
           <Link
             to="/data/$entity/$recordId"

@@ -121,6 +121,7 @@ export function DiveProfileChart({
   tanks: ProfileTank[]
 }) {
   const gradientId = useId()
+  const ceilingGradientId = useId()
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const geometry = useMemo(
     () =>
@@ -237,7 +238,7 @@ export function DiveProfileChart({
             </span>
             {geometry.ceilingPath ? (
               <span className="inline-flex items-center gap-2">
-                <span className="h-0.5 w-5 border-t-2 border-dashed border-red-500" />
+                <span className="h-0.5 w-5 bg-red-500" />
                 Deco ceiling
               </span>
             ) : null}
@@ -291,13 +292,18 @@ export function DiveProfileChart({
               <title>Dive computer profile</title>
               <desc>
                 Depth increases downward. Temperature and the differently colored tank
-                pressures use aligned tracks. Dashed red segments show the recorded
-                decompression ceiling. Colored vertical markers indicate tank switches.
+                pressures use aligned tracks. A red gradient and solid boundary show the
+                recorded decompression ceiling. Colored vertical markers indicate tank
+                switches.
               </desc>
               <defs>
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.08" />
                   <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.3" />
+                </linearGradient>
+                <linearGradient id={ceilingGradientId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#ef4444" stopOpacity="0.06" />
+                  <stop offset="100%" stopColor="#ef4444" stopOpacity="0.32" />
                 </linearGradient>
               </defs>
 
@@ -354,6 +360,9 @@ export function DiveProfileChart({
               ))}
 
               <path d={geometry.depthAreaPath} fill={`url(#${gradientId})`} />
+              {geometry.ceilingAreaPath ? (
+                <path d={geometry.ceilingAreaPath} fill={`url(#${ceilingGradientId})`} />
+              ) : null}
               <path
                 d={geometry.depthPath}
                 fill="none"
@@ -369,8 +378,8 @@ export function DiveProfileChart({
                   fill="none"
                   className="stroke-red-500"
                   strokeWidth="2.5"
-                  strokeDasharray="7 5"
                   strokeLinejoin="round"
+                  strokeLinecap="round"
                   vectorEffect="non-scaling-stroke"
                 />
               ) : null}
@@ -494,6 +503,16 @@ export function DiveProfileChart({
                     strokeWidth="3"
                     vectorEffect="non-scaling-stroke"
                   />
+                  {selectedPoint.temperatureY === null ? null : (
+                    <circle
+                      cx={selectedPoint.x}
+                      cy={selectedPoint.temperatureY}
+                      r="4.5"
+                      className="fill-orange-500 stroke-background"
+                      strokeWidth="2"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  )}
                   {selectedPoint.tank1PressureY === null ? null : (
                     <circle
                       cx={selectedPoint.x}
