@@ -88,6 +88,76 @@ export async function loadDives() {
     .limit(250)
 }
 
+export async function loadDiveSiteMap() {
+  const db = getDb()
+  return db.transaction(
+    async (transaction) => {
+      const [sites, siteDives] = await Promise.all([
+        transaction
+          .select({
+            id: diveSites.id,
+            name: diveSites.name,
+            country: diveSites.country,
+            region: diveSites.region,
+            waterName: diveSites.waterName,
+            latitude: diveSites.latitude,
+            longitude: diveSites.longitude,
+            maximumDepthMeters: diveSites.maximumDepthMeters,
+            altitudeMeters: diveSites.altitudeMeters,
+            difficulty: diveSites.difficulty,
+            rating: diveSites.rating,
+          })
+          .from(diveSites)
+          .orderBy(asc(diveSites.name)),
+        transaction
+          .select({
+            id: dives.id,
+            siteId: dives.siteId,
+            number: dives.number,
+            diveDate: dives.diveDate,
+            maximumDepthMeters: dives.maximumDepthMeters,
+          })
+          .from(dives)
+          .orderBy(desc(dives.diveDate), desc(dives.entryTime)),
+      ])
+
+      const divesBySite = new Map<string, typeof siteDives>()
+      for (const dive of siteDives) {
+        if (!dive.siteId) continue
+        const siteEntries = divesBySite.get(dive.siteId) ?? []
+        siteEntries.push(dive)
+        divesBySite.set(dive.siteId, siteEntries)
+      }
+
+      return sites.map((site) => {
+        const siteEntries = divesBySite.get(site.id) ?? []
+        const deepestMeters = siteEntries.reduce<string | null>((deepest, dive) => {
+          if (dive.maximumDepthMeters === null) return deepest
+          if (deepest === null || Number(dive.maximumDepthMeters) > Number(deepest)) {
+            return dive.maximumDepthMeters
+          }
+          return deepest
+        }, null)
+        const latestDive = siteEntries[0]
+
+        return {
+          ...site,
+          diveCount: siteEntries.length,
+          deepestMeters,
+          latestDive: latestDive
+            ? {
+                id: latestDive.id,
+                number: latestDive.number,
+                diveDate: latestDive.diveDate,
+              }
+            : null,
+        }
+      })
+    },
+    { isolationLevel: 'repeatable read', accessMode: 'read only' },
+  )
+}
+
 export async function loadDive(diveId: string) {
   const db = getDb()
   return db.transaction(

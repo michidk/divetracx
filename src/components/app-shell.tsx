@@ -3,6 +3,7 @@ import {
   Anchor,
   Database,
   Download,
+  MapPinned,
   RefreshCw,
   ScrollText,
   TableProperties,
@@ -12,6 +13,7 @@ import type { ReactNode } from 'react'
 const navigation = [
   { to: '/', label: 'Overview', icon: Anchor },
   { to: '/dives', label: 'Dives', icon: Database },
+  { to: '/map', label: 'Map', icon: MapPinned },
   { to: '/data', label: 'Data', icon: TableProperties },
   { to: '/settings/sync', label: 'Sync', icon: RefreshCw },
   { to: '/settings/sync/logs', label: 'Sync logs', icon: ScrollText },
@@ -43,7 +45,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 className="flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-medium transition-colors sm:px-3"
               >
                 <item.icon size={16} aria-hidden="true" />
-                <span className="hidden sm:inline">{item.label}</span>
+                <span className="hidden lg:inline">{item.label}</span>
               </Link>
             ))}
           </nav>

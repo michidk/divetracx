@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as DataIndexRouteImport } from './routes/data/index'
 import { Route as DivesIndexRouteImport } from './routes/dives/index'
+import { Route as MapIndexRouteImport } from './routes/map/index'
 import { Route as ApiExportCsvRouteImport } from './routes/api/export/csv'
 import { Route as ApiExportJsonRouteImport } from './routes/api/export/json'
 import { Route as ApiExportUddfRouteImport } from './routes/api/export/uddf'
@@ -41,6 +42,11 @@ const DataIndexRoute = DataIndexRouteImport.update({
 const DivesIndexRoute = DivesIndexRouteImport.update({
   id: '/dives/',
   path: '/dives/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapIndexRoute = MapIndexRouteImport.update({
+  id: '/map/',
+  path: '/map/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiExportCsvRoute = ApiExportCsvRouteImport.update({
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/data/': typeof DataIndexRoute
   '/dives/': typeof DivesIndexRoute
+  '/map/': typeof MapIndexRoute
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/data': typeof DataIndexRoute
   '/dives': typeof DivesIndexRoute
+  '/map': typeof MapIndexRoute
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/data/': typeof DataIndexRoute
   '/dives/': typeof DivesIndexRoute
+  '/map/': typeof MapIndexRoute
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
@@ -142,6 +151,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/data/'
     | '/dives/'
+    | '/map/'
     | '/api/export/csv'
     | '/api/export/json'
     | '/api/export/uddf'
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/data'
     | '/dives'
+    | '/map'
     | '/api/export/csv'
     | '/api/export/json'
     | '/api/export/uddf'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/data/'
     | '/dives/'
+    | '/map/'
     | '/api/export/csv'
     | '/api/export/json'
     | '/api/export/uddf'
@@ -188,6 +200,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   DataIndexRoute: typeof DataIndexRoute
   DivesIndexRoute: typeof DivesIndexRoute
+  MapIndexRoute: typeof MapIndexRoute
   ApiExportCsvRoute: typeof ApiExportCsvRoute
   ApiExportJsonRoute: typeof ApiExportJsonRoute
   ApiExportUddfRoute: typeof ApiExportUddfRoute
@@ -227,6 +240,13 @@ declare module '@tanstack/react-router' {
       path: '/dives'
       fullPath: '/dives/'
       preLoaderRoute: typeof DivesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/map/': {
+      id: '/map/'
+      path: '/map'
+      fullPath: '/map/'
+      preLoaderRoute: typeof MapIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/export/csv': {
@@ -300,6 +320,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   DataIndexRoute: DataIndexRoute,
   DivesIndexRoute: DivesIndexRoute,
+  MapIndexRoute: MapIndexRoute,
   ApiExportCsvRoute: ApiExportCsvRoute,
   ApiExportJsonRoute: ApiExportJsonRoute,
   ApiExportUddfRoute: ApiExportUddfRoute,
