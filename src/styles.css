@@ -53,3 +53,122 @@
     outline: 2px solid var(--primary);
   }
 }
+
+.divetracx-site-map .maplibregl-canvas {
+  filter: saturate(0.72) brightness(1.02) contrast(0.96);
+}
+
+.divetracx-site-map .maplibregl-ctrl-group {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  box-shadow: none;
+}
+
+.divetracx-site-map .maplibregl-ctrl-group button {
+  background-color: transparent;
+  opacity: 0.7;
+  transition:
+    background-color 150ms ease-out,
+    opacity 150ms ease-out;
+}
+
+.divetracx-site-map .maplibregl-ctrl-group button:hover,
+.divetracx-site-map .maplibregl-ctrl-group button:focus-visible {
+  background-color: var(--accent);
+  opacity: 1;
+}
+
+.divetracx-site-map-marker {
+  position: relative;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  transition: transform 150ms ease-out;
+}
+
+.divetracx-site-map-marker:hover,
+.divetracx-site-map-marker:focus-visible,
+.divetracx-site-map-marker[data-selected="true"] {
+  transform: scale(1.1);
+}
+
+.divetracx-site-map-marker[data-selected="true"] {
+  z-index: 3;
+}
+
+.divetracx-site-map-marker:focus-visible {
+  border-radius: 999px;
+  outline: 3px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.divetracx-site-map-marker-pin {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+  place-items: center;
+  border: 3px solid var(--card);
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 1px 5px rgb(16 44 49 / 28%);
+  color: var(--primary-foreground);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1;
+  transition:
+    background-color 150ms ease-out,
+    box-shadow 150ms ease-out,
+    width 150ms ease-out,
+    height 150ms ease-out;
+}
+
+.divetracx-site-map-marker-cluster {
+  width: 26px;
+  height: 26px;
+  box-shadow:
+    0 0 0 2px var(--card),
+    0 0 0 3px var(--primary);
+}
+
+.divetracx-site-map-marker[data-selected="true"] .divetracx-site-map-marker-pin {
+  width: 24px;
+  height: 24px;
+  background: #ea580c;
+  box-shadow:
+    0 0 0 2px var(--card),
+    0 0 0 4px #ea580c;
+}
+
+.divetracx-site-map-marker[data-selected="true"] .divetracx-site-map-marker-cluster {
+  width: 28px;
+  height: 28px;
+}
+
+.divetracx-site-map-inspector {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 200ms ease-in-out,
+    transform 200ms ease-in-out;
+}
+
+@starting-style {
+  .divetracx-site-map-inspector {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (max-width: 639px), (pointer: coarse) {
+  .maplibregl-map .maplibregl-ctrl-group button {
+    width: 44px;
+    height: 44px;
+  }
+}

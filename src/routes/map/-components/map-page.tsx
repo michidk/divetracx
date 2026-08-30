@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { ExternalLink, MapPin, Pencil, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { formatDiveDate, formatMeters } from '@/modules/dives/format'
 import type { getDiveSiteMap } from '@/modules/dives/server/queries'
 import {
@@ -31,6 +31,16 @@ export function MapPage({ sites }: { sites: DiveSiteMapData }) {
     () => filteredSites.flatMap((site) => mapSiteCoordinates(site) ?? []),
     [filteredSites],
   )
+
+  useEffect(() => {
+    if (
+      selectedSiteId &&
+      !filteredMappedSites.some((site) => site.id === selectedSiteId)
+    ) {
+      setSelectedSiteId(null)
+    }
+  }, [filteredMappedSites, selectedSiteId])
+
   const mappedDives = mappedSites.reduce((total, site) => total + site.diveCount, 0)
   const unmappedSiteCount = sites.length - mappedSites.length
 

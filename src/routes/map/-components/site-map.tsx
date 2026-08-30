@@ -1,55 +1,19 @@
-import type { CircleMarker, Map as LeafletMap } from 'leaflet'
-import { useEffect, useRef, useState } from 'react'
-import 'leaflet/dist/leaflet.css'
+import type { Map as MapLibreMap, Marker as MapLibreMarker } from 'maplibre-gl'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import 'maplibre-gl/dist/maplibre-gl.css'
 import { groupSitesByCoordinates, type MappedDiveSite } from '../-lib/map-sites'
+import { SiteMapInspector } from './site-map-inspector'
+import {
+  configureSiteMapMarkerNavigation,
+  createSiteMapMarkerElement,
+  getVisibleSiteGroupKeys,
+  syncSiteMapMarkerSelection,
+} from './site-map-marker'
+import { SiteMapStatus, type SiteMapStatusValue } from './site-map-status'
+import { DIVE_SITE_BASEMAP_STYLE } from './site-map-style'
+import { fitSiteMapGroups, positionSelectedDiveSite } from './site-map-viewport'
 
-function locationLabel(site: MappedDiveSite) {
-  return [site.region, site.country].filter(Boolean).join(', ') || 'Location not set'
-}
-
-function createPopup(sites: MappedDiveSite[]) {
-  const popup = document.createElement('div')
-  popup.className = 'min-w-52 space-y-3 py-1 font-sans'
-
-  if (sites.length > 1) {
-    const heading = document.createElement('p')
-    heading.className = 'text-xs font-bold uppercase tracking-wider text-slate-500'
-    heading.textContent = `${sites.length} dive spots at this location`
-    popup.append(heading)
-  }
-
-  for (const site of sites) {
-    const entry = document.createElement('div')
-    entry.className = 'border-b border-slate-200 pb-2 last:border-0 last:pb-0'
-
-    const title = document.createElement('a')
-    title.className = 'block font-semibold text-teal-800 hover:underline'
-    title.href = `/data/sites/${site.id}`
-    title.textContent = site.name
-
-    const location = document.createElement('p')
-    location.className = 'mt-0.5 text-xs text-slate-500'
-    location.textContent = locationLabel(site)
-
-    const summary = document.createElement('p')
-    summary.className = 'mt-1 text-xs text-slate-700'
-    summary.textContent = `${site.diveCount} ${site.diveCount === 1 ? 'dive' : 'dives'}${site.deepestMeters ? ` · deepest ${Number(site.deepestMeters).toFixed(1)} m` : ''}`
-
-    entry.append(title, location, summary)
-
-    if (site.latestDive) {
-      const latestDive = document.createElement('a')
-      latestDive.className =
-        'mt-1 inline-block text-xs font-medium text-teal-700 hover:underline'
-      latestDive.href = `/dives/${site.latestDive.id}`
-      latestDive.textContent = `Open latest dive #${site.latestDive.number ?? '—'}`
-      entry.append(latestDive)
-    }
-    popup.append(entry)
-  }
-
-  return popup
-}
+const MAP_LOAD_TIMEOUT_MS = 8_000
 
 export function SiteMap({
   sites,
@@ -58,136 +22,290 @@ export function SiteMap({
 }: {
   sites: MappedDiveSite[]
   selectedSiteId: string | null
-  onSelectSite: (siteId: string) => void
+  onSelectSite: (siteId: string | null) => void
 }) {
+  const groups = useMemo(() => groupSitesByCoordinates(sites), [sites])
+  const selectedSite = sites.find((site) => site.id === selectedSiteId) ?? null
   const containerRef = useRef<HTMLElement>(null)
-  const mapRef = useRef<LeafletMap | null>(null)
-  const markersRef = useRef(new Map<string, CircleMarker>())
-  const onSelectSiteRef = useRef(onSelectSite)
+  const mapRef = useRef<MapLibreMap | null>(null)
+  const markersRef = useRef<Map<string, MapLibreMarker>>(new Map())
+  const markerElementsRef = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const retryButtonRef = useRef<HTMLButtonElement>(null)
+  const shouldFocusRetryRef = useRef(false)
+  const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const groupsRef = useRef(groups)
   const selectedSiteIdRef = useRef(selectedSiteId)
-  const [error, setError] = useState(false)
-  const [ready, setReady] = useState(false)
-  onSelectSiteRef.current = onSelectSite
-  selectedSiteIdRef.current = selectedSiteId
+  const onSelectSiteRef = useRef(onSelectSite)
+  const rovingGroupKeyRef = useRef<string | null>(null)
+  const lastSelectedGroupKeyRef = useRef<string | null>(null)
+  const lastPositionedSiteIdRef = useRef<string | null>(null)
+  const [mapAttempt, setMapAttempt] = useState(0)
+  const [status, setStatus] = useState<SiteMapStatusValue>('loading')
+  const [inspectorFocusRequest, setInspectorFocusRequest] = useState(0)
 
+  groupsRef.current = groups
+  selectedSiteIdRef.current = selectedSiteId
+  onSelectSiteRef.current = onSelectSite
+
+  const selectedGroupKey =
+    groups.find((group) => group.sites.some((site) => site.id === selectedSiteId))?.key ??
+    null
+  if (selectedGroupKey && selectedGroupKey !== lastSelectedGroupKeyRef.current) {
+    rovingGroupKeyRef.current = selectedGroupKey
+  }
+
+  const handleMapError = useCallback((error: unknown) => {
+    console.error('Dive site map failed', error)
+    shouldFocusRetryRef.current =
+      containerRef.current?.contains(document.activeElement) ?? false
+    if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current)
+    loadTimeoutRef.current = null
+    setStatus('error')
+  }, [])
+
+  const synchronizeMarkerSelection = useCallback((map: MapLibreMap) => {
+    let focusedGroupKey: string | null = null
+    for (const [groupKey, element] of markerElementsRef.current) {
+      if (element === document.activeElement) focusedGroupKey = groupKey
+    }
+    const visibleGroupKeys = getVisibleSiteGroupKeys(map, groupsRef.current)
+    const activeSelectedGroupKey =
+      groupsRef.current.find((group) =>
+        group.sites.some((site) => site.id === selectedSiteIdRef.current),
+      )?.key ?? null
+    const tabbableGroupKey = syncSiteMapMarkerSelection(
+      markerElementsRef.current,
+      activeSelectedGroupKey,
+      visibleGroupKeys,
+      focusedGroupKey ?? rovingGroupKeyRef.current,
+    )
+    rovingGroupKeyRef.current = tabbableGroupKey
+
+    if (focusedGroupKey && !visibleGroupKeys.includes(focusedGroupKey)) {
+      if (tabbableGroupKey) {
+        markerElementsRef.current.get(tabbableGroupKey)?.focus()
+      } else {
+        map.getCanvas().focus()
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (status !== 'error' || !shouldFocusRetryRef.current) return
+    shouldFocusRetryRef.current = false
+    retryButtonRef.current?.focus()
+  }, [status])
+
+  // mapAttempt intentionally re-runs initialization after the user requests a retry.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: retry state is an intentional effect trigger
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    let cancelled = false
-    let map: LeafletMap | null = null
-    setReady(false)
+    let disposed = false
+    let failed = false
 
-    async function initializeMap(mapContainer: HTMLElement) {
+    void (async () => {
+      const fail = (error: unknown) => {
+        if (disposed || failed) return
+        failed = true
+        handleMapError(error)
+      }
+
       try {
-        const L = await import('leaflet')
-        if (cancelled) return
-
-        map = L.map(mapContainer, {
-          scrollWheelZoom: false,
-          zoomControl: true,
+        const maplibregl = await import('maplibre-gl')
+        if (disposed) return
+        const map = new maplibregl.Map({
+          container,
+          style: DIVE_SITE_BASEMAP_STYLE,
+          center: [0, 20],
+          zoom: 2,
+          attributionControl: false,
         })
         mapRef.current = map
-        markersRef.current.clear()
+        loadTimeoutRef.current = setTimeout(
+          () => fail('Map loading timed out'),
+          MAP_LOAD_TIMEOUT_MS,
+        )
+        map.addControl(
+          new maplibregl.NavigationControl({ showCompass: false }),
+          'top-right',
+        )
+        map.on('load', () => {
+          if (disposed || failed) return
+          if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current)
+          loadTimeoutRef.current = null
+          setStatus('ready')
+          synchronizeMarkerSelection(map)
+        })
+        map.on('moveend', () => synchronizeMarkerSelection(map))
+        map.on('error', (event) => fail(event.error))
+        map.on('click', () => onSelectSiteRef.current(null))
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          maxZoom: 19,
-        }).addTo(map)
-
-        const groups = groupSitesByCoordinates(sites)
-        const bounds: Array<[number, number]> = []
-        for (const group of groups) {
-          const diveCount = group.sites.reduce((total, site) => total + site.diveCount, 0)
-          const marker = L.circleMarker([group.latitude, group.longitude], {
-            radius: Math.min(16, 7 + Math.log2(Math.max(1, diveCount + 1)) * 2),
-            color: '#f8ffff',
-            weight: 2,
-            fillColor: '#087f8c',
-            fillOpacity: 0.9,
-          }).addTo(map)
-
-          marker.bindTooltip(
-            group.sites.length === 1
-              ? group.sites[0]?.name || 'Dive spot'
-              : `${group.sites.length} dive spots`,
-            { direction: 'top', offset: [0, -6] },
-          )
-          marker.bindPopup(createPopup(group.sites), { maxWidth: 320 })
-          marker.on('click', () => {
-            const selectedSite = group.sites.some(
-              (site) => site.id === selectedSiteIdRef.current,
-            )
-              ? selectedSiteIdRef.current
-              : group.sites[0]?.id
-            if (selectedSite) onSelectSiteRef.current(selectedSite)
-          })
-
-          for (const site of group.sites) markersRef.current.set(site.id, marker)
-          bounds.push([group.latitude, group.longitude])
-        }
-
-        if (bounds.length === 1 && bounds[0]) {
-          map.setView(bounds[0], 10)
-        } else if (bounds.length > 1) {
-          map.fitBounds(bounds, { padding: [32, 32], maxZoom: 11 })
-        } else {
-          map.setView([20, 0], 2)
-        }
-
-        requestAnimationFrame(() => map?.invalidateSize())
-        setReady(true)
-        setError(false)
-      } catch {
-        if (!cancelled) setError(true)
+        const resizeObserver = new ResizeObserver(() => map.resize())
+        resizeObserver.observe(container)
+        map.once('remove', () => resizeObserver.disconnect())
+      } catch (error) {
+        fail(error)
       }
-    }
+    })()
 
-    void initializeMap(container)
     return () => {
-      cancelled = true
+      disposed = true
+      for (const marker of markersRef.current.values()) marker.remove()
       markersRef.current.clear()
+      markerElementsRef.current.clear()
+      if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current)
+      loadTimeoutRef.current = null
+      mapRef.current?.remove()
       mapRef.current = null
-      map?.remove()
     }
-  }, [sites])
+  }, [handleMapError, mapAttempt, synchronizeMarkerSelection])
 
   useEffect(() => {
-    if (!ready) return
-    for (const [siteId, marker] of markersRef.current) {
-      const selected = siteId === selectedSiteId
-      marker.setStyle({
-        fillColor: selected ? '#ea580c' : '#087f8c',
-        fillOpacity: selected ? 1 : 0.9,
-        weight: selected ? 4 : 2,
-      })
-      if (selected) {
-        marker.bringToFront()
-        marker.openPopup()
-        mapRef.current?.panTo(marker.getLatLng())
+    if (status !== 'ready' || !mapRef.current) return
+    const map = mapRef.current
+    let disposed = false
+
+    void (async () => {
+      try {
+        const maplibregl = await import('maplibre-gl')
+        if (disposed) return
+        let focusedGroupKey: string | null = null
+        for (const [groupKey, element] of markerElementsRef.current) {
+          if (element === document.activeElement) focusedGroupKey = groupKey
+        }
+        if (focusedGroupKey) rovingGroupKeyRef.current = focusedGroupKey
+
+        for (const marker of markersRef.current.values()) marker.remove()
+        markersRef.current.clear()
+        markerElementsRef.current.clear()
+
+        for (const group of groups) {
+          const element = createSiteMapMarkerElement(
+            group,
+            (selectedGroup, focusInspector) => {
+              const currentIndex = selectedGroup.sites.findIndex(
+                (site) => site.id === selectedSiteIdRef.current,
+              )
+              const nextSite =
+                selectedGroup.sites[(currentIndex + 1) % selectedGroup.sites.length]
+              if (!nextSite) return
+              onSelectSiteRef.current(nextSite.id)
+              if (focusInspector) {
+                setInspectorFocusRequest((request) => request + 1)
+              }
+            },
+          )
+          const marker = new maplibregl.Marker({ element, anchor: 'center' })
+            .setLngLat([group.longitude, group.latitude])
+            .addTo(map)
+          markersRef.current.set(group.key, marker)
+          markerElementsRef.current.set(group.key, element)
+        }
+
+        configureSiteMapMarkerNavigation(
+          markerElementsRef.current,
+          () => getVisibleSiteGroupKeys(map, groupsRef.current),
+          (groupKey) => {
+            rovingGroupKeyRef.current = groupKey
+          },
+        )
+        synchronizeMarkerSelection(map)
+
+        const activeSelectedSite = sites.find(
+          (site) => site.id === selectedSiteIdRef.current,
+        )
+        if (activeSelectedSite) {
+          lastPositionedSiteIdRef.current = activeSelectedSite.id
+          positionSelectedDiveSite(map, activeSelectedSite)
+        } else {
+          lastPositionedSiteIdRef.current = null
+          fitSiteMapGroups(map, groups)
+        }
+
+        if (focusedGroupKey) {
+          const focusedMarker = markerElementsRef.current.get(focusedGroupKey)
+          if (focusedMarker && !focusedMarker.hidden) focusedMarker.focus()
+        }
+      } catch (error) {
+        if (!disposed) handleMapError(error)
       }
+    })()
+
+    return () => {
+      disposed = true
     }
-  }, [selectedSiteId, ready])
+  }, [groups, handleMapError, sites, status, synchronizeMarkerSelection])
+
+  useEffect(() => {
+    if (status !== 'ready' || !mapRef.current) return
+    const map = mapRef.current
+    synchronizeMarkerSelection(map)
+    if (!selectedSiteId) {
+      const previousGroupKey = lastSelectedGroupKeyRef.current
+      if (previousGroupKey) {
+        markerElementsRef.current.get(previousGroupKey)?.focus()
+      }
+      lastSelectedGroupKeyRef.current = null
+      lastPositionedSiteIdRef.current = null
+      return
+    }
+
+    lastSelectedGroupKeyRef.current = selectedGroupKey
+    if (lastPositionedSiteIdRef.current === selectedSiteId) return
+    const activeSelectedSite = sites.find((site) => site.id === selectedSiteId)
+    if (!activeSelectedSite) return
+    lastPositionedSiteIdRef.current = selectedSiteId
+    requestAnimationFrame(() => positionSelectedDiveSite(map, activeSelectedSite))
+  }, [selectedGroupKey, selectedSiteId, sites, status, synchronizeMarkerSelection])
 
   return (
-    <div className="relative isolate min-h-[34rem] overflow-hidden rounded-2xl border border-border bg-muted/40">
-      <section
-        ref={containerRef}
-        aria-label="Interactive map of dive spots"
-        aria-busy={!ready && !error}
-        className="h-[34rem] w-full"
-      />
-      {!ready && !error ? (
-        <div className="pointer-events-none absolute inset-0 grid place-items-center bg-muted/60 text-sm text-muted-foreground">
-          Loading dive map…
-        </div>
-      ) : null}
-      {error ? (
-        <div className="absolute inset-0 grid place-items-center bg-muted px-6 text-center text-sm text-muted-foreground">
-          The map tiles could not be loaded. Every dive spot remains available in the
-          list.
-        </div>
-      ) : null}
+    <div className="flex h-[34rem] min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="relative min-h-0 flex-1">
+        <section
+          ref={containerRef}
+          className="divetracx-site-map h-full w-full"
+          aria-label="Interactive map of dive spots"
+          aria-hidden={status !== 'ready'}
+          inert={status !== 'ready'}
+        />
+        {selectedSite ? (
+          <SiteMapInspector
+            site={selectedSite}
+            focusRequest={inspectorFocusRequest}
+            onClose={() => onSelectSite(null)}
+          />
+        ) : null}
+        <SiteMapStatus
+          status={status}
+          retryButtonRef={retryButtonRef}
+          onRetry={() => {
+            setStatus('loading')
+            setMapAttempt((attempt) => attempt + 1)
+          }}
+        />
+      </div>
+      <p className="border-t border-border bg-card px-4 py-3 text-xs text-muted-foreground">
+        ©{' '}
+        <a
+          className="underline underline-offset-2 hover:text-foreground"
+          href="https://www.openstreetmap.org/copyright"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          OpenStreetMap contributors
+        </a>
+        {' · © '}
+        <a
+          className="underline underline-offset-2 hover:text-foreground"
+          href="https://carto.com/attributions"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          CARTO
+        </a>
+        .
+      </p>
     </div>
   )
 }
