@@ -1,4 +1,4 @@
-# Dive sites missing coordinates
+# Dive-site coordinate research
 
 Database snapshot: 2026-08-30 (UTC)
 
@@ -7,6 +7,11 @@ This is a working research document, not an import file. The database currently 
 latitude and contain the same invalid longitude (`-170.0000000`). Their DiveMate
 source values are also the same malformed pair: `189°60'0.00"N`,
 `170°00'0.00"W`. Both coordinates therefore need to be replaced together.
+
+The other 28 sites have populated coordinates. They are audited separately below.
+All 28 decimal values accurately reproduce their DiveMate degree-minute-second
+source text (maximum conversion difference: `0.0000000444°`), but five source
+positions appear to identify the wrong place.
 
 ## Status and confidence
 
@@ -17,6 +22,15 @@ source values are also the same malformed pair: `189°60'0.00"N`,
   the exact underwater point. Review before importing.
 - **Pending**: no defensible coordinate has been found yet. The Maps link is a name
   search, not a coordinate link.
+
+For the existing-coordinate audit:
+
+- **Verified**: the stored point matches a named map record, reef, dive entry, or
+  the expected site feature.
+- **Plausible**: the point is in the right context but may be an operator, parking
+  place, boat entry, or surface landmark rather than the named underwater site.
+- **Mismatch**: the stored point is demonstrably associated with another location
+  or is implausibly far from the named site. A replacement candidate is included.
 
 Google Maps coordinate links use `https://www.google.com/maps?q=<lat>,<lon>` so the
 proposed latitude and longitude are visible in the URL.
@@ -113,12 +127,54 @@ pending.
 | 59 | Grotta delle Stalattiti | Punta Giglio | — | — | [Search by name](https://www.google.com/maps/search/?api=1&query=Grotta+delle+Stalattiti+Punta+Giglio+Alghero) | **Pending** | Operator/trip name found, but no precise public marker. |
 | 50 | La Bramassa | Punta Giglio | 40.5821535 | 8.2051543 | [40.5821535, 8.2051543](https://www.google.com/maps?q=40.5821535,8.2051543) | **Candidate** | Direct named surface feature “Cala Bramassa”; exact cave entrance remains unverified. |
 
+## Existing-coordinate audit
+
+The stored decimal values and their DiveMate source text agree for every row in
+this section. This audit checks whether that source position makes geographic
+sense. Distances quoted below are approximate straight-line distances to the
+comparison point, not navigation distances.
+
+| DiveMate ID | Dive site | Stored coordinates | Google Maps | Audit | Comparison / action |
+| ---: | --- | ---: | --- | --- | --- |
+| 27 | Föttinger | 47.8406639, 13.5445667 | [Stored point](https://www.google.com/maps?q=47.8406639,13.5445667) | **Verified** | 10 m from the named Google place “Tauchplatz Föttinger”. Keep. |
+| 31 | Camp Plansee | 47.4870889, 10.8428833 | [Stored point](https://www.google.com/maps?q=47.4870889,10.8428833) | **Verified** | 8 m from the named “Tauchbasis Planseecamp”. Keep. |
+| 41 | Nautilus | 47.9064972, 13.5670667 | [Stored point](https://www.google.com/maps?q=47.9064972,13.5670667) | **Verified** | 18 m from the current named dive place “Tauchplatz Watersports” at Weyregg; likely an older operator/site name. Keep. |
+| 35 | Koversada | 45.1553722, 13.6068722 | [Stored point](https://www.google.com/maps?q=45.1553722,13.6068722) | **Plausible** | 13 m from Triton Diving at Camping Orsera, but roughly 1.5 km north of Koversada's campsite/dive centre. Keep only if this row represents the operator or departure point; otherwise review against the logbook. |
+| 63 | Sataya South | 24.1571056, 35.7125250 | [Stored point](https://www.google.com/maps?q=24.1571056,35.7125250) | **Verified** | 173 m from the named Google place “Sataya Dolphin House Reef South” and similarly close to the independent dive-site marker. Keep. |
+| 22 | Elphinstone | 25.3141861, 34.8596194 | [Stored point](https://www.google.com/maps?q=25.3141861,34.8596194) | **Verified** | The stored point itself is a named OpenStreetMap/Google Elphinstone dive-site marker; differing reef-centre records reflect the long reef. Keep. |
+| 1 | Gorgonia Beach Housereef | 24.7061444, 35.0855278 | [Stored point](https://www.google.com/maps?q=24.7061444,35.0855278) | **Mismatch** | Stored point is about 570 m inland at the resort/road, not the house reef. Candidate named “House Reef Gorgonia”: [24.7043357, 35.0908098](https://www.google.com/maps?q=24.7043357,35.0908098). |
+| 18 | Ras Torombi | 25.6612806, 34.5869056 | [Stored point](https://www.google.com/maps?q=25.6612806,34.5869056) | **Verified** | 209 m from the named “Ras Torombi reef” marker and on the same reef edge. Keep. |
+| 24 | Abu Dabbab II & III | 25.3453222, 34.7670278 | [Stored point](https://www.google.com/maps?q=25.3453222,34.7670278) | **Plausible** | Roughly 1.0 km west of the mapped Abu Dabbab II and III reef centres; it may be a boat entry. Their midpoint is [25.3472973, 34.7771072](https://www.google.com/maps?q=25.3472973,34.7771072). Review before changing. |
+| 23 | Abu Dabbab IV | 25.3405694, 34.7947306 | [Stored point](https://www.google.com/maps?q=25.3405694,34.7947306) | **Verified** | The stored point is a named “Abu Dabab 4” dive marker and lies about 310 m from the mapped reef centre. Keep. |
+| 25 | Marsa Shouna | 25.4698889, 34.6824667 | [Stored point](https://www.google.com/maps?q=25.4698889,34.6824667) | **Verified** | 98 m from two exact-name Google records for Marsa Shouna / Shoab El Shouna. Keep. |
+| 66 | Big Gotta / Gotta Kebier | 23.5572083, 36.2250833 | [Stored point](https://www.google.com/maps?q=23.5572083,36.2250833) | **Mismatch** | Stored point is near Rocky Island, about 34 km from the St. John's “Gota Kebir” record. Candidate: [23.4146981, 35.9306143](https://www.google.com/maps?q=23.4146981,35.9306143). |
+| 68 | Paradise Reef | 23.5571194, 36.2261556 | [Stored point](https://www.google.com/maps?q=23.5571194,36.2261556) | **Mismatch** | Stored point is near Rocky Island, about 42 km from the named “Paradise Reef St. Johns Orabi”. Candidate: [23.6235000, 35.8217000](https://www.google.com/maps?q=23.6235000,35.8217000). |
+| 19 | Big Brother | 26.3117806, 34.8467417 | [Stored point](https://www.google.com/maps?q=26.3117806,34.8467417) | **Verified** | 283 m from the mapped Big Brother Island centre and appropriately located at its reef edge. Keep. |
+| 21 | Daedalus | 24.9316194, 35.8716500 | [Stored point](https://www.google.com/maps?q=24.9316194,35.8716500) | **Verified** | 148 m from the mapped Daedalus Reef marker. Keep. |
+| 65 | Rocky Island | 24.1571056, 35.7125250 | [Stored point](https://www.google.com/maps?q=24.1571056,35.7125250) | **Mismatch** | Exact duplicate of Sataya South and about 85 km from Rocky Island. Island-centre candidate: [23.5636405, 36.2454635](https://www.google.com/maps?q=23.5636405,36.2454635); select the actual dive side from the log/operator route. |
+| 20 | Small Brother | 26.3003694, 34.8633583 | [Stored point](https://www.google.com/maps?q=26.3003694,34.8633583) | **Verified** | 93 m from the mapped Small Brother Island point. Keep. |
+| 64 | Zabargad Island | 23.5571306, 36.2262944 | [Stored point](https://www.google.com/maps?q=23.5571306,36.2262944) | **Mismatch** | Stored point is near Rocky Island and 6.7 km from Zabargad. Island-centre candidate: [23.6110648, 36.1976630](https://www.google.com/maps?q=23.6110648,36.1976630); select the actual dive side from the log/operator route. |
+| 17 | Divers Indoor | 48.3085944, 11.8638306 | [Stored point](https://www.google.com/maps?q=48.3085944,11.8638306) | **Verified** | 41 m from the named “Diver's Indoor Tauchsportzentrum”. Keep. |
+| 11 | Allmanshausen Wasserwacht | 47.9308333, 11.3329806 | [Stored point](https://www.google.com/maps?q=47.9308333,11.3329806) | **Verified** | 84 m from the mapped Wasserrettungsstation Seeburg on the expected shoreline. Keep. |
+| 9 | Echinger Weiher | 48.3160861, 11.6177833 | [Stored point](https://www.google.com/maps?q=48.3160861,11.6177833) | **Verified** | Inside the mapped Echinger Weiher boundary, 105 m from its centre, at the northeast edge/entry. Keep. |
+| 14 | Friedberger See | 48.3605944, 10.9653056 | [Stored point](https://www.google.com/maps?q=48.3605944,10.9653056) | **Verified** | 9 m from the named Tauchbasis and Wasserwacht pier. Keep. |
+| 15 | Walchensee, Steinbruch | 47.5733333, 11.3536833 | [Stored point](https://www.google.com/maps?q=47.5733333,11.3536833) | **Plausible** | Correct Walchensee south-shore/road context, but no independent named underwater marker was found. Retain pending local confirmation. |
+| 16 | Walchensee, ’Hackerl’ | 47.5725222, 11.3222694 | [Stored point](https://www.google.com/maps?q=47.5725222,11.3222694) | **Plausible** | Maps to the P22 south-shore parking/entry area; the exact “Hackerl” underwater point was not independently published. Retain pending local confirmation. |
+| 32 | Nordturm | 49.3537667, 12.1984444 | [Stored point](https://www.google.com/maps?q=49.3537667,12.1984444) | **Verified** | 187 m west of “Parkplatz Murner See Holzturm”, placing it at the expected north-side water entry rather than in the car park. Keep. |
+| 26 | Walchensee, Gallerie | 47.6054167, 11.3349639 | [Stored point](https://www.google.com/maps?q=47.6054167,11.3349639) | **Plausible** | Maps to the Kirchelwandtunnel/gallery on the Walchensee shore, consistent with the name; exact underwater entry remains unverified. Retain pending local confirmation. |
+| 48 | Capo Galera, Hausriff | 40.5702167, 8.2422611 | [Stored point](https://www.google.com/maps?q=40.5702167,8.2422611) | **Verified** | 73 m from Capo Galera Diving Center in the correct house-reef entry area. Keep. |
+| 61 | Cueva del Aqua | 37.5764250, -1.2198111 | [Stored point](https://www.google.com/maps?q=37.5764250,-1.2198111) | **Verified** | 24 m from the named Cueva del Agua cave record. Keep. |
+
 ## Research progress
 
-- Inventory: **42 / 42** database rows captured.
-- Confirmed coordinates: **23**.
-- Candidate coordinates needing review: **11**.
-- Still pending an exact coordinate: **8**.
+- Full coordinate inventory: **70 / 70** database rows reviewed.
+- Missing/invalid-coordinate rows captured: **42 / 42**.
+- Missing rows with confirmed replacements: **23**.
+- Missing rows with candidate replacements needing review: **11**.
+- Missing rows still pending an exact coordinate: **8**.
+- Existing coordinates verified: **18 / 28**.
+- Existing coordinates plausible but needing review: **5 / 28**.
+- Existing coordinate mismatches: **5 / 28**.
 - Database updates applied: **0** (this document is research only).
 
 ### Next sites to resolve
