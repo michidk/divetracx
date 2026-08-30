@@ -271,6 +271,8 @@ async function loadDataListRecords(
             `Sample ${sample.sampleIndex + 1}`,
             sample.temperatureCelsius ? `${sample.temperatureCelsius} °C` : null,
             sample.pressureBar ? `${sample.pressureBar} bar` : null,
+            sample.tank1PressureBar ? `T1 ${sample.tank1PressureBar} bar` : null,
+            sample.tank2PressureBar ? `T2 ${sample.tank2PressureBar} bar` : null,
             sample.decoCeilingMeters ? `${sample.decoCeilingMeters} m ceiling` : null,
             sample.tankNumber ? `Tank ${sample.tankNumber}` : null,
           ]

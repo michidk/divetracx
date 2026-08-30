@@ -332,6 +332,7 @@ function mapTank(row: SourceRow): DiveMateTank | null {
 const PROFILE_SAMPLE_WIDTH = 12
 const PROFILE_DEPTH_WIDTH = 4
 const PROFILE_AUXILIARY_WIDTH = 11
+const PROFILE_TRANSMITTER_WIDTH = 14
 const PROFILE_DECOMPRESSION_WIDTH = 9
 
 function fixedWidthSamples(value: unknown, width: number): string[] {
@@ -356,6 +357,7 @@ function mapProfileSamples(row: SourceRow): DiveMateProfileSample[] {
   }
 
   const auxiliarySamples = fixedWidthSamples(row.Profile2, PROFILE_AUXILIARY_WIDTH)
+  const transmitterSamples = fixedWidthSamples(row.Profile3, PROFILE_TRANSMITTER_WIDTH)
   const decompressionSamples = fixedWidthSamples(
     row.Profile4,
     PROFILE_DECOMPRESSION_WIDTH,
@@ -364,9 +366,16 @@ function mapProfileSamples(row: SourceRow): DiveMateProfileSample[] {
   const sourceUpdatedAt = text(row.Updated)
   return profileSamples.map((rawSample, sampleIndex) => {
     const auxiliarySample = auxiliarySamples[sampleIndex] ?? null
+    const transmitterSample = transmitterSamples[sampleIndex] ?? null
     const decompressionSample = decompressionSamples[sampleIndex] ?? null
     const depthTenths = Number(rawSample.slice(0, PROFILE_DEPTH_WIDTH))
     const pressureTenths = auxiliarySample ? Number(auxiliarySample.slice(3, 7)) : 0
+    const tank1PressureTenths = transmitterSample
+      ? Number(transmitterSample.slice(0, 4))
+      : 0
+    const tank2PressureTenths = transmitterSample
+      ? Number(transmitterSample.slice(4, 8))
+      : 0
     const ceilingMeters = decompressionSample
       ? Number(decompressionSample.slice(6, 9))
       : 0
@@ -379,6 +388,10 @@ function mapProfileSamples(row: SourceRow): DiveMateProfileSample[] {
         ? (Number(auxiliarySample.slice(0, 3)) / 10).toFixed(1)
         : null,
       pressureBar: pressureTenths > 0 ? (pressureTenths / 10).toFixed(1) : null,
+      tank1PressureBar:
+        tank1PressureTenths > 0 ? (tank1PressureTenths / 10).toFixed(1) : null,
+      tank2PressureBar:
+        tank2PressureTenths > 0 ? (tank2PressureTenths / 10).toFixed(1) : null,
       decoCeilingMeters: ceilingMeters > 0 ? String(ceilingMeters) : null,
       tankNumber: auxiliarySample ? Number(auxiliarySample.slice(7, 8)) + 1 : null,
       externalId: `${diveExternalId}:${sampleIndex}`,
@@ -387,6 +400,7 @@ function mapProfileSamples(row: SourceRow): DiveMateProfileSample[] {
       sourcePayload: {
         rawSample,
         ...(auxiliarySample ? { rawAuxiliarySample: auxiliarySample } : {}),
+        ...(transmitterSample ? { rawTransmitterSample: transmitterSample } : {}),
         ...(decompressionSample ? { rawDecompressionSample: decompressionSample } : {}),
         profileIntervalSeconds,
       },

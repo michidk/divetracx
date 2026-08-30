@@ -3,6 +3,8 @@ export interface DiveProfilePoint {
   depthMeters: number
   temperatureCelsius: number | null
   pressureBar: number | null
+  tank1PressureBar: number | null
+  tank2PressureBar: number | null
   decoCeilingMeters: number | null
   tankNumber: number | null
 }
@@ -12,6 +14,8 @@ export interface PositionedDiveProfilePoint extends DiveProfilePoint {
   depthY: number
   temperatureY: number | null
   pressureY: number | null
+  tank1PressureY: number | null
+  tank2PressureY: number | null
   ceilingY: number | null
 }
 
@@ -92,6 +96,8 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
       ...sample,
       temperatureCelsius: finiteOrNull(sample.temperatureCelsius),
       pressureBar: finiteOrNull(sample.pressureBar),
+      tank1PressureBar: finiteOrNull(sample.tank1PressureBar),
+      tank2PressureBar: finiteOrNull(sample.tank2PressureBar),
       decoCeilingMeters: finiteOrNull(sample.decoCeilingMeters),
     }))
     .slice()
@@ -112,7 +118,11 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
   )
   const maximumPressureBar = Math.max(
     0,
-    ...points.flatMap((point) => (point.pressureBar === null ? [] : [point.pressureBar])),
+    ...points.flatMap((point) =>
+      [point.pressureBar, point.tank1PressureBar, point.tank2PressureBar].flatMap(
+        (pressure) => (pressure === null ? [] : [pressure]),
+      ),
+    ),
   )
   const pressureRange =
     maximumPressureBar > 0
@@ -139,6 +149,18 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
       PROFILE_CHART_VIEWBOX.pressureTop,
       PROFILE_CHART_VIEWBOX.pressureHeight,
     ),
+    tank1PressureY: scaleTrackValue(
+      point.tank1PressureBar,
+      pressureRange,
+      PROFILE_CHART_VIEWBOX.pressureTop,
+      PROFILE_CHART_VIEWBOX.pressureHeight,
+    ),
+    tank2PressureY: scaleTrackValue(
+      point.tank2PressureBar,
+      pressureRange,
+      PROFILE_CHART_VIEWBOX.pressureTop,
+      PROFILE_CHART_VIEWBOX.pressureHeight,
+    ),
     ceilingY:
       point.decoCeilingMeters === null || point.decoCeilingMeters <= 0
         ? null
@@ -154,7 +176,17 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
     point.temperatureY === null ? null : { x: point.x, y: point.temperatureY },
   )
   const pressurePath = createSegmentedPath(positionedPoints, (point) =>
-    point.pressureY === null ? null : { x: point.x, y: point.pressureY },
+    point.pressureY === null ||
+    (point.tankNumber === 1 && point.tank1PressureY !== null) ||
+    (point.tankNumber === 2 && point.tank2PressureY !== null)
+      ? null
+      : { x: point.x, y: point.pressureY },
+  )
+  const tank1PressurePath = createSegmentedPath(positionedPoints, (point) =>
+    point.tank1PressureY === null ? null : { x: point.x, y: point.tank1PressureY },
+  )
+  const tank2PressurePath = createSegmentedPath(positionedPoints, (point) =>
+    point.tank2PressureY === null ? null : { x: point.x, y: point.tank2PressureY },
   )
   const ceilingPath = createSegmentedPath(positionedPoints, (point) =>
     point.ceilingY === null ? null : { x: point.x, y: point.ceilingY },
@@ -177,6 +209,8 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
     depthAreaPath,
     temperaturePath,
     pressurePath,
+    tank1PressurePath,
+    tank2PressurePath,
     ceilingPath,
     tankSwitches,
     maximumElapsedSeconds,

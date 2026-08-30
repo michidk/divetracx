@@ -258,6 +258,8 @@ export const diveProfileSamples = pgTable(
     depthMeters: numeric('depth_meters', { precision: 7, scale: 2 }).notNull(),
     temperatureCelsius: numeric('temperature_celsius', { precision: 5, scale: 2 }),
     pressureBar: numeric('pressure_bar', { precision: 7, scale: 2 }),
+    tank1PressureBar: numeric('tank_1_pressure_bar', { precision: 7, scale: 2 }),
+    tank2PressureBar: numeric('tank_2_pressure_bar', { precision: 7, scale: 2 }),
     decoCeilingMeters: numeric('deco_ceiling_meters', { precision: 7, scale: 2 }),
     tankNumber: integer('tank_number'),
     ...sourceColumns,

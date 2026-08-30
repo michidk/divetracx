@@ -11,6 +11,8 @@ function sample(
   values: Partial<{
     temperatureCelsius: number | null
     pressureBar: number | null
+    tank1PressureBar: number | null
+    tank2PressureBar: number | null
     decoCeilingMeters: number | null
     tankNumber: number | null
   }> = {},
@@ -20,6 +22,8 @@ function sample(
     depthMeters,
     temperatureCelsius: null,
     pressureBar: null,
+    tank1PressureBar: null,
+    tank2PressureBar: null,
     decoCeilingMeters: null,
     tankNumber: null,
     ...values,
@@ -61,24 +65,32 @@ describe('dive profile chart geometry', () => {
       sample(0, 1, {
         temperatureCelsius: 20,
         pressureBar: 200,
+        tank1PressureBar: 200,
+        tank2PressureBar: 190,
         tankNumber: 1,
       }),
       sample(30, 20, {
         temperatureCelsius: 12,
         pressureBar: null,
+        tank1PressureBar: 180,
+        tank2PressureBar: null,
         decoCeilingMeters: 6,
         tankNumber: 2,
       }),
       sample(60, 8, {
         temperatureCelsius: 15,
         pressureBar: 150,
+        tank1PressureBar: 160,
+        tank2PressureBar: 150,
         decoCeilingMeters: 3,
         tankNumber: 2,
       }),
     ])
 
     expect(geometry.temperaturePath).toContain('L')
-    expect(geometry.pressurePath.match(/M/g)).toHaveLength(2)
+    expect(geometry.tank1PressurePath).toContain('L')
+    expect(geometry.tank2PressurePath.match(/M/g)).toHaveLength(2)
+    expect(geometry.pressurePath).toBe('')
     expect(geometry.ceilingPath).toContain('L')
     expect(geometry.tankSwitches.map((point) => point.tankNumber)).toEqual([1, 2])
     expect(geometry.pressureRange).toEqual({ minimum: 0, maximum: 200 })

@@ -275,6 +275,8 @@ export async function loadDive(diveId: string) {
           depthMeters: diveProfileSamples.depthMeters,
           temperatureCelsius: diveProfileSamples.temperatureCelsius,
           pressureBar: diveProfileSamples.pressureBar,
+          tank1PressureBar: diveProfileSamples.tank1PressureBar,
+          tank2PressureBar: diveProfileSamples.tank2PressureBar,
           decoCeilingMeters: diveProfileSamples.decoCeilingMeters,
           tankNumber: diveProfileSamples.tankNumber,
         })

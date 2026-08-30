@@ -384,6 +384,8 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
             depthMeters: sample.depthMeters,
             temperatureCelsius: sample.temperatureCelsius,
             pressureBar: sample.pressureBar,
+            tank1PressureBar: sample.tank1PressureBar,
+            tank2PressureBar: sample.tank2PressureBar,
             decoCeilingMeters: sample.decoCeilingMeters,
             tankNumber: sample.tankNumber,
           })),

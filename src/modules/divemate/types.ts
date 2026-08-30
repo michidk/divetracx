@@ -131,6 +131,8 @@ export interface DiveMateProfileSample extends DiveMateSourceRecord {
   depthMeters: string
   temperatureCelsius: string | null
   pressureBar: string | null
+  tank1PressureBar: string | null
+  tank2PressureBar: string | null
   decoCeilingMeters: string | null
   tankNumber: number | null
 }

@@ -89,7 +89,7 @@ describe('parseDiveMateDatabase', () => {
         Water INTEGER, Entry INTEGER, Rating INTEGER, Computer TEXT,
         Divesuit TEXT, Boat TEXT, Divemaster TEXT, Comments TEXT,
         UUID TEXT, Updated TEXT, ProfileInt INTEGER, Profile TEXT,
-        Profile2 TEXT, Profile4 TEXT
+        Profile2 TEXT, Profile3 TEXT, Profile4 TEXT
       );
       INSERT INTO Logbook VALUES (
         11, 1, 7, 2, 5, '4', '9', 42, '2026-07-26', '14:29:00',
@@ -98,6 +98,7 @@ describe('parseDiveMateDatabase', () => {
         'great dive', 'dive-uuid', '2026-07-26', 30,
         '000000000000001500000000012300000000',
         '220200000002151500100020000001000',
+        '199520000000001950150000000019001450000000',
         '000099000010002003005001006'
       );
       CREATE TABLE Tank (
@@ -145,6 +146,8 @@ describe('parseDiveMateDatabase', () => {
         depthMeters: '0.0',
         temperatureCelsius: '22.0',
         pressureBar: '200.0',
+        tank1PressureBar: '199.5',
+        tank2PressureBar: '200.0',
         decoCeilingMeters: null,
         tankNumber: 1,
       }),
@@ -155,6 +158,8 @@ describe('parseDiveMateDatabase', () => {
         depthMeters: '1.5',
         temperatureCelsius: '21.5',
         pressureBar: '150.0',
+        tank1PressureBar: '195.0',
+        tank2PressureBar: '150.0',
         decoCeilingMeters: '3',
         tankNumber: 2,
       }),
@@ -165,6 +170,8 @@ describe('parseDiveMateDatabase', () => {
         depthMeters: '12.3',
         temperatureCelsius: '20.0',
         pressureBar: null,
+        tank1PressureBar: '190.0',
+        tank2PressureBar: '145.0',
         decoCeilingMeters: '6',
         tankNumber: 2,
       }),
@@ -172,6 +179,7 @@ describe('parseDiveMateDatabase', () => {
     expect(snapshot.profileSamples[2]?.sourcePayload).toEqual({
       rawSample: '012300000000',
       rawAuxiliarySample: '20000001000',
+      rawTransmitterSample: '19001450000000',
       rawDecompressionSample: '005001006',
       profileIntervalSeconds: 30,
     })

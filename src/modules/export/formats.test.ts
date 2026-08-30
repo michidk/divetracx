@@ -6,7 +6,7 @@ function fixture(): ExportSnapshot {
   const timestamp = new Date('2026-08-29T10:15:00.000Z')
   return {
     format: 'divetracx-backup',
-    version: 3,
+    version: 4,
     exportedAt: timestamp.toISOString(),
     data: {
       divers: [
@@ -112,6 +112,8 @@ function fixture(): ExportSnapshot {
           depthMeters: '0.00',
           temperatureCelsius: '22.00',
           pressureBar: '205.00',
+          tank1PressureBar: '205.00',
+          tank2PressureBar: '198.00',
           decoCeilingMeters: null,
           tankNumber: 1,
           sourceKey: 'divemate',
@@ -130,6 +132,8 @@ function fixture(): ExportSnapshot {
           depthMeters: '12.30',
           temperatureCelsius: '19.50',
           pressureBar: '198.50',
+          tank1PressureBar: '194.00',
+          tank2PressureBar: '198.50',
           decoCeilingMeters: '3.00',
           tankNumber: 2,
           sourceKey: 'divemate',
@@ -157,7 +161,7 @@ describe('export formats', () => {
     }
 
     expect(parsed.format).toBe('divetracx-backup')
-    expect(parsed.version).toBe(3)
+    expect(parsed.version).toBe(4)
     expect(parsed.data.dives).toHaveLength(1)
     expect(parsed.data.divers[0]?.createdAt).toBe('2026-08-29T10:15:00.000Z')
   })
@@ -169,7 +173,9 @@ describe('export formats', () => {
     expect(output).toContain('"Blue, ""Deep"" Hole"')
     expect(output).toContain('"\'=HYPERLINK(""bad"")\notherwise memorable"')
     expect(output).toContain('"-24.1234567"')
-    expect(output).toContain('"2","0:0.00:22.00:205.00::1;30:12.30:19.50:198.50:3.00:2"')
+    expect(output).toContain(
+      '"2","0:0.00:22.00:205.00:205.00:198.00::1;30:12.30:19.50:198.50:194.00:198.50:3.00:2"',
+    )
     expect(output).toEndWith('\r\n')
   })
 

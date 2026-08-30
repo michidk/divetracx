@@ -573,6 +573,22 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
         step: '0.01',
       },
       {
+        key: 'tank1PressureBar',
+        label: 'Tank 1 transmitter pressure (bar)',
+        kind: 'number',
+        section: 'Measurement',
+        min: 0,
+        step: '0.01',
+      },
+      {
+        key: 'tank2PressureBar',
+        label: 'Tank 2 transmitter pressure (bar)',
+        kind: 'number',
+        section: 'Measurement',
+        min: 0,
+        step: '0.01',
+      },
+      {
         key: 'decoCeilingMeters',
         label: 'Decompression ceiling (m)',
         kind: 'number',

@@ -11,6 +11,8 @@ interface ProfileSample {
   depthMeters: string
   temperatureCelsius: string | null
   pressureBar: string | null
+  tank1PressureBar: string | null
+  tank2PressureBar: string | null
   decoCeilingMeters: string | null
   tankNumber: number | null
 }
@@ -48,6 +50,11 @@ function tankLabel(tankNumber: number, tanks: ProfileTank[]) {
   const tank = tanks.find((item) => item.computerTankNumber === tankNumber)
   if (!tank) return `Tank ${tankNumber}`
   return `${tank.name || `Tank ${tankNumber}`} · ${gasName(tank)}`
+}
+
+function tankName(tankNumber: number, tanks: ProfileTank[]) {
+  const tank = tanks.find((item) => item.computerTankNumber === tankNumber)
+  return tank?.name || `Tank ${tankNumber}`
 }
 
 function TrackBounds({
@@ -124,6 +131,10 @@ export function DiveProfileChart({
           temperatureCelsius:
             sample.temperatureCelsius === null ? null : Number(sample.temperatureCelsius),
           pressureBar: sample.pressureBar === null ? null : Number(sample.pressureBar),
+          tank1PressureBar:
+            sample.tank1PressureBar === null ? null : Number(sample.tank1PressureBar),
+          tank2PressureBar:
+            sample.tank2PressureBar === null ? null : Number(sample.tank2PressureBar),
           decoCeilingMeters:
             sample.decoCeilingMeters === null ? null : Number(sample.decoCeilingMeters),
           tankNumber: sample.tankNumber,
@@ -133,6 +144,9 @@ export function DiveProfileChart({
   )
   const selectedPoint =
     selectedIndex === null ? null : (geometry.points[selectedIndex] ?? null)
+  const hasTankPressureProfiles = Boolean(
+    geometry.tank1PressurePath || geometry.tank2PressurePath,
+  )
   const tankNumbers = Array.from(
     new Set(geometry.points.flatMap((point) => point.tankNumber ?? [])),
   ).sort((left, right) => left - right)
@@ -169,9 +183,17 @@ export function DiveProfileChart({
         selectedPoint.temperatureCelsius === null
           ? null
           : `${selectedPoint.temperatureCelsius.toFixed(1)} degrees Celsius`,
+        selectedPoint.tank1PressureBar === null
+          ? null
+          : `${tankName(1, tanks)} ${selectedPoint.tank1PressureBar.toFixed(0)} bar`,
+        selectedPoint.tank2PressureBar === null
+          ? null
+          : `${tankName(2, tanks)} ${selectedPoint.tank2PressureBar.toFixed(0)} bar`,
+        selectedPoint.tank1PressureBar !== null ||
+        selectedPoint.tank2PressureBar !== null ||
         selectedPoint.pressureBar === null
           ? null
-          : `${selectedPoint.pressureBar.toFixed(0)} bar`,
+          : `${selectedPoint.pressureBar.toFixed(0)} bar active tank pressure`,
         selectedPoint.decoCeilingMeters === null
           ? null
           : `${selectedPoint.decoCeilingMeters.toFixed(0)} metre decompression ceiling`,
@@ -224,9 +246,24 @@ export function DiveProfileChart({
                 <span className="h-0.5 w-5 bg-orange-500" /> Temperature
               </span>
             ) : null}
+            {geometry.tank1PressurePath ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="h-0.5 w-5" style={{ backgroundColor: tankColor(1) }} />
+                {tankName(1, tanks)} pressure
+              </span>
+            ) : null}
+            {geometry.tank2PressurePath ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="h-0.5 w-5" style={{ backgroundColor: tankColor(2) }} />
+                {tankName(2, tanks)} pressure
+              </span>
+            ) : null}
             {geometry.pressurePath ? (
               <span className="inline-flex items-center gap-2">
-                <span className="h-0.5 w-5 bg-violet-500" /> Active tank pressure
+                <span className="h-0.5 w-5 bg-violet-500" />{' '}
+                {hasTankPressureProfiles
+                  ? 'Other active tank pressure'
+                  : 'Active tank pressure'}
               </span>
             ) : null}
           </div>
@@ -246,16 +283,16 @@ export function DiveProfileChart({
             <svg
               viewBox={`0 0 ${PROFILE_CHART_VIEWBOX.width} ${PROFILE_CHART_VIEWBOX.height}`}
               role="img"
-              aria-label="Depth, decompression ceiling, temperature, active tank pressure, and tank switches over elapsed dive time"
+              aria-label="Depth, decompression ceiling, temperature, individual tank pressure, and tank switches over elapsed dive time"
               onPointerMove={selectFromPointer}
               onPointerLeave={() => setSelectedIndex(null)}
               className="block h-auto min-h-[32rem] min-w-[48rem] w-full touch-none"
             >
               <title>Dive computer profile</title>
               <desc>
-                Depth increases downward. Temperature and pressure use aligned tracks.
-                Dashed red segments show the recorded decompression ceiling. Colored
-                vertical markers indicate tank switches.
+                Depth increases downward. Temperature and the differently colored tank
+                pressures use aligned tracks. Dashed red segments show the recorded
+                decompression ceiling. Colored vertical markers indicate tank switches.
               </desc>
               <defs>
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -362,7 +399,9 @@ export function DiveProfileChart({
                 <TrackBounds
                   top={PROFILE_CHART_VIEWBOX.pressureTop}
                   height={PROFILE_CHART_VIEWBOX.pressureHeight}
-                  label="Active tank pressure"
+                  label={
+                    hasTankPressureProfiles ? 'Tank pressure' : 'Active tank pressure'
+                  }
                   maximum={`${geometry.pressureRange.maximum.toFixed(0)}`}
                   minimum="0 bar"
                 />
@@ -381,6 +420,26 @@ export function DiveProfileChart({
                   fill="none"
                   className="stroke-violet-500"
                   strokeWidth="2.5"
+                  strokeLinejoin="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              ) : null}
+              {geometry.tank1PressurePath ? (
+                <path
+                  d={geometry.tank1PressurePath}
+                  fill="none"
+                  stroke={tankColor(1)}
+                  strokeWidth="2.75"
+                  strokeLinejoin="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              ) : null}
+              {geometry.tank2PressurePath ? (
+                <path
+                  d={geometry.tank2PressurePath}
+                  fill="none"
+                  stroke={tankColor(2)}
+                  strokeWidth="2.75"
                   strokeLinejoin="round"
                   vectorEffect="non-scaling-stroke"
                 />
@@ -435,6 +494,28 @@ export function DiveProfileChart({
                     strokeWidth="3"
                     vectorEffect="non-scaling-stroke"
                   />
+                  {selectedPoint.tank1PressureY === null ? null : (
+                    <circle
+                      cx={selectedPoint.x}
+                      cy={selectedPoint.tank1PressureY}
+                      r="4.5"
+                      fill={tankColor(1)}
+                      className="stroke-background"
+                      strokeWidth="2"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  )}
+                  {selectedPoint.tank2PressureY === null ? null : (
+                    <circle
+                      cx={selectedPoint.x}
+                      cy={selectedPoint.tank2PressureY}
+                      r="4.5"
+                      fill={tankColor(2)}
+                      className="stroke-background"
+                      strokeWidth="2"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  )}
                 </g>
               ) : null}
             </svg>
@@ -492,12 +573,39 @@ export function DiveProfileChart({
               </span>
             </p>
             <p className="rounded-lg bg-muted/60 px-3 py-2">
-              <span className="block text-xs text-muted-foreground">Pressure</span>
-              <span className="font-mono font-semibold">
-                {selectedPoint?.pressureBar === null || !selectedPoint
-                  ? '—'
-                  : `${selectedPoint.pressureBar.toFixed(0)} bar`}
-              </span>
+              <span className="block text-xs text-muted-foreground">Tank pressure</span>
+              {selectedPoint &&
+              (selectedPoint.tank1PressureBar !== null ||
+                selectedPoint.tank2PressureBar !== null) ? (
+                <span className="mt-1 block space-y-1 font-mono text-xs font-semibold">
+                  {selectedPoint.tank1PressureBar === null ? null : (
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: tankColor(1) }}
+                      />
+                      {tankName(1, tanks)} {selectedPoint.tank1PressureBar.toFixed(0)}
+                      bar
+                    </span>
+                  )}
+                  {selectedPoint.tank2PressureBar === null ? null : (
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: tankColor(2) }}
+                      />
+                      {tankName(2, tanks)} {selectedPoint.tank2PressureBar.toFixed(0)}
+                      bar
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className="font-mono font-semibold">
+                  {selectedPoint?.pressureBar === null || !selectedPoint
+                    ? '—'
+                    : `${selectedPoint.pressureBar.toFixed(0)} bar`}
+                </span>
+              )}
             </p>
             <p className="rounded-lg bg-muted/60 px-3 py-2">
               <span className="block text-xs text-muted-foreground">Active tank</span>
@@ -509,8 +617,11 @@ export function DiveProfileChart({
             </p>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Hover or use arrow keys to inspect. Missing pressure segments mean the dive
-            computer recorded no active transmitter value.
+            Hover or use arrow keys to inspect.{' '}
+            {hasTankPressureProfiles
+              ? 'Tank transmitter traces share one pressure scale and use their tank colors. '
+              : ''}
+            Missing segments mean the dive computer recorded no transmitter value.
           </p>
         </>
       )}

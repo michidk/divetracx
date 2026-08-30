@@ -438,6 +438,8 @@ async function saveProfileSample(id: string, values: EditorValues) {
     depthMeters,
     temperatureCelsius: optionalDecimal(values, 'temperatureCelsius'),
     pressureBar: optionalDecimal(values, 'pressureBar', { min: 0 }),
+    tank1PressureBar: optionalDecimal(values, 'tank1PressureBar', { min: 0 }),
+    tank2PressureBar: optionalDecimal(values, 'tank2PressureBar', { min: 0 }),
     decoCeilingMeters: optionalDecimal(values, 'decoCeilingMeters', { min: 0 }),
     tankNumber: optionalInteger(values, 'tankNumber', { min: 1 }),
     updatedAt: new Date(),
