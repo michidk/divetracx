@@ -295,15 +295,6 @@ export function SiteMap({
         >
           OpenStreetMap contributors
         </a>
-        {' · © '}
-        <a
-          className="underline underline-offset-2 hover:text-foreground"
-          href="https://carto.com/attributions"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          CARTO
-        </a>
         .
       </p>
     </div>

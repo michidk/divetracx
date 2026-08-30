@@ -5,10 +5,10 @@ export const DIVE_SITE_BASEMAP_STYLE: StyleSpecification = {
   sources: {
     diveSiteBasemap: {
       type: 'raster',
-      tiles: ['https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png'],
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
-      maxzoom: 20,
-      attribution: '© OpenStreetMap contributors, © CARTO',
+      maxzoom: 19,
+      attribution: '© OpenStreetMap contributors',
     },
   },
   layers: [
