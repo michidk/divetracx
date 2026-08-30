@@ -27,6 +27,7 @@ function tankSummary(tank: ExportSnapshot['data']['tanks'][number]) {
   if (tank.computerTankNumber !== null) {
     parts.push(`channel ${tank.computerTankNumber}`)
   }
+  if (tank.tankType !== null) parts.push(`type code ${tank.tankType}`)
   if (tank.volumeLiters) parts.push(`${tank.volumeLiters} L`)
   if (tank.startPressureBar || tank.endPressureBar) {
     parts.push(`${tank.startPressureBar ?? '?'}-${tank.endPressureBar ?? '?'} bar`)
@@ -34,6 +35,9 @@ function tankSummary(tank: ExportSnapshot['data']['tanks'][number]) {
   if (tank.oxygenPercent) parts.push(`${tank.oxygenPercent}% O2`)
   if (tank.heliumPercent && Number(tank.heliumPercent) > 0) {
     parts.push(`${tank.heliumPercent}% He`)
+  }
+  if (tank.breathingTimeSeconds !== null) {
+    parts.push(`${tank.breathingTimeSeconds} s breathing time`)
   }
   return parts.join(' · ')
 }
@@ -133,6 +137,11 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
     'air_temperature_celsius',
     'water_temperature_celsius',
     'weight_kg',
+    'equipment_weight_kg',
+    'maximum_ppo2',
+    'decompression_dive',
+    'water_type_code',
+    'entry_type_code',
     'visibility',
     'current',
     'waves',
@@ -142,6 +151,7 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
     'suit',
     'boat',
     'divemaster',
+    'legacy_buddy_note',
     'buddies',
     'equipment',
     'tanks',
@@ -207,6 +217,11 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
         csvCell(dive.airTemperatureCelsius),
         csvCell(dive.waterTemperatureCelsius),
         csvCell(dive.weightKg),
+        csvCell(dive.equipmentWeightKg),
+        csvCell(dive.maximumPpo2),
+        csvCell(dive.decompressionDive),
+        csvCell(dive.waterType),
+        csvCell(dive.entryType),
         csvCell(dive.visibility, true),
         csvCell(dive.current, true),
         csvCell(dive.waves, true),
@@ -216,6 +231,7 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
         csvCell(dive.suit, true),
         csvCell(dive.boat, true),
         csvCell(dive.divemaster, true),
+        csvCell(dive.legacyBuddyText, true),
         csvCell(buddyNames, true),
         csvCell(equipmentNames, true),
         csvCell(tankNames, true),

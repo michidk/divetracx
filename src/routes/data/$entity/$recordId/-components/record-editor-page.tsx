@@ -238,6 +238,36 @@ export function RecordEditorPage({
         </aside>
       ) : null}
 
+      {payload.record ? (
+        <section className="rounded-2xl border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold">Record metadata</h2>
+          <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                Source
+              </dt>
+              <dd className="mt-1 font-medium">{payload.record.sourceKey}</dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                Source ID
+              </dt>
+              <dd className="mt-1 font-medium">{payload.record.externalId || '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                Last changed
+              </dt>
+              <dd className="mt-1 font-medium">
+                <time dateTime={payload.record.updatedAt}>
+                  {payload.record.updatedAt.replace('T', ' ').replace('Z', ' UTC')}
+                </time>
+              </dd>
+            </div>
+          </dl>
+        </section>
+      ) : null}
+
       <form onSubmit={(event) => void submit(event)} className="space-y-6">
         {sections.map((section) => (
           <section

@@ -307,6 +307,9 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
         airTemperatureCelsius: item.airTemperatureCelsius,
         waterTemperatureCelsius: item.waterTemperatureCelsius,
         weightKg: item.weightKg,
+        equipmentWeightKg: item.equipmentWeightKg,
+        maximumPpo2: item.maximumPpo2,
+        decompressionDive: item.decompressionDive,
         visibility: item.visibility,
         current: item.current,
         waves: item.waves,
@@ -318,6 +321,7 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
         suit: item.suit,
         boat: item.boat,
         divemaster: item.divemaster,
+        legacyBuddyText: item.legacyBuddyText,
         notes: item.notes,
       }
       const [row] = await tx

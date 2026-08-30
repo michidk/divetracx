@@ -70,6 +70,10 @@ function formatRecordTime(value: Date | string | null) {
   return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString()
 }
 
+function formatSourceCode(value: number | null) {
+  return value === null ? '—' : `Code ${value}`
+}
+
 export function DivePage({ dive }: { dive: DiveData }) {
   const location = [dive.site?.region, dive.site?.country].filter(Boolean).join(', ')
   const diverName = dive.diver ? formatPersonName(dive.diver) : null
@@ -160,6 +164,24 @@ export function DivePage({ dive }: { dive: DiveData }) {
                 label="Weight"
                 value={dive.weightKg ? `${Number(dive.weightKg).toFixed(1)} kg` : '—'}
               />
+              <Value
+                label="Equipment weight"
+                value={
+                  dive.equipmentWeightKg
+                    ? `${Number(dive.equipmentWeightKg).toFixed(1)} kg`
+                    : '—'
+                }
+              />
+              <Value
+                label="Maximum ppO₂"
+                value={dive.maximumPpo2 ? Number(dive.maximumPpo2).toFixed(2) : '—'}
+              />
+              <Value
+                label="Decompression dive"
+                value={dive.decompressionDive ? 'Yes' : 'No'}
+              />
+              <Value label="Water type" value={formatSourceCode(dive.waterType)} />
+              <Value label="Entry type" value={formatSourceCode(dive.entryType)} />
               <Value label="Visibility" value={dive.visibility} />
               <Value label="Current" value={dive.current} />
               <Value label="Waves" value={dive.waves} />
@@ -222,6 +244,23 @@ export function DivePage({ dive }: { dive: DiveData }) {
                           tank.endPressureBar
                             ? `${Number(tank.endPressureBar).toFixed(0)} bar`
                             : '—'
+                        }
+                      />
+                      <Value
+                        label="Computer channel"
+                        value={
+                          tank.computerTankNumber === null
+                            ? '—'
+                            : `Tank ${tank.computerTankNumber}`
+                        }
+                      />
+                      <Value label="Tank type" value={formatSourceCode(tank.tankType)} />
+                      <Value
+                        label="Breathing time"
+                        value={
+                          tank.breathingTimeSeconds === null
+                            ? '—'
+                            : formatDuration(tank.breathingTimeSeconds)
                         }
                       />
                     </dl>
@@ -292,6 +331,7 @@ export function DivePage({ dive }: { dive: DiveData }) {
             <dl className="mt-5 space-y-5">
               <Value label="Diver" value={diverName} />
               <Value label="Divemaster" value={dive.divemaster} />
+              <Value label="Legacy buddy note" value={dive.legacyBuddyText} />
               <Value
                 label="Buddies"
                 value={

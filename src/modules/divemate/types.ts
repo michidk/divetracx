@@ -96,6 +96,9 @@ export interface DiveMateDive extends DiveMateSourceRecord {
   airTemperatureCelsius: string | null
   waterTemperatureCelsius: string | null
   weightKg: string | null
+  equipmentWeightKg: string | null
+  maximumPpo2: string | null
+  decompressionDive: boolean
   visibility: string | null
   current: string | null
   waves: string | null
@@ -107,6 +110,7 @@ export interface DiveMateDive extends DiveMateSourceRecord {
   suit: string | null
   boat: string | null
   divemaster: string | null
+  legacyBuddyText: string | null
   notes: string | null
 }
 

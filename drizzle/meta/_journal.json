@@ -36,6 +36,13 @@
       "when": 1788107064578,
       "tag": "0004_steady_legion",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788108343962,
+      "tag": "0005_flashy_thanos",
+      "breakpoints": true
     }
   ]
 }

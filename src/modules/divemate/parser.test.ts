@@ -89,7 +89,8 @@ describe('parseDiveMateDatabase', () => {
         Water INTEGER, Entry INTEGER, Rating INTEGER, Computer TEXT,
         Divesuit TEXT, Boat TEXT, Divemaster TEXT, Comments TEXT,
         UUID TEXT, Updated TEXT, ProfileInt INTEGER, Profile TEXT,
-        Profile2 TEXT, Profile3 TEXT, Profile4 TEXT
+        Profile2 TEXT, Profile3 TEXT, Profile4 TEXT, MaxPPO2 REAL,
+        EquipWeight REAL, Deco INTEGER, Buddy TEXT, Profile10 TEXT
       );
       INSERT INTO Logbook VALUES (
         11, 1, 7, 2, 5, '4', '9', 42, '2026-07-26', '14:29:00',
@@ -99,7 +100,8 @@ describe('parseDiveMateDatabase', () => {
         '000000000000001500000000012300000000',
         '220200000002151500100020000001000',
         '199520000000001950150000000019001450000000',
-        '000099000010002003005001006'
+        '000099000010002003005001006', 1.31, 12.4, 1, 'Legacy Buddy',
+        'must not be stored'
       );
       CREATE TABLE Tank (
         ID INTEGER, LogID INTEGER, TankID INTEGER, Name TEXT, SortOrd INTEGER, Tanktype INTEGER,
@@ -127,7 +129,12 @@ describe('parseDiveMateDatabase', () => {
       entryTime: '14:29:00',
       durationSeconds: 2910,
       maximumDepthMeters: '31.2',
+      maximumPpo2: '1.31',
+      equipmentWeightKg: '12.4',
+      decompressionDive: true,
+      legacyBuddyText: 'Legacy Buddy',
     })
+    expect(snapshot.dives[0]?.sourcePayload).not.toHaveProperty('Profile10')
     expect(snapshot.sites[0]).toMatchObject({
       latitude: '24.7061444',
       longitude: '35.0855278',

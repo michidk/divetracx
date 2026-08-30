@@ -143,12 +143,14 @@ function coordinate(value: unknown, latitude: boolean): string | null {
 
 function sourcePayload(row: SourceRow): Record<string, unknown> {
   return Object.fromEntries(
-    Object.entries(row).map(([key, value]) => {
-      if (value instanceof Uint8Array) {
-        return [key, { omittedBinaryBytes: value.byteLength }]
-      }
-      return [key, value]
-    }),
+    Object.entries(row)
+      .filter(([key]) => key !== 'Profile10')
+      .map(([key, value]) => {
+        if (value instanceof Uint8Array) {
+          return [key, { omittedBinaryBytes: value.byteLength }]
+        }
+        return [key, value]
+      }),
   )
 }
 
@@ -291,6 +293,9 @@ function mapDive(row: SourceRow): DiveMateDive | null {
     airTemperatureCelsius: decimal(row.Airtemp, true),
     waterTemperatureCelsius: decimal(row.Watertemp, true),
     weightKg: decimal(row.Weight),
+    equipmentWeightKg: decimal(row.EquipWeight),
+    maximumPpo2: decimal(row.MaxPPO2),
+    decompressionDive: integer(row.Deco) === 1,
     visibility: text(row.VisHor),
     current: text(row.UWCurrent),
     waves: text(row.Waves),
@@ -302,6 +307,7 @@ function mapDive(row: SourceRow): DiveMateDive | null {
     suit: text(row.Divesuit),
     boat: text(row.Boat),
     divemaster: text(row.Divemaster),
+    legacyBuddyText: text(row.Buddy),
     notes: text(row.Comments),
   }
 }

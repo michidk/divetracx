@@ -1,5 +1,44 @@
 import { describe, expect, test } from 'bun:test'
+import { getTableColumns } from 'drizzle-orm'
+import {
+  buddies,
+  certifications,
+  diveProfileSamples,
+  divers,
+  diveSites,
+  dives,
+  diveTypes,
+  equipment,
+  shops,
+  syncRuns,
+  tanks,
+} from '@/db/schema'
 import { entityDefinitionList, entityDefinitions, entityKeySchema } from './entities'
+
+const entityTables = {
+  dives,
+  sites: diveSites,
+  divers,
+  buddies,
+  equipment,
+  certifications,
+  shops,
+  'dive-types': diveTypes,
+  tanks,
+  'profile-samples': diveProfileSamples,
+  'sync-runs': syncRuns,
+} as const
+
+const recordMetadataColumns = new Set([
+  'id',
+  'sourceKey',
+  'externalId',
+  'externalUuid',
+  'sourceUpdatedAt',
+  'sourcePayload',
+  'createdAt',
+  'updatedAt',
+])
 
 describe('data entity definitions', () => {
   test('defines every entity exactly once', () => {
@@ -32,6 +71,21 @@ describe('data entity definitions', () => {
       kind: 'multi-select',
       reference: 'equipment',
     })
+  })
+
+  test('provides an editor field for every domain column', () => {
+    for (const entity of entityKeySchema.options) {
+      const editorFields = new Set(
+        entityDefinitions[entity].fields.map((field) => field.key),
+      )
+      const domainColumns = Object.keys(getTableColumns(entityTables[entity])).filter(
+        (column) => !recordMetadataColumns.has(column),
+      )
+      expect(
+        domainColumns.filter((column) => !editorFields.has(column)),
+        `${entity} has domain columns without editor fields`,
+      ).toEqual([])
+    }
   })
 
   test('keeps synchronization audit records read-only', () => {

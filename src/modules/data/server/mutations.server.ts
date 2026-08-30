@@ -147,6 +147,9 @@ async function saveDive(id: string, values: EditorValues) {
     airTemperatureCelsius: optionalDecimal(values, 'airTemperatureCelsius'),
     waterTemperatureCelsius: optionalDecimal(values, 'waterTemperatureCelsius'),
     weightKg: optionalDecimal(values, 'weightKg', { min: 0 }),
+    equipmentWeightKg: optionalDecimal(values, 'equipmentWeightKg', { min: 0 }),
+    maximumPpo2: optionalDecimal(values, 'maximumPpo2', { min: 0 }),
+    decompressionDive: booleanValue(values, 'decompressionDive'),
     visibility: optionalText(values, 'visibility'),
     current: optionalText(values, 'current'),
     waves: optionalText(values, 'waves'),
@@ -158,6 +161,7 @@ async function saveDive(id: string, values: EditorValues) {
     suit: optionalText(values, 'suit'),
     boat: optionalText(values, 'boat'),
     divemaster: optionalText(values, 'divemaster'),
+    legacyBuddyText: optionalText(values, 'legacyBuddyText'),
     notes: optionalText(values, 'notes'),
     updatedAt: new Date(),
   }
