@@ -16,6 +16,7 @@ export const Route = createRootRoute({
         content: 'A self-hosted dive log with DiveMate synchronization.',
       },
     ],
+    links: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
   }),
   component: () => (
     <AppShell>
