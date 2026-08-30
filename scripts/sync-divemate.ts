@@ -16,7 +16,7 @@ function syncTrigger(): DiveMateSyncTrigger {
 try {
   const result = await syncDiveMate({ trigger: syncTrigger() })
   console.log(
-    `DiveMate sync ${result.runId} completed: ${result.counts.dives ?? 0} dives, ${result.counts.profileSamples ?? 0} profile samples, ${result.counts.sites ?? 0} sites, ${result.counts.certifications ?? 0} certifications`,
+    `DiveMate sync ${result.runId} completed: ${result.counts.dives ?? 0} dives, ${result.counts.profileSamples ?? 0} profile samples, ${result.counts.sites ?? 0} sites, ${result.counts.certifications ?? 0} certifications, ${result.counts.pictures ?? 0} picture references`,
   )
 } finally {
   await closeDb()

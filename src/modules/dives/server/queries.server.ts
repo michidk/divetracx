@@ -12,6 +12,7 @@ import {
   dives,
   diveTypes,
   equipment,
+  pictures,
   shops,
   syncRuns,
   tanks,
@@ -265,13 +266,28 @@ export async function loadDive(diveId: string) {
           volumeLiters: tanks.volumeLiters,
           startPressureBar: tanks.startPressureBar,
           endPressureBar: tanks.endPressureBar,
+          workingPressureBar: tanks.workingPressureBar,
           oxygenPercent: tanks.oxygenPercent,
           heliumPercent: tanks.heliumPercent,
           breathingTimeSeconds: tanks.breathingTimeSeconds,
+          supplyTypeCode: tanks.supplyTypeCode,
+          weightKg: tanks.weightKg,
+          divePhaseCode: tanks.divePhaseCode,
         })
         .from(tanks)
         .where(eq(tanks.diveId, diveId))
         .orderBy(asc(tanks.sortOrder))
+
+      const divePictures = await transaction
+        .select({
+          id: pictures.id,
+          path: pictures.path,
+          description: pictures.description,
+          sortOrder: pictures.sortOrder,
+        })
+        .from(pictures)
+        .where(eq(pictures.diveId, diveId))
+        .orderBy(asc(pictures.sortOrder), asc(pictures.path))
 
       const profileSamples = await transaction
         .select({
@@ -298,6 +314,7 @@ export async function loadDive(diveId: string) {
         buddies: diveBuddiesData,
         equipment: diveEquipmentData,
         tanks: diveTanks,
+        pictures: divePictures,
         profileSamples,
       }
     },

@@ -6,6 +6,7 @@ import type {
   DiveMateDiver,
   DiveMateDiveType,
   DiveMateEquipment,
+  DiveMatePicture,
   DiveMateProfileSample,
   DiveMateShop,
   DiveMateSite,
@@ -174,10 +175,16 @@ function mapDiver(row: SourceRow): DiveMateDiver | null {
     lastName: text(row.LastName),
     email: text(row.Email),
     phone: text(row.Mobile) ?? text(row.Phone),
+    street: text(row.Street),
+    postalCode: text(row.Zip),
+    city: text(row.City),
+    state: text(row.State),
+    country: text(row.Country),
     birthDate: date(row.Birthdate),
     bloodGroup: text(row.Bloodgroup),
     emergencyContact: text(row.EmergContact),
     emergencyPhone: text(row.EmergContactNumber),
+    emergencyEmail: text(row.EmergEmail),
     insurance: text(row.DiveInsurance),
     notes: text(row.Comments),
   }
@@ -215,7 +222,10 @@ function mapBuddy(row: SourceRow): DiveMateBuddy | null {
     lastName: text(row.LastName),
     email: text(row.Email),
     phone: text(row.Mobile) ?? text(row.Phone),
+    street: text(row.Street),
+    postalCode: text(row.Zip),
     city: text(row.City),
+    state: text(row.State),
     country: text(row.Country),
     notes: text(row.Comments),
   }
@@ -228,16 +238,24 @@ function mapEquipment(row: SourceRow): DiveMateEquipment | null {
     text(row.Name) ?? text(row.Object) ?? `DiveMate equipment ${source.externalId}`
   return {
     ...source,
+    diverExternalId: externalId(row.DiverID),
     name,
     category: text(row.Category),
     manufacturer: text(row.Manufacturer),
     model: text(row.Object),
     serialNumber: text(row.Serial),
+    information: text(row.Info),
     purchasedAt: date(row.DateP),
+    purchasePrice: decimal(row.Price),
+    purchaseShop: text(row.Shop),
     retiredAt: date(row.DateR),
     serviceDueAt: date(row.DateRN),
     inactive: integer(row.Inactive) === 1,
     weightKg: decimal(row.Weight),
+    equipmentTypeCode: integer(row.TypeID),
+    sourceValue1: decimal(row.Val1, true),
+    sourceValue2: decimal(row.Val2, true),
+    sourceValue3: integer(row.Val3),
     notes: text(row.Comments),
   }
 }
@@ -255,6 +273,9 @@ function mapCertification(row: SourceRow): DiveMateCertification | null {
     certifiedAt: date(row.CertDate),
     instructorName: text(row.Instructor),
     instructorNumber: text(row.InstructorNo),
+    sortOrder: integer(row.SortOrd),
+    scan1Path: text(row.Scan1Path),
+    scan2Path: text(row.Scan2Path),
   }
 }
 
@@ -329,9 +350,30 @@ function mapTank(row: SourceRow): DiveMateTank | null {
     volumeLiters: decimal(row.Tanksize),
     startPressureBar: decimal(row.PresS),
     endPressureBar: decimal(row.PresE),
+    workingPressureBar: decimal(row.PresW),
     oxygenPercent: decimal(row.O2, true),
     heliumPercent: decimal(row.He, true),
     breathingTimeSeconds: integer(row.BreathingTime),
+    supplyTypeCode: integer(row.SupplyType),
+    weightKg: decimal(row.Weight),
+    divePhaseCode: integer(row.DivePhase),
+  }
+}
+
+function mapPicture(row: SourceRow): DiveMatePicture | null {
+  const source = sourceRecord(row)
+  const path = text(row.Path)
+  if (!source || !path) return null
+  return {
+    ...source,
+    diveExternalId: externalId(row.LogID),
+    siteExternalId: externalId(row.PlaceID),
+    buddyExternalId: externalId(row.BuddyID),
+    equipmentExternalId: externalId(row.EquipmentID),
+    diverExternalId: externalId(row.DiverID),
+    path,
+    description: text(row.Description),
+    sortOrder: integer(row.SortOrd),
   }
 }
 
@@ -424,6 +466,9 @@ export function parseDiveMateDatabase(databasePath: string): DiveMateSnapshot {
     const info = readRows(database, 'DBInfo')[0]
     return {
       databaseVersion: text(info?.DBVersion),
+      databaseProgram: text(info?.PrgName),
+      databaseUuid: text(info?.UUID),
+      databaseUpdatedAt: text(info?.Updated),
       divers: compact(readRows(database, 'Personal').map(mapDiver)),
       sites: compact(readRows(database, 'Place').map(mapSite)),
       buddies: compact(readRows(database, 'Buddy').map(mapBuddy)),
@@ -433,6 +478,7 @@ export function parseDiveMateDatabase(databasePath: string): DiveMateSnapshot {
       diveTypes: compact(readRows(database, 'Divetype').map(mapDiveType)),
       dives: compact(readRows(database, 'Logbook').map(mapDive)),
       tanks: compact(readRows(database, 'Tank').map(mapTank)),
+      pictures: compact(readRows(database, 'Pictures').map(mapPicture)),
       profileSamples: readRows(database, 'Logbook').flatMap(mapProfileSamples),
     }
   } finally {

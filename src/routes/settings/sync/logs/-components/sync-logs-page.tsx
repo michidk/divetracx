@@ -34,6 +34,7 @@ function importedSummary(counts: Record<string, number> | null) {
     'equipment',
     'certifications',
     'tanks',
+    'pictures',
   ]
   return preferredKeys
     .filter((key) => counts[key] !== undefined)
@@ -91,6 +92,9 @@ export function SyncLogsPage({ logs }: { logs: SyncLogs }) {
             </p>
             {log.sourceFingerprint ? (
               <p className="mt-2 font-mono text-xs text-muted-foreground">
+                {log.sourceDatabaseVersion
+                  ? `DiveMate DB ${log.sourceDatabaseVersion} · `
+                  : ''}
                 backup {log.sourceFingerprint.slice(0, 16)}
               </p>
             ) : null}

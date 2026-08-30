@@ -17,6 +17,7 @@ import {
   dives,
   diveTypes,
   equipment,
+  pictures,
   shops,
   syncRuns,
   tanks,
@@ -113,10 +114,16 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
           lastName: item.lastName,
           email: item.email,
           phone: item.phone,
+          street: item.street,
+          postalCode: item.postalCode,
+          city: item.city,
+          state: item.state,
+          country: item.country,
           birthDate: item.birthDate,
           bloodGroup: item.bloodGroup,
           emergencyContact: item.emergencyContact,
           emergencyPhone: item.emergencyPhone,
+          emergencyEmail: item.emergencyEmail,
           insurance: item.insurance,
           notes: item.notes,
         })
@@ -127,10 +134,16 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
             lastName: item.lastName,
             email: item.email,
             phone: item.phone,
+            street: item.street,
+            postalCode: item.postalCode,
+            city: item.city,
+            state: item.state,
+            country: item.country,
             birthDate: item.birthDate,
             bloodGroup: item.bloodGroup,
             emergencyContact: item.emergencyContact,
             emergencyPhone: item.emergencyPhone,
+            emergencyEmail: item.emergencyEmail,
             insurance: item.insurance,
             notes: item.notes,
             externalUuid: item.externalUuid,
@@ -181,7 +194,10 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
         lastName: item.lastName,
         email: item.email,
         phone: item.phone,
+        street: item.street,
+        postalCode: item.postalCode,
         city: item.city,
+        state: item.state,
         country: item.country,
         notes: item.notes,
       }
@@ -200,16 +216,26 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
     for (const item of snapshot.equipment) {
       const values = {
         ...sourceValues(item),
+        diverId: item.diverExternalId
+          ? (diverIds.get(item.diverExternalId) ?? null)
+          : null,
         name: item.name,
         category: item.category,
         manufacturer: item.manufacturer,
         model: item.model,
         serialNumber: item.serialNumber,
+        information: item.information,
         purchasedAt: item.purchasedAt,
+        purchasePrice: item.purchasePrice,
+        purchaseShop: item.purchaseShop,
         retiredAt: item.retiredAt,
         serviceDueAt: item.serviceDueAt,
         inactive: item.inactive,
         weightKg: item.weightKg,
+        equipmentTypeCode: item.equipmentTypeCode,
+        sourceValue1: item.sourceValue1,
+        sourceValue2: item.sourceValue2,
+        sourceValue3: item.sourceValue3,
         notes: item.notes,
       }
       const [row] = await tx
@@ -267,6 +293,9 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
         certifiedAt: item.certifiedAt,
         instructorName: item.instructorName,
         instructorNumber: item.instructorNumber,
+        sortOrder: item.sortOrder,
+        scan1Path: item.scan1Path,
+        scan2Path: item.scan2Path,
       }
       await tx
         .insert(certifications)
@@ -410,15 +439,46 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
         volumeLiters: item.volumeLiters,
         startPressureBar: item.startPressureBar,
         endPressureBar: item.endPressureBar,
+        workingPressureBar: item.workingPressureBar,
         oxygenPercent: item.oxygenPercent,
         heliumPercent: item.heliumPercent,
         breathingTimeSeconds: item.breathingTimeSeconds,
+        supplyTypeCode: item.supplyTypeCode,
+        weightKg: item.weightKg,
+        divePhaseCode: item.divePhaseCode,
       }
       await tx
         .insert(tanks)
         .values(values)
         .onConflictDoUpdate({
           target: [tanks.sourceKey, tanks.externalId],
+          set: values,
+        })
+    }
+
+    for (const item of snapshot.pictures) {
+      const values = {
+        ...sourceValues(item),
+        diveId: item.diveExternalId ? (diveIds.get(item.diveExternalId) ?? null) : null,
+        siteId: item.siteExternalId ? (siteIds.get(item.siteExternalId) ?? null) : null,
+        buddyId: item.buddyExternalId
+          ? (buddyIds.get(item.buddyExternalId) ?? null)
+          : null,
+        equipmentId: item.equipmentExternalId
+          ? (equipmentIds.get(item.equipmentExternalId) ?? null)
+          : null,
+        diverId: item.diverExternalId
+          ? (diverIds.get(item.diverExternalId) ?? null)
+          : null,
+        path: item.path,
+        description: item.description,
+        sortOrder: item.sortOrder,
+      }
+      await tx
+        .insert(pictures)
+        .values(values)
+        .onConflictDoUpdate({
+          target: [pictures.sourceKey, pictures.externalId],
           set: values,
         })
     }
@@ -433,6 +493,7 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
       diveTypes: snapshot.diveTypes.length,
       dives: snapshot.dives.length,
       tanks: snapshot.tanks.length,
+      pictures: snapshot.pictures.length,
       profileSamples: snapshot.profileSamples.length,
     }
   })
@@ -471,6 +532,10 @@ export async function syncDiveMate(
         status: 'succeeded',
         finishedAt: new Date(),
         sourceFingerprint: fingerprint,
+        sourceDatabaseVersion: snapshot.databaseVersion,
+        sourceDatabaseProgram: snapshot.databaseProgram,
+        sourceDatabaseUuid: snapshot.databaseUuid,
+        sourceDatabaseUpdatedAt: snapshot.databaseUpdatedAt,
         counts,
       })
       .where(eq(syncRuns.id, run.id))

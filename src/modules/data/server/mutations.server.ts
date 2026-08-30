@@ -14,6 +14,7 @@ import {
   dives,
   diveTypes,
   equipment,
+  pictures,
   shops,
   tanks,
 } from '@/db/schema'
@@ -244,10 +245,16 @@ async function saveDiver(id: string, values: EditorValues) {
     lastName: optionalText(values, 'lastName'),
     email: optionalText(values, 'email'),
     phone: optionalText(values, 'phone'),
+    street: optionalText(values, 'street'),
+    postalCode: optionalText(values, 'postalCode'),
+    city: optionalText(values, 'city'),
+    state: optionalText(values, 'state'),
+    country: optionalText(values, 'country'),
     birthDate: optionalText(values, 'birthDate'),
     bloodGroup: optionalText(values, 'bloodGroup'),
     emergencyContact: optionalText(values, 'emergencyContact'),
     emergencyPhone: optionalText(values, 'emergencyPhone'),
+    emergencyEmail: optionalText(values, 'emergencyEmail'),
     insurance: optionalText(values, 'insurance'),
     notes: optionalText(values, 'notes'),
     updatedAt: new Date(),
@@ -273,7 +280,10 @@ async function saveBuddy(id: string, values: EditorValues) {
     lastName: optionalText(values, 'lastName'),
     email: optionalText(values, 'email'),
     phone: optionalText(values, 'phone'),
+    street: optionalText(values, 'street'),
+    postalCode: optionalText(values, 'postalCode'),
     city: optionalText(values, 'city'),
+    state: optionalText(values, 'state'),
     country: optionalText(values, 'country'),
     notes: optionalText(values, 'notes'),
     updatedAt: new Date(),
@@ -295,16 +305,24 @@ async function saveBuddy(id: string, values: EditorValues) {
 
 async function saveEquipment(id: string, values: EditorValues) {
   const fields = {
+    diverId: optionalUuid(values, 'diverId'),
     name: requiredText(values, 'name'),
     category: optionalText(values, 'category'),
     manufacturer: optionalText(values, 'manufacturer'),
     model: optionalText(values, 'model'),
     serialNumber: optionalText(values, 'serialNumber'),
+    information: optionalText(values, 'information'),
     purchasedAt: optionalText(values, 'purchasedAt'),
+    purchasePrice: optionalDecimal(values, 'purchasePrice', { min: 0 }),
+    purchaseShop: optionalText(values, 'purchaseShop'),
     retiredAt: optionalText(values, 'retiredAt'),
     serviceDueAt: optionalText(values, 'serviceDueAt'),
     inactive: booleanValue(values, 'inactive'),
     weightKg: optionalDecimal(values, 'weightKg', { min: 0 }),
+    equipmentTypeCode: optionalInteger(values, 'equipmentTypeCode'),
+    sourceValue1: optionalDecimal(values, 'sourceValue1'),
+    sourceValue2: optionalDecimal(values, 'sourceValue2'),
+    sourceValue3: optionalInteger(values, 'sourceValue3'),
     notes: optionalText(values, 'notes'),
     updatedAt: new Date(),
   }
@@ -332,6 +350,9 @@ async function saveCertification(id: string, values: EditorValues) {
     certifiedAt: optionalText(values, 'certifiedAt'),
     instructorName: optionalText(values, 'instructorName'),
     instructorNumber: optionalText(values, 'instructorNumber'),
+    sortOrder: optionalInteger(values, 'sortOrder'),
+    scan1Path: optionalText(values, 'scan1Path'),
+    scan2Path: optionalText(values, 'scan2Path'),
     updatedAt: new Date(),
   }
   const [row] =
@@ -412,9 +433,13 @@ async function saveTank(id: string, values: EditorValues) {
     volumeLiters: optionalDecimal(values, 'volumeLiters', { min: 0 }),
     startPressureBar,
     endPressureBar,
+    workingPressureBar: optionalDecimal(values, 'workingPressureBar', { min: 0 }),
     oxygenPercent,
     heliumPercent,
     breathingTimeSeconds: optionalInteger(values, 'breathingTimeSeconds', { min: 0 }),
+    supplyTypeCode: optionalInteger(values, 'supplyTypeCode'),
+    weightKg: optionalDecimal(values, 'weightKg', { min: 0 }),
+    divePhaseCode: optionalInteger(values, 'divePhaseCode'),
     updatedAt: new Date(),
   }
   const [row] =
@@ -429,6 +454,33 @@ async function saveTank(id: string, values: EditorValues) {
           .where(eq(tanks.id, recordId(id)))
           .returning({ id: tanks.id })
   if (!row) throw new Error('Tank was not found')
+  return row.id
+}
+
+async function savePicture(id: string, values: EditorValues) {
+  const fields = {
+    diveId: optionalUuid(values, 'diveId'),
+    siteId: optionalUuid(values, 'siteId'),
+    buddyId: optionalUuid(values, 'buddyId'),
+    equipmentId: optionalUuid(values, 'equipmentId'),
+    diverId: optionalUuid(values, 'diverId'),
+    path: requiredText(values, 'path'),
+    description: optionalText(values, 'description'),
+    sortOrder: optionalInteger(values, 'sortOrder'),
+    updatedAt: new Date(),
+  }
+  const [row] =
+    id === 'new'
+      ? await getDb()
+          .insert(pictures)
+          .values({ ...fields, sourceKey: 'manual' })
+          .returning({ id: pictures.id })
+      : await getDb()
+          .update(pictures)
+          .set(fields)
+          .where(eq(pictures.id, recordId(id)))
+          .returning({ id: pictures.id })
+  if (!row) throw new Error('Picture reference was not found')
   return row.id
 }
 
@@ -488,6 +540,8 @@ export async function saveDataRecord(
       return saveDiveType(id, values)
     case 'tanks':
       return saveTank(id, values)
+    case 'pictures':
+      return savePicture(id, values)
     case 'profile-samples':
       return saveProfileSample(id, values)
     case 'sync-runs':

@@ -43,6 +43,20 @@
       "when": 1788108343962,
       "tag": "0005_flashy_thanos",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788112210488,
+      "tag": "0006_marvelous_bill_hollister",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788112619355,
+      "tag": "0007_sharp_franklin_storm",
+      "breakpoints": true
     }
   ]
 }

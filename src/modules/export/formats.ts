@@ -32,6 +32,7 @@ function tankSummary(tank: ExportSnapshot['data']['tanks'][number]) {
   if (tank.startPressureBar || tank.endPressureBar) {
     parts.push(`${tank.startPressureBar ?? '?'}-${tank.endPressureBar ?? '?'} bar`)
   }
+  if (tank.workingPressureBar) parts.push(`${tank.workingPressureBar} bar working`)
   if (tank.oxygenPercent) parts.push(`${tank.oxygenPercent}% O2`)
   if (tank.heliumPercent && Number(tank.heliumPercent) > 0) {
     parts.push(`${tank.heliumPercent}% He`)
@@ -39,6 +40,11 @@ function tankSummary(tank: ExportSnapshot['data']['tanks'][number]) {
   if (tank.breathingTimeSeconds !== null) {
     parts.push(`${tank.breathingTimeSeconds} s breathing time`)
   }
+  if (tank.supplyTypeCode !== null) {
+    parts.push(`supply code ${tank.supplyTypeCode}`)
+  }
+  if (tank.weightKg) parts.push(`${tank.weightKg} kg`)
+  if (tank.divePhaseCode !== null) parts.push(`phase code ${tank.divePhaseCode}`)
   return parts.join(' · ')
 }
 

@@ -13,6 +13,7 @@ export async function loadSyncLogs() {
       startedAt: syncRuns.startedAt,
       finishedAt: syncRuns.finishedAt,
       sourceFingerprint: syncRuns.sourceFingerprint,
+      sourceDatabaseVersion: syncRuns.sourceDatabaseVersion,
       counts: syncRuns.counts,
       error: syncRuns.error,
     })

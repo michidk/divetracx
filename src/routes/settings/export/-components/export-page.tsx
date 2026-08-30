@@ -15,7 +15,7 @@ const exportOptions: ExportOption[] = [
     title: 'Divetracx backup',
     description: 'A complete, versioned copy of your Divetracx database records.',
     details:
-      'JSON · dives, sites, people, equipment, tanks, certifications, and sync history',
+      'JSON · dives, sites, people, equipment, tanks, picture references, certifications, and sync history',
     href: '/api/export/json',
     label: 'Download JSON',
     icon: FileJson2,

@@ -6,6 +6,7 @@ import {
   ChevronRight,
   ContactRound,
   Database,
+  Images,
   MapPin,
   RefreshCw,
   Tags,
@@ -29,6 +30,7 @@ const entityIcons = {
   shops: Building2,
   'dive-types': Tags,
   tanks: Database,
+  pictures: Images,
   'profile-samples': Activity,
   'sync-runs': RefreshCw,
 } satisfies Record<EntityKey, typeof Waves>

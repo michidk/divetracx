@@ -24,17 +24,22 @@ describe('parseDiveMateDatabase', () => {
   test('normalizes a DiveMate logbook and its linked records', () => {
     const { database, path } = fixtureDatabase()
     database.exec(`
-      CREATE TABLE DBInfo (DBVersion TEXT);
-      INSERT INTO DBInfo VALUES ('4.0');
+      CREATE TABLE DBInfo (DBVersion TEXT, PrgName TEXT, UUID TEXT, Updated TEXT);
+      INSERT INTO DBInfo VALUES (
+        '4.0', 'DiveMate', 'database-uuid', '2026-07-26T12:00:00'
+      );
       CREATE TABLE Personal (
         ID INTEGER, FirstName TEXT, LastName TEXT, Email TEXT, Mobile TEXT,
         Birthdate TEXT, Bloodgroup TEXT, EmergContact TEXT,
         EmergContactNumber TEXT, DiveInsurance TEXT, Comments TEXT,
-        UUID TEXT, Updated TEXT
+        UUID TEXT, Updated TEXT, Street TEXT, Zip TEXT, City TEXT,
+        State TEXT, Country TEXT, EmergEmail TEXT
       );
       INSERT INTO Personal VALUES (
         1, 'Ada', 'Diver', 'ada@example.test', '+1', '1990-01-02', 'A+',
-        'Grace', '+2', 'insured', 'notes', 'diver-uuid', '2026-01-01'
+        'Grace', '+2', 'insured', 'notes', 'diver-uuid', '2026-01-01',
+        '1 Ocean Road', '12345', 'Dive City', 'Coast', 'Example',
+        'grace@example.test'
       );
       CREATE TABLE Place (
         ID INTEGER, Place TEXT, Country TEXT, Region TEXT, WaterName TEXT,
@@ -49,30 +54,34 @@ describe('parseDiveMateDatabase', () => {
       CREATE TABLE Buddy (
         ID INTEGER, FirstName TEXT, LastName TEXT, Email TEXT, Mobile TEXT,
         Phone TEXT, City TEXT, Country TEXT, Comments TEXT, UUID TEXT,
-        Updated TEXT
+        Updated TEXT, Street TEXT, Zip TEXT, State TEXT
       );
       INSERT INTO Buddy VALUES (
         4, 'Sam', 'Buddy', NULL, NULL, NULL, NULL, NULL, NULL,
-        'buddy-uuid', '2026-01-01'
+        'buddy-uuid', '2026-01-01', '2 Reef Road', '54321', 'Bay'
       );
       CREATE TABLE Equipment (
         ID INTEGER, Name TEXT, Object TEXT, Category TEXT, Manufacturer TEXT,
         Serial TEXT, DateP TEXT, DateR TEXT, DateRN TEXT, Inactive INTEGER,
         Weight REAL, Comments TEXT, Photo BLOB, UUID TEXT, Updated TEXT
+        , DiverID INTEGER, Info TEXT, Price REAL, Shop TEXT, TypeID INTEGER,
+        Val1 REAL, Val2 REAL, Val3 INTEGER
       );
       INSERT INTO Equipment VALUES (
         9, 'Dive computer', 'Model X', 'Computers', 'Example', '123',
         '2025-01-01', NULL, NULL, 0, 0.2, NULL, X'0102',
-        'equipment-uuid', '2026-01-01'
+        'equipment-uuid', '2026-01-01', 1, 'Bluetooth device', 500,
+        'Dive Center', 11, 12, 0, 2
       );
       CREATE TABLE Brevets (
         ID INTEGER, DiverID INTEGER, Brevet TEXT, Org TEXT, Number TEXT,
         CertDate TEXT, Instructor TEXT, InstructorNo TEXT, UUID TEXT,
-        Updated TEXT
+        Updated TEXT, Scan1Path TEXT, Scan2Path TEXT, SortOrd INTEGER
       );
       INSERT INTO Brevets VALUES (
         3, 1, 'Advanced', 'Example Org', 'C-123', '2024-06-01',
-        'Instructor', 'I-1', 'cert-uuid', '2026-01-01'
+        'Instructor', 'I-1', 'cert-uuid', '2026-01-01',
+        '/media/front.jpg', '/media/back.jpg', 3
       );
       CREATE TABLE Shop (ID INTEGER, ShopName TEXT, UUID TEXT, Updated TEXT);
       INSERT INTO Shop VALUES (2, 'Dive Center', 'shop-uuid', '2026-01-01');
@@ -106,11 +115,21 @@ describe('parseDiveMateDatabase', () => {
       CREATE TABLE Tank (
         ID INTEGER, LogID INTEGER, TankID INTEGER, Name TEXT, SortOrd INTEGER, Tanktype INTEGER,
         Tanksize REAL, PresS REAL, PresE REAL, O2 REAL, He REAL,
-        BreathingTime INTEGER, UUID TEXT, Updated TEXT
+        BreathingTime INTEGER, UUID TEXT, Updated TEXT, PresW REAL,
+        SupplyType INTEGER, Weight REAL, DivePhase INTEGER
       );
       INSERT INTO Tank VALUES (
         12, 11, 2, 'Back gas', 1, 0, 12, 200, 50, 32, 0, 2900,
-        'tank-uuid', '2026-07-26'
+        'tank-uuid', '2026-07-26', 232, 4, 12.4, 2
+      );
+      CREATE TABLE Pictures (
+        ID INTEGER, LogID INTEGER, PlaceID INTEGER, BuddyID INTEGER,
+        EquipmentID INTEGER, DiverID INTEGER, Path TEXT, Description TEXT,
+        SortOrd INTEGER, UUID TEXT, Updated TEXT
+      );
+      INSERT INTO Pictures VALUES (
+        13, 11, NULL, NULL, NULL, 1, '/media/dive.jpg', 'Dive photo', 1,
+        'picture-uuid', '2026-07-26'
       );
     `)
     database.close()
@@ -118,6 +137,9 @@ describe('parseDiveMateDatabase', () => {
     const snapshot = parseDiveMateDatabase(path)
 
     expect(snapshot.databaseVersion).toBe('4.0')
+    expect(snapshot.databaseProgram).toBe('DiveMate')
+    expect(snapshot.databaseUuid).toBe('database-uuid')
+    expect(snapshot.databaseUpdatedAt).toBe('2026-07-26T12:00:00')
     expect(snapshot.dives).toHaveLength(1)
     expect(snapshot.dives[0]).toMatchObject({
       externalId: '11',
@@ -134,6 +156,19 @@ describe('parseDiveMateDatabase', () => {
       decompressionDive: true,
       legacyBuddyText: 'Legacy Buddy',
     })
+    expect(snapshot.divers[0]).toMatchObject({
+      street: '1 Ocean Road',
+      postalCode: '12345',
+      city: 'Dive City',
+      state: 'Coast',
+      country: 'Example',
+      emergencyEmail: 'grace@example.test',
+    })
+    expect(snapshot.buddies[0]).toMatchObject({
+      street: '2 Reef Road',
+      postalCode: '54321',
+      state: 'Bay',
+    })
     expect(snapshot.dives[0]?.sourcePayload).not.toHaveProperty('Profile10')
     expect(snapshot.sites[0]).toMatchObject({
       latitude: '24.7061444',
@@ -143,6 +178,33 @@ describe('parseDiveMateDatabase', () => {
       diveExternalId: '11',
       computerTankNumber: 2,
       oxygenPercent: '32',
+      workingPressureBar: '232',
+      supplyTypeCode: 4,
+      weightKg: '12.4',
+      divePhaseCode: 2,
+    })
+    expect(snapshot.equipment[0]).toMatchObject({
+      diverExternalId: '1',
+      information: 'Bluetooth device',
+      purchasePrice: '500',
+      purchaseShop: 'Dive Center',
+      equipmentTypeCode: 11,
+      sourceValue1: '12',
+      sourceValue2: '0',
+      sourceValue3: 2,
+    })
+    expect(snapshot.certifications[0]).toMatchObject({
+      scan1Path: '/media/front.jpg',
+      scan2Path: '/media/back.jpg',
+      sortOrder: 3,
+    })
+    expect(snapshot.pictures[0]).toMatchObject({
+      externalId: '13',
+      diveExternalId: '11',
+      diverExternalId: '1',
+      path: '/media/dive.jpg',
+      description: 'Dive photo',
+      sortOrder: 1,
     })
     expect(snapshot.profileSamples).toEqual([
       expect.objectContaining({

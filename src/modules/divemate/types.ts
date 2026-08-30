@@ -10,10 +10,16 @@ export interface DiveMateDiver extends DiveMateSourceRecord {
   lastName: string | null
   email: string | null
   phone: string | null
+  street: string | null
+  postalCode: string | null
+  city: string | null
+  state: string | null
+  country: string | null
   birthDate: string | null
   bloodGroup: string | null
   emergencyContact: string | null
   emergencyPhone: string | null
+  emergencyEmail: string | null
   insurance: string | null
   notes: string | null
 }
@@ -40,22 +46,33 @@ export interface DiveMateBuddy extends DiveMateSourceRecord {
   lastName: string | null
   email: string | null
   phone: string | null
+  street: string | null
+  postalCode: string | null
   city: string | null
+  state: string | null
   country: string | null
   notes: string | null
 }
 
 export interface DiveMateEquipment extends DiveMateSourceRecord {
+  diverExternalId: string | null
   name: string
   category: string | null
   manufacturer: string | null
   model: string | null
   serialNumber: string | null
+  information: string | null
   purchasedAt: string | null
+  purchasePrice: string | null
+  purchaseShop: string | null
   retiredAt: string | null
   serviceDueAt: string | null
   inactive: boolean
   weightKg: string | null
+  equipmentTypeCode: number | null
+  sourceValue1: string | null
+  sourceValue2: string | null
+  sourceValue3: number | null
   notes: string | null
 }
 
@@ -67,6 +84,9 @@ export interface DiveMateCertification extends DiveMateSourceRecord {
   certifiedAt: string | null
   instructorName: string | null
   instructorNumber: string | null
+  sortOrder: number | null
+  scan1Path: string | null
+  scan2Path: string | null
 }
 
 export interface DiveMateShop extends DiveMateSourceRecord {
@@ -123,9 +143,24 @@ export interface DiveMateTank extends DiveMateSourceRecord {
   volumeLiters: string | null
   startPressureBar: string | null
   endPressureBar: string | null
+  workingPressureBar: string | null
   oxygenPercent: string | null
   heliumPercent: string | null
   breathingTimeSeconds: number | null
+  supplyTypeCode: number | null
+  weightKg: string | null
+  divePhaseCode: number | null
+}
+
+export interface DiveMatePicture extends DiveMateSourceRecord {
+  diveExternalId: string | null
+  siteExternalId: string | null
+  buddyExternalId: string | null
+  equipmentExternalId: string | null
+  diverExternalId: string | null
+  path: string
+  description: string | null
+  sortOrder: number | null
 }
 
 export interface DiveMateProfileSample extends DiveMateSourceRecord {
@@ -143,6 +178,9 @@ export interface DiveMateProfileSample extends DiveMateSourceRecord {
 
 export interface DiveMateSnapshot {
   databaseVersion: string | null
+  databaseProgram: string | null
+  databaseUuid: string | null
+  databaseUpdatedAt: string | null
   divers: DiveMateDiver[]
   sites: DiveMateSite[]
   buddies: DiveMateBuddy[]
@@ -152,5 +190,6 @@ export interface DiveMateSnapshot {
   diveTypes: DiveMateDiveType[]
   dives: DiveMateDive[]
   tanks: DiveMateTank[]
+  pictures: DiveMatePicture[]
   profileSamples: DiveMateProfileSample[]
 }

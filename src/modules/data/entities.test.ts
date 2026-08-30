@@ -9,6 +9,7 @@ import {
   dives,
   diveTypes,
   equipment,
+  pictures,
   shops,
   syncRuns,
   tanks,
@@ -25,6 +26,7 @@ const entityTables = {
   shops,
   'dive-types': diveTypes,
   tanks,
+  pictures,
   'profile-samples': diveProfileSamples,
   'sync-runs': syncRuns,
 } as const

@@ -32,6 +32,10 @@ export interface DataEditorRecord {
   values: EditorValues
   sourceKey: string
   externalId: string | null
+  externalUuid: string | null
+  sourceUpdatedAt: string | null
+  sourcePayload: string | null
+  createdAt: string | null
   updatedAt: string
 }
 

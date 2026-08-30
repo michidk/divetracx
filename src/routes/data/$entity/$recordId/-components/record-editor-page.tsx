@@ -241,7 +241,13 @@ export function RecordEditorPage({
       {payload.record ? (
         <section className="rounded-2xl border border-border bg-card p-5">
           <h2 className="text-sm font-semibold">Record metadata</h2>
-          <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
+          <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                Record ID
+              </dt>
+              <dd className="mt-1 break-all font-mono text-xs">{payload.record.id}</dd>
+            </div>
             <div>
               <dt className="text-xs uppercase tracking-wide text-muted-foreground">
                 Source
@@ -256,6 +262,30 @@ export function RecordEditorPage({
             </div>
             <div>
               <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                Source UUID
+              </dt>
+              <dd className="mt-1 break-all font-mono text-xs">
+                {payload.record.externalUuid || '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                Source changed
+              </dt>
+              <dd className="mt-1 font-medium">
+                {payload.record.sourceUpdatedAt || '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                Created
+              </dt>
+              <dd className="mt-1 font-medium">
+                {payload.record.createdAt?.replace('T', ' ').replace('Z', ' UTC') || '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
                 Last changed
               </dt>
               <dd className="mt-1 font-medium">
@@ -266,6 +296,21 @@ export function RecordEditorPage({
             </div>
           </dl>
         </section>
+      ) : null}
+
+      {payload.record?.sourcePayload ? (
+        <details className="rounded-2xl border border-border bg-card p-5">
+          <summary className="cursor-pointer text-sm font-semibold">
+            Raw source payload
+          </summary>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Read-only data retained from the source for fields that are not part of the
+            normalized model.
+          </p>
+          <pre className="mt-4 max-h-96 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-muted p-4 font-mono text-xs leading-5">
+            {payload.record.sourcePayload}
+          </pre>
+        </details>
       ) : null}
 
       <form onSubmit={(event) => void submit(event)} className="space-y-6">

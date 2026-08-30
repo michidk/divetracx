@@ -17,7 +17,7 @@ export function SyncPage({ status }: { status: SyncStatus }) {
     try {
       const result = await runDiveMateSync()
       setMessage(
-        `Imported ${result.counts.dives ?? 0} dives and ${result.counts.profileSamples ?? 0} profile samples successfully.`,
+        `Imported ${result.counts.dives ?? 0} dives, ${result.counts.profileSamples ?? 0} profile samples, and ${result.counts.pictures ?? 0} picture references successfully.`,
       )
       await router.invalidate()
     } catch (error) {

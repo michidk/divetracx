@@ -4,6 +4,7 @@ import {
   Clock3,
   Database,
   Gauge,
+  ImageIcon,
   MapPin,
   Navigation,
   Pencil,
@@ -268,10 +269,56 @@ export function DivePage({ dive }: { dive: DiveData }) {
                             : formatDuration(tank.breathingTimeSeconds)
                         }
                       />
+                      <Value
+                        label="Working pressure"
+                        value={
+                          tank.workingPressureBar
+                            ? `${Number(tank.workingPressureBar).toFixed(0)} bar`
+                            : '—'
+                        }
+                      />
+                      <Value
+                        label="Tank weight"
+                        value={
+                          tank.weightKg ? `${Number(tank.weightKg).toFixed(1)} kg` : '—'
+                        }
+                      />
+                      <Value
+                        label="Supply type"
+                        value={formatSourceCode(tank.supplyTypeCode)}
+                      />
+                      <Value
+                        label="Dive phase"
+                        value={formatSourceCode(tank.divePhaseCode)}
+                      />
                     </dl>
                   </article>
                 ))}
               </div>
+            </section>
+          ) : null}
+
+          {dive.pictures.length > 0 ? (
+            <section className="rounded-2xl border border-border bg-card p-6 md:p-8">
+              <div className="flex items-center gap-3">
+                <ImageIcon className="text-primary" size={21} aria-hidden="true" />
+                <h2 className="text-xl font-semibold">Picture references</h2>
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">
+                The DiveMate backup contains device paths but no image bytes.
+              </p>
+              <ul className="mt-5 divide-y divide-border">
+                {dive.pictures.map((picture) => (
+                  <li key={picture.id} className="py-3 first:pt-0 last:pb-0">
+                    <p className="text-sm font-medium">
+                      {picture.description || picture.path.split('/').at(-1)}
+                    </p>
+                    <code className="mt-1 block break-all text-xs text-muted-foreground">
+                      {picture.path}
+                    </code>
+                  </li>
+                ))}
+              </ul>
             </section>
           ) : null}
 

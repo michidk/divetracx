@@ -14,6 +14,7 @@ import {
   dives,
   diveTypes,
   equipment,
+  pictures,
   shops,
   syncRuns,
   tanks,
@@ -78,6 +79,10 @@ function editorRecord(
     id: string
     sourceKey: string
     externalId?: string | null
+    externalUuid?: string | null
+    sourceUpdatedAt?: string | null
+    sourcePayload?: Record<string, unknown> | null
+    createdAt?: Date
     updatedAt: Date
   },
 ): DataEditorRecord {
@@ -86,6 +91,10 @@ function editorRecord(
     values: fieldValues(entity, row),
     sourceKey: row.sourceKey,
     externalId: row.externalId ?? null,
+    externalUuid: row.externalUuid ?? null,
+    sourceUpdatedAt: row.sourceUpdatedAt ?? null,
+    sourcePayload: row.sourcePayload ? JSON.stringify(row.sourcePayload, null, 2) : null,
+    createdAt: row.createdAt ? timestamp(row.createdAt) : null,
     updatedAt: timestamp(row.updatedAt),
   }
 }
@@ -106,6 +115,7 @@ export async function loadDataOverview(): Promise<DataOverviewItem[]> {
     tableCount(shops),
     tableCount(diveTypes),
     tableCount(tanks),
+    tableCount(pictures),
     tableCount(diveProfileSamples),
     tableCount(syncRuns),
   ])
@@ -119,6 +129,7 @@ export async function loadDataOverview(): Promise<DataOverviewItem[]> {
     'shops',
     'dive-types',
     'tanks',
+    'pictures',
     'profile-samples',
     'sync-runs',
   ]
@@ -241,6 +252,30 @@ async function loadDataListRecords(
             tank.volumeLiters ? `${tank.volumeLiters} L` : null,
             tank.startPressureBar ? `${tank.startPressureBar} bar` : null,
           ]
+            .filter(Boolean)
+            .join(' · ') || null,
+        ),
+      )
+    }
+    case 'pictures': {
+      const rows = await db
+        .select({
+          picture: pictures,
+          diveNumber: dives.number,
+          siteName: diveSites.name,
+          equipmentName: equipment.name,
+        })
+        .from(pictures)
+        .leftJoin(dives, eq(pictures.diveId, dives.id))
+        .leftJoin(diveSites, eq(pictures.siteId, diveSites.id))
+        .leftJoin(equipment, eq(pictures.equipmentId, equipment.id))
+        .orderBy(desc(pictures.updatedAt), asc(pictures.sortOrder))
+      return rows.map(({ picture, diveNumber, siteName, equipmentName }) =>
+        sourceListItem(
+          picture,
+          picture.path.split('/').at(-1) || picture.path,
+          picture.description,
+          [diveNumber === null ? null : `Dive #${diveNumber}`, siteName, equipmentName]
             .filter(Boolean)
             .join(' · ') || null,
         ),
@@ -400,6 +435,10 @@ async function loadRecord(
       const [row] = await db.select().from(tanks).where(eq(tanks.id, id)).limit(1)
       return row ? editorRecord(entity, row) : null
     }
+    case 'pictures': {
+      const [row] = await db.select().from(pictures).where(eq(pictures.id, id)).limit(1)
+      return row ? editorRecord(entity, row) : null
+    }
     case 'profile-samples': {
       const [row] = await db
         .select()
@@ -415,6 +454,10 @@ async function loadRecord(
         id: row.id,
         sourceKey: row.sourceKey,
         externalId: null,
+        externalUuid: null,
+        sourceUpdatedAt: null,
+        sourcePayload: null,
+        createdAt: timestamp(row.startedAt),
         updatedAt: timestamp(row.finishedAt ?? row.startedAt),
         values: {
           sourceKey: row.sourceKey,
@@ -423,6 +466,10 @@ async function loadRecord(
           startedAt: timestamp(row.startedAt),
           finishedAt: timestamp(row.finishedAt),
           sourceFingerprint: row.sourceFingerprint ?? '',
+          sourceDatabaseVersion: row.sourceDatabaseVersion ?? '',
+          sourceDatabaseProgram: row.sourceDatabaseProgram ?? '',
+          sourceDatabaseUuid: row.sourceDatabaseUuid ?? '',
+          sourceDatabaseUpdatedAt: row.sourceDatabaseUpdatedAt ?? '',
           counts: row.counts ? JSON.stringify(row.counts, null, 2) : '',
           error: row.error ?? '',
         },
