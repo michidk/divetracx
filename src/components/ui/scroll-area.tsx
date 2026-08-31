@@ -1,0 +1,65 @@
+import { ScrollArea as ScrollAreaPrimitive } from 'radix-ui'
+import type * as React from 'react'
+
+function classNames(...values: Array<string | undefined | false>) {
+  return values.filter(Boolean).join(' ')
+}
+
+function ScrollArea({
+  className,
+  children,
+  viewportClassName,
+  viewportProps,
+  orientation = 'vertical',
+  ...props
+}: React.ComponentProps<typeof ScrollAreaPrimitive.Root> & {
+  viewportClassName?: string
+  viewportProps?: React.ComponentProps<typeof ScrollAreaPrimitive.Viewport>
+  orientation?: 'vertical' | 'horizontal' | 'both'
+}) {
+  return (
+    <ScrollAreaPrimitive.Root
+      data-slot="scroll-area"
+      className={classNames('relative', className)}
+      {...props}
+    >
+      <ScrollAreaPrimitive.Viewport
+        data-slot="scroll-area-viewport"
+        className={classNames('size-full rounded-[inherit]', viewportClassName)}
+        {...viewportProps}
+      >
+        {children}
+      </ScrollAreaPrimitive.Viewport>
+      {orientation !== 'horizontal' ? <ScrollBar /> : null}
+      {orientation !== 'vertical' ? <ScrollBar orientation="horizontal" /> : null}
+      <ScrollAreaPrimitive.Corner />
+    </ScrollAreaPrimitive.Root>
+  )
+}
+
+function ScrollBar({
+  className,
+  orientation = 'vertical',
+  ...props
+}: React.ComponentProps<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>) {
+  return (
+    <ScrollAreaPrimitive.ScrollAreaScrollbar
+      data-slot="scroll-area-scrollbar"
+      orientation={orientation}
+      className={classNames(
+        'flex touch-none select-none p-px transition-colors',
+        orientation === 'vertical' && 'h-full w-2.5 border-l border-l-transparent',
+        orientation === 'horizontal' && 'h-2.5 flex-col border-t border-t-transparent',
+        className,
+      )}
+      {...props}
+    >
+      <ScrollAreaPrimitive.ScrollAreaThumb
+        data-slot="scroll-area-thumb"
+        className="relative flex-1 rounded-full bg-border"
+      />
+    </ScrollAreaPrimitive.ScrollAreaScrollbar>
+  )
+}
+
+export { ScrollArea, ScrollBar }
