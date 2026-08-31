@@ -2,16 +2,22 @@
 
 Database snapshot: 2026-08-30 (UTC)
 
-This is a working research document, not an import file. The database currently has
-70 dive sites; 42 match `latitude IS NULL OR longitude IS NULL`. All 42 are missing
-latitude and contain the same invalid longitude (`-170.0000000`). Their DiveMate
-source values are also the same malformed pair: `189°60'0.00"N`,
-`170°00'0.00"W`. Both coordinates therefore need to be replaced together.
+This is a working research document, not an import file. In the initial snapshot,
+the database had 70 dive sites and 42 matched
+`latitude IS NULL OR longitude IS NULL`. All 42 were missing latitude and contained
+the same invalid longitude (`-170.0000000`). Their DiveMate source values were also
+the same malformed pair: `189°60'0.00"N`, `170°00'0.00"W`. Both coordinates
+therefore needed to be replaced together.
 
-The other 28 sites have populated coordinates. They are audited separately below.
-All 28 decimal values accurately reproduce their DiveMate degree-minute-second
-source text (maximum conversion difference: `0.0000000444°`), but five source
-positions appear to identify the wrong place.
+On 2026-08-31, the 23 replacements currently marked **Confirmed** below were
+written to the database. The original `source_latitude` and `source_longitude`
+values were preserved for provenance. Nineteen malformed rows remain: 17
+candidate replacements and two pending sites.
+
+The 28 sites that already had populated coordinates in the initial snapshot are
+audited separately below. All 28 decimal values accurately reproduce their DiveMate
+degree-minute-second source text (maximum conversion difference:
+`0.0000000444°`), but five source positions appear to identify the wrong place.
 
 ## Status and confidence
 
@@ -65,13 +71,13 @@ second longitude (the underlying custom-field labels happen to be reversed).
 | DiveMate ID | Dive site | Region | Latitude | Longitude | Google Maps | Status | Evidence / note |
 | ---: | --- | --- | ---: | ---: | --- | --- | --- |
 | 37 | Baron Gautsch | Istria | 44.9402778 | 13.4138889 | [44.9402778, 13.4138889](https://www.google.com/maps?q=44.9402778,13.4138889) | **Confirmed** | Exact wreck marker on Triton Diving's operator map. |
-| 36 | Consolidated B24 | Istrien | — | — | [Search by name](https://www.google.com/maps/search/?api=1&query=Consolidated+B-24+wreck+Istria+Croatia) | **Pending** | The wreck is documented by regional operators, but no trustworthy position was published in the sources checked. Do not substitute a different Adriatic B-24 wreck. |
+| 36 | Consolidated B24 | Istrien | — | — | [Search by name](https://www.google.com/maps/search/?api=1&query=Consolidated+B-24+wreck+Vrsar+Istria+Croatia) | **Pending** | The linked dive was with Triton Diving in Vrsar, reached by a 15-minute Zodiac, and had a recorded maximum depth of 30.96 m. Triton's current public dive map omits the aircraft and no position was found. This rules out both Diving Center Shark's 52 m Medulin wreck and the famous Vis B-24 at 43.02925, 16.25771. |
 | 39 | HMS Coriolanus | Istrien | 45.3194444 | 13.4236111 | [45.3194444, 13.4236111](https://www.google.com/maps?q=45.3194444,13.4236111) | **Confirmed** | Exact wreck marker on Triton Diving's operator map. |
 | 38 | Saline | Istrien | 45.1207796 | 13.6153865 | [45.1207796, 13.6153865](https://www.google.com/maps?q=45.1207796,13.6153865) | **Confirmed** | Exact reef marker on Triton Diving's operator map. |
 | 40 | Sturag | Istrien | 45.0513924 | 13.6233687 | [45.0513924, 13.6233687](https://www.google.com/maps?q=45.0513924,13.6233687) | **Confirmed** | Exact island marker on Triton Diving's operator map. |
-| 7 | Hrid Mala Giavina | Selce | 45.0502513 | 14.7441440 | [45.0502513, 14.7441440](https://www.google.com/maps?q=45.0502513,14.7441440) | **Confirmed** | Current operator spelling is [Hrid Mala Glavina](https://mihuric.hr/hrid-mala-glavina/); matched to the named Google dive spot “Reef Mala Glavina”. |
-| 8 | Pyramida Riff | Selce | — | — | [Search by operator spelling](https://www.google.com/maps/search/?api=1&query=Hrid+Piramida+Selce+Croatia) | **Pending** | Matched by name to Mihurić's current [Hrid Piramida](https://mihuric.hr/hrid-piramida/) page, but no coordinate is published there. |
-| 10 | Selce Riff Kamenjak | Selce | — | — | [Search by operator spelling](https://www.google.com/maps/search/?api=1&query=Hrid+Kamenjak+Selce+Croatia) | **Pending** | Likely Mihurić's current [Hrid Kamenjak](https://mihuric.hr/hrid-kamenjak/), but search results also return unrelated Kamenjak sites. |
+| 7 | Hrid Mala Giavina | Selce | 45.0502513 | 14.7441440 | [45.0502513, 14.7441440](https://www.google.com/maps?q=45.0502513,14.7441440) | **Candidate** | Current operator spelling is [Hrid Mala Glavina](https://mihuric.hr/hrid-mala-glavina/), and this point is the named Google dive spot “Reef Mala Glavina”. It was not imported because other published data conflict: [DiveNavigator](https://www.divenavigator.com/dive-sites/croatia/hrid-mala-glavina) gives 45.0562, 14.7417, while an independent Croatia dataset lists “Glavina” at 45.0687016, 14.7379231. Establish whether those names refer to this same site before import. |
+| 8 | Pyramida Riff | Selce | — | — | [Search by operator spelling](https://www.google.com/maps/search/?api=1&query=Hrid+Piramida+Selce+Croatia) | **Pending** | Matched by name to Mihurić's current [Hrid Piramida](https://mihuric.hr/hrid-piramida/) page. Its operator diagram confirms an isolated rock just off Krk but is not georeferenced. [Dive Champ](https://divechamp.com/divesite/hrid-piramida) embeds 45.0562, 14.7418, but marks the record unverified; that point is within about 10 m of DiveNavigator's conflicting Hrid Mala Glavina position, so it is not yet defensible. |
+| 10 | Selce Riff Kamenjak | Selce | 45.0723083 | 14.7335672 | [45.0723083, 14.7335672](https://www.google.com/maps?q=45.0723083,14.7335672) | **Confirmed** | Exact “Kamenjak Languste” dive-site record in an independent Croatia dataset, 65 m from OpenStreetMap's official-source [Kamenjak islet](https://www.openstreetmap.org/way/737397543); Mihurić's [Hrid Kamenjak](https://mihuric.hr/hrid-kamenjak/) diagram confirms the paired inner/outer reef. |
 | 2 | Selce D.C. Mihurić Housereef | Selce | 45.1524907 | 14.7192413 | [45.1524907, 14.7192413](https://www.google.com/maps?q=45.1524907,14.7192413) | **Confirmed** | Named Google record for Diving Center Mihurić; the operator lists this as its [House reef](https://mihuric.hr/house-reef/). |
 
 ## Egypt
@@ -109,8 +115,13 @@ should not yet be imported as confirmed dive-site coordinates.
 The database trip used Capo Galera. The operator confirms many of the names on its
 [dive-site list and map](https://www.capogalera.com/diving-spots.aspx?ver=it), but
 its public pages do not publish coordinates for every underwater entrance. Direct
-named natural-feature matches are recorded; unresolved operator-only names stay
-pending.
+named natural-feature matches are recorded. Alghero Divers also publishes a
+numbered [Punta Giglio aerial site map](https://www.algherodivers.com/en/punta-giglio-porto-conte).
+Its underlying Google Earth image was registered against current north-up Google
+satellite imagery using 15 matched shoreline and landmark features. The derived
+marker positions are approximate: the same registration places the operator's
+Grotta dei Cervi marker about 145 m from Google's named natural-feature marker.
+They therefore remain candidates rather than confirmed coordinates.
 
 | DiveMate ID | Dive site | Region | Latitude | Longitude | Google Maps | Status | Evidence / note |
 | ---: | --- | --- | ---: | ---: | --- | --- | --- |
@@ -118,14 +129,14 @@ pending.
 | 49 | Grotta della Madonnina | Capo Caccia | 40.5602825 | 8.1638158 | [40.5602825, 8.1638158](https://www.google.com/maps?q=40.5602825,8.1638158) | **Confirmed** | Direct named Google natural-feature record; also on the [Capo Galera site list](https://www.capogalera.com/diving-spot/3/grotta-della-madonnina/it). |
 | 54 | Grotta di Nereo | Capo Caccia | 40.5616595 | 8.1611888 | [40.5616595, 8.1611888](https://www.google.com/maps?q=40.5616595,8.1611888) | **Confirmed** | Direct named Google natural-feature record; also on the [Capo Galera site list](https://www.capogalera.com/diving-spot/2/grotta-di-nereo/it). |
 | 56 | Il Tunnel & Grotta de Cabriol | Capo Caccia | 40.5637139 | 8.1620502 | [40.5637139, 8.1620502](https://www.google.com/maps?q=40.5637139,8.1620502) | **Candidate** | Surface marker for Escala del Cabirol; Capo Galera lists [Il Tunnel](https://www.capogalera.com/diving-spot/8/il-tunnel/it) and [Grotta del Cabirol](https://www.capogalera.com/diving-spot/6/grotta-del-cabirol/it) separately. |
-| 58 | Porticato | Capo Caccia | — | — | [Search by operator spelling](https://www.google.com/maps/search/?api=1&query=Il+Porticato+Capo+Caccia+Alghero) | **Pending** | Confirmed as Capo Galera's [Il Porticato](https://www.capogalera.com/diving-spot/7/il-porticato/it), but no precise coordinate was found. |
+| 58 | Porticato | Capo Caccia | 40.5693348 | 8.1575632 | [40.5693348, 8.1575632](https://www.google.com/maps?q=40.5693348,8.1575632) | **Candidate** | Exact-name “Il Porticato” coordinate in the [Divelog Italy dataset](https://github.com/trousiakis/divelog/blob/cc967933afbcf50d3031b79b0289ca78296f97c0/diveSites/Italy.json). It is geographically consistent with [Capo Galera's description](https://www.capogalera.com/diving-spot/7/il-porticato/it): under Capo Caccia, a short distance from the Nereo cave complex. The operator does not publish a coordinate, so retain candidate status. |
 | 60 | Dolmen | Isola Foradada | 40.5700000 | 8.1516670 | [40.5700000, 8.1516670](https://www.google.com/maps?q=40.5700000,8.1516670) | **Candidate** | Centre marker for Isola di Foradada, not the exact “Dolmen” underwater point. |
 | 51 | Grotta dei Cervi | Punta Giglio | 40.5681912 | 8.2041873 | [40.5681912, 8.2041873](https://www.google.com/maps?q=40.5681912,8.2041873) | **Confirmed** | Direct named Google natural-feature record; also on the [Capo Galera site list](https://www.capogalera.com/diving-spot/5/grotta-dei-cervi/it). |
-| 52 | Grotta dei Falco | Punta Giglio | — | — | [Search with likely plural spelling](https://www.google.com/maps/search/?api=1&query=Grotta+dei+Falchi+Punta+Giglio+Alghero) | **Pending** | Likely spelling “Grotta dei Falchi”; no defensible exact marker found. |
-| 57 | Grotta dei Fantasmi | Punta Giglio | — | — | [Search by name](https://www.google.com/maps/search/?api=1&query=Grotta+dei+Fantasmi+Punta+Giglio+Alghero) | **Pending** | The [Capo Galera page](https://www.capogalera.com/diving-spot/4/grotta-dei-fantasmi/it) confirms the site, but not its coordinate. |
-| 55 | Grotta del Pozzo | Punta Giglio | — | — | [Search by name](https://www.google.com/maps/search/?api=1&query=Grotta+del+Pozzo+Punta+Giglio+Alghero) | **Pending** | Operator/trip name found, but no precise public marker. |
-| 59 | Grotta delle Stalattiti | Punta Giglio | — | — | [Search by name](https://www.google.com/maps/search/?api=1&query=Grotta+delle+Stalattiti+Punta+Giglio+Alghero) | **Pending** | Operator/trip name found, but no precise public marker. |
-| 50 | La Bramassa | Punta Giglio | 40.5821535 | 8.2051543 | [40.5821535, 8.2051543](https://www.google.com/maps?q=40.5821535,8.2051543) | **Candidate** | Direct named surface feature “Cala Bramassa”; exact cave entrance remains unverified. |
+| 52 | Grotta dei Falco | Punta Giglio | 40.5692463 | 8.2222748 | [40.5692463, 8.2222748](https://www.google.com/maps?q=40.5692463,8.2222748) | **Candidate** | Database spelling is singular; Alghero Divers calls it [Ennio Falco's Cave / Amphitrite](https://www.algherodivers.com/en/2-grotta-di-e-falco). Approximate position derived from marker 2 on its registered Punta Giglio aerial map. |
+| 57 | Grotta dei Fantasmi | Punta Giglio | 40.5692359 | 8.2065887 | [40.5692359, 8.2065887](https://www.google.com/maps?q=40.5692359,8.2065887) | **Candidate** | Both [Capo Galera](https://www.capogalera.com/diving-spot/4/grotta-dei-fantasmi/it) and [Alghero Divers](https://www.algherodivers.com/en/4-grotta-dei-fantasmi) confirm the site. Approximate position derived from marker 4 on Alghero Divers' registered aerial map. |
+| 55 | Grotta del Pozzo | Punta Giglio | 40.5711452 | 8.1972809 | [40.5711452, 8.1972809](https://www.google.com/maps?q=40.5711452,8.1972809) | **Candidate** | Approximate position derived from marker 6 on Alghero Divers' registered aerial map. Its [site description](https://www.algherodivers.com/en/6-grotta-del-pozzo) and an [archived independent guide](https://web.archive.org/web/20071022032608/http://www.portoconte.it/diving/luoimm/pozzo.htm) independently place it just inside Porto Conte Bay, on the west side of Capo Bocato. |
+| 59 | Grotta delle Stalattiti | Punta Giglio | 40.5700661 | 8.2075653 | [40.5700661, 8.2075653](https://www.google.com/maps?q=40.5700661,8.2075653) | **Candidate** | [Alghero Divers' site page](https://www.algherodivers.com/en/3-grotta-delle-stalattiti) confirms the cave and 7 m entrance. Approximate position derived from marker 3 on its registered Punta Giglio aerial map. |
+| 50 | La Bramassa | Punta Giglio | 40.5727847 | 8.1974792 | [40.5727847, 8.1974792](https://www.google.com/maps?q=40.5727847,8.1974792) | **Candidate** | Approximate position derived from marker 7 (“Bramassa's complex”) on Alghero Divers' registered aerial map. This supersedes the earlier Cala Bramassa surface-feature candidate at 40.5821535, 8.2051543, which is about 1.2 km from the operator marker and appears to be a different feature. |
 
 ## Existing-coordinate audit
 
@@ -170,21 +181,24 @@ comparison point, not navigation distances.
 - Full coordinate inventory: **70 / 70** database rows reviewed.
 - Missing/invalid-coordinate rows captured: **42 / 42**.
 - Missing rows with confirmed replacements: **23**.
-- Missing rows with candidate replacements needing review: **11**.
-- Missing rows still pending an exact coordinate: **8**.
+- Missing rows with candidate replacements needing review: **17**.
+- Missing rows still pending an exact coordinate: **2**.
 - Existing coordinates verified: **18 / 28**.
 - Existing coordinates plausible but needing review: **5 / 28**.
 - Existing coordinate mismatches: **5 / 28**.
-- Database updates applied: **0** (this document is research only).
+- Database updates applied: **23** confirmed coordinate pairs on 2026-08-31.
 
 ### Next sites to resolve
 
-1. Consolidated B24 — identify the exact Istrian aircraft wreck, not another
-   Croatian/Adriatic B-24.
-2. Pyramida Riff / Hrid Piramida and Selce Riff Kamenjak / Hrid Kamenjak — obtain
-   coordinates directly from Diving Center Mihurić or a chart that names the
-   offshore rocks.
+1. Consolidated B24 — obtain the position from Triton Diving or the 2024 Vrsar
+   route sheet; the dive record rules out the published Medulin and Vis B-24s.
+2. Pyramida Riff / Hrid Piramida and Hrid Mala Glavina — resolve the conflicting
+   published positions directly with Diving Center Mihurić or a georeferenced
+   chart; the public operator diagrams are not georeferenced.
 3. Shaab Maksour, Small Gotta, and Abu Gushun/Hamada now have candidate map
    positions; cross-check them against an operator route sheet before import.
-4. Porticato and the five unresolved Punta Giglio cave names — obtain Capo
-   Galera's georeferenced dive map or direct operator confirmation.
+4. The four formerly unresolved Punta Giglio caves and Bramassa now have
+   approximate positions from Alghero Divers' aerial site map. Confirm them
+   against operator GPS waypoints before import, especially the two western
+   markers (Pozzo and Bramassa), which lie outside the map-registration control
+   points and therefore have greater uncertainty.
