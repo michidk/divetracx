@@ -1,4 +1,5 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router'
+import { AppError } from '@/components/app-error'
 import { AppShell } from '@/components/app-shell'
 import '../styles.css'
 
@@ -23,6 +24,7 @@ export const Route = createRootRoute({
       <Outlet />
     </AppShell>
   ),
+  errorComponent: AppError,
   shellComponent: RootDocument,
 })
 
