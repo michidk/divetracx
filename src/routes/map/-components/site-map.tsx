@@ -26,6 +26,7 @@ export function SiteMap({
 }) {
   const groups = useMemo(() => groupSitesByCoordinates(sites), [sites])
   const selectedSite = sites.find((site) => site.id === selectedSiteId) ?? null
+  const frameRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef<Map<string, MapLibreMarker>>(new Map())
@@ -128,6 +129,10 @@ export function SiteMap({
         )
         map.addControl(
           new maplibregl.NavigationControl({ showCompass: false }),
+          'top-right',
+        )
+        map.addControl(
+          new maplibregl.FullscreenControl({ container: frameRef.current ?? container }),
           'top-right',
         )
         map.on('load', () => {
@@ -260,7 +265,10 @@ export function SiteMap({
   }, [selectedGroupKey, selectedSiteId, sites, status, synchronizeMarkerSelection])
 
   return (
-    <div className="flex h-[34rem] min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card">
+    <div
+      ref={frameRef}
+      className="divetracx-site-map-frame flex h-[34rem] min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card"
+    >
       <div className="relative min-h-0 flex-1">
         <section
           ref={containerRef}

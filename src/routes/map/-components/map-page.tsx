@@ -43,7 +43,7 @@ export function MapPage({ sites }: { sites: DiveSiteMapData }) {
     }
   }, [filteredMappedSites, selectedSiteId])
 
-  const selectSiteFromList = useCallback((siteId: string) => {
+  const jumpToSiteOnMap = useCallback((siteId: string) => {
     setSelectedSiteId(siteId)
     if (!window.matchMedia('(max-width: 1279px)').matches) return
     const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -66,8 +66,8 @@ export function MapPage({ sites }: { sites: DiveSiteMapData }) {
           </p>
           <h1 className="mt-2 text-4xl font-semibold tracking-tight">Dive spots</h1>
           <p className="mt-3 max-w-2xl text-muted-foreground">
-            Explore every recorded dive site. Select a marker or list entry to see its
-            dives and open the underlying records.
+            Explore every recorded dive site. Select a marker or use Jump to map to see
+            its dives and open the underlying records.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
@@ -157,20 +157,18 @@ export function MapPage({ sites }: { sites: DiveSiteMapData }) {
                   key={site.id}
                   className={`border-b border-border last:border-0 ${selected ? 'bg-accent/70' : ''}`}
                 >
-                  {mappedSite ? (
-                    <button
-                      type="button"
-                      aria-label={`Show ${site.name} on the map`}
-                      aria-pressed={selected}
-                      onClick={() => selectSiteFromList(site.id)}
-                      className="w-full px-5 pb-2 pt-5 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
-                    >
-                      {summary}
-                    </button>
-                  ) : (
-                    <div className="px-5 pb-2 pt-5">{summary}</div>
-                  )}
-                  <div className="flex items-center gap-3 px-5 pb-3 text-xs font-semibold">
+                  <div className="px-5 pb-2 pt-5">{summary}</div>
+                  <div className="flex flex-wrap items-center gap-3 px-5 pb-3 text-xs font-semibold">
+                    {mappedSite ? (
+                      <button
+                        type="button"
+                        aria-label={`Jump to map: ${site.name}`}
+                        onClick={() => jumpToSiteOnMap(site.id)}
+                        className="inline-flex min-h-9 items-center gap-1.5 text-primary hover:underline"
+                      >
+                        <MapPin size={13} aria-hidden="true" /> Jump to map
+                      </button>
+                    ) : null}
                     <Link
                       to="/data/$entity/$recordId"
                       params={{ entity: 'sites', recordId: site.id }}
