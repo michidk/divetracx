@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { ExternalLink, MapPin, Pencil, Search } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { formatDiveDate, formatMeters } from '@/modules/dives/format'
 import type { getDiveSiteMap } from '@/modules/dives/server/queries'
 import {
@@ -19,6 +20,7 @@ function siteLocation(site: DiveSiteMapRecord) {
 export function MapPage({ sites }: { sites: DiveSiteMapData }) {
   const [search, setSearch] = useState('')
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null)
+  const mapRegionRef = useRef<HTMLDivElement>(null)
   const mappedSites = useMemo(
     () => sites.flatMap((site) => mapSiteCoordinates(site) ?? []),
     [sites],
@@ -40,6 +42,17 @@ export function MapPage({ sites }: { sites: DiveSiteMapData }) {
       setSelectedSiteId(null)
     }
   }, [filteredMappedSites, selectedSiteId])
+
+  const selectSiteFromList = useCallback((siteId: string) => {
+    setSelectedSiteId(siteId)
+    if (!window.matchMedia('(max-width: 1279px)').matches) return
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? 'auto'
+      : 'smooth'
+    requestAnimationFrame(() => {
+      mapRegionRef.current?.scrollIntoView({ behavior, block: 'start' })
+    })
+  }, [])
 
   const mappedDives = mappedSites.reduce((total, site) => total + site.diveCount, 0)
   const unmappedSiteCount = sites.length - mappedSites.length
@@ -89,11 +102,13 @@ export function MapPage({ sites }: { sites: DiveSiteMapData }) {
       </label>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(20rem,0.72fr)]">
-        <SiteMap
-          sites={filteredMappedSites}
-          selectedSiteId={selectedSiteId}
-          onSelectSite={setSelectedSiteId}
-        />
+        <div ref={mapRegionRef} className="scroll-mt-4">
+          <SiteMap
+            sites={filteredMappedSites}
+            selectedSiteId={selectedSiteId}
+            onSelectSite={setSelectedSiteId}
+          />
+        </div>
 
         <section className="flex h-[34rem] min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card">
           <div className="border-b border-border px-5 py-4">
@@ -102,7 +117,7 @@ export function MapPage({ sites }: { sites: DiveSiteMapData }) {
               {filteredSites.length} of {sites.length} sites
             </p>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <ScrollArea className="min-h-0 flex-1" type="always">
             {filteredSites.map((site) => {
               const mappedSite = mapSiteCoordinates(site)
               const selected = site.id === selectedSiteId
@@ -140,20 +155,22 @@ export function MapPage({ sites }: { sites: DiveSiteMapData }) {
               return (
                 <article
                   key={site.id}
-                  className={`border-b border-border p-3 last:border-0 ${selected ? 'bg-accent/70' : ''}`}
+                  className={`border-b border-border last:border-0 ${selected ? 'bg-accent/70' : ''}`}
                 >
                   {mappedSite ? (
                     <button
                       type="button"
-                      onClick={() => setSelectedSiteId(site.id)}
-                      className="w-full rounded-lg p-2 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      aria-label={`Show ${site.name} on the map`}
+                      aria-pressed={selected}
+                      onClick={() => selectSiteFromList(site.id)}
+                      className="w-full px-5 pb-2 pt-5 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
                     >
                       {summary}
                     </button>
                   ) : (
-                    <div className="p-2">{summary}</div>
+                    <div className="px-5 pb-2 pt-5">{summary}</div>
                   )}
-                  <div className="mt-1 flex items-center gap-3 px-2 text-xs font-semibold">
+                  <div className="flex items-center gap-3 px-5 pb-3 text-xs font-semibold">
                     <Link
                       to="/data/$entity/$recordId"
                       params={{ entity: 'sites', recordId: site.id }}
@@ -179,7 +196,7 @@ export function MapPage({ sites }: { sites: DiveSiteMapData }) {
                 No dive spots match this search.
               </p>
             ) : null}
-          </div>
+          </ScrollArea>
         </section>
       </div>
 

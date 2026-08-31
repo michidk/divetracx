@@ -1,3 +1,4 @@
+import { LoaderCircle } from 'lucide-react'
 import type { RefObject } from 'react'
 
 export type SiteMapStatusValue = 'loading' | 'ready' | 'error'
@@ -22,7 +23,8 @@ export function SiteMapStatus({
           aria-hidden="true"
           className="absolute inset-0 animate-pulse bg-gradient-to-br from-accent via-muted to-background"
         />
-        <span className="relative rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-muted-foreground shadow-lg shadow-slate-950/5">
+        <span className="relative inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-muted-foreground shadow-lg shadow-slate-950/5">
+          <LoaderCircle aria-hidden="true" className="size-4 animate-spin text-primary" />
           Loading dive map…
         </span>
       </div>
