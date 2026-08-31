@@ -58,6 +58,14 @@
   filter: saturate(0.72) brightness(1.02) contrast(0.96);
 }
 
+.divetracx-site-map-frame:fullscreen,
+.divetracx-site-map-frame.maplibregl-pseudo-fullscreen {
+  width: 100vw;
+  height: 100dvh;
+  border: 0;
+  border-radius: 0;
+}
+
 .divetracx-site-map .maplibregl-ctrl-group {
   overflow: hidden;
   border: 1px solid var(--border);
