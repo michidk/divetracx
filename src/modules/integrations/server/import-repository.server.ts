@@ -13,6 +13,7 @@ import {
   dives,
   diveTypes,
   equipment,
+  equipmentSets,
   externalRecordLinks,
   externalRecords,
   integrationState,
@@ -24,10 +25,11 @@ import {
   classifyExternalRecords,
   validateExternalRecordInputs,
 } from '../record-classification'
-import type {
-  CanonicalRecordLink,
-  ExternalRecordInput,
-  ObservedExternalRecord,
+import {
+  type CanonicalRecordLink,
+  type ExternalRecordInput,
+  MATCHED_LINK_ROLE,
+  type ObservedExternalRecord,
 } from '../types'
 import { hashExternalRecord } from './record-hash.server'
 
@@ -39,6 +41,7 @@ const CANONICAL_DELETE_ORDER = [
   'dive_buddy',
   'dive_equipment',
   'dive',
+  'equipment_set',
   'equipment',
   'buddy',
   'shop',
@@ -83,6 +86,9 @@ async function deleteCanonicalRows(
     case 'dive':
       await transaction.delete(dives).where(inArray(dives.id, ids))
       return
+    case 'equipment_set':
+      await transaction.delete(equipmentSets).where(inArray(equipmentSets.id, ids))
+      return
     case 'equipment':
       await transaction.delete(equipment).where(inArray(equipment.id, ids))
       return
@@ -111,12 +117,16 @@ export async function acquireImportLock(transaction: DatabaseTransaction) {
 }
 
 export async function replaceImportedCanonicalDataset(transaction: DatabaseTransaction) {
-  const links = await transaction
+  const allLinks = await transaction
     .select({
       canonicalEntityType: externalRecordLinks.canonicalEntityType,
       canonicalEntityId: externalRecordLinks.canonicalEntityId,
+      role: externalRecordLinks.role,
     })
     .from(externalRecordLinks)
+  // Matched records existed before any import and were only enriched;
+  // replacing the imported dataset must leave them in place.
+  const links = allLinks.filter((link) => link.role !== MATCHED_LINK_ROLE)
 
   const unknownTypes = [
     ...new Set(

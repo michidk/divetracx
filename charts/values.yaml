@@ -116,14 +116,53 @@ divemate:
   maxImageBytes: 104857600
 
 garmin:
-  # Approved Garmin partner transport is exposed through a server-side adapter.
+  # Garmin Connect transport is exposed through a server-side adapter. Leave the
+  # URLs empty to use the bundled adapter deployment (garminAdapter.enabled).
   fullImportUrl: ""
   incrementalImportUrl: ""
+  # Secret holding the shared authorization value sent to and checked by the
+  # adapter (key below). Required for the bundled adapter and the sync CronJob.
   existingSecret: ""
   authorizationSecretKey: "authorization"
   timeoutMs: 30000
   maxResponseBytes: 104857600
   maxFitBytes: 26214400
+  sync:
+    # Scheduled incremental Garmin import through the configured adapter.
+    enabled: false
+    schedule: "30 3 * * *"
+    timeZone: "Etc/UTC"
+    concurrencyPolicy: Forbid
+    startingDeadlineSeconds: 3600
+    successfulJobsHistoryLimit: 3
+    failedJobsHistoryLimit: 3
+    backoffLimit: 2
+    resources:
+      limits:
+        cpu: 500m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 128Mi
+
+garminAdapter:
+  # Bundled Garmin Connect adapter (unofficial consumer API, garth-style token
+  # login). Log in once with: kubectl exec -it deploy/<release>-garmin-adapter
+  # -- bun run garmin:login — tokens persist on the tokens volume.
+  enabled: false
+  port: 8787
+  domain: garmin.com
+  tokens:
+    size: 16Mi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
 
 storage:
   provider: local

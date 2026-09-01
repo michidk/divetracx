@@ -1,19 +1,28 @@
 import '@tanstack/react-start/server-only'
 
 import { createHash } from 'node:crypto'
-import { eq, inArray } from 'drizzle-orm'
-import { diveProfileSamples, diveSites, dives, tanks } from '@/db/schema'
+import { and, eq, inArray } from 'drizzle-orm'
+import type { DatabaseTransaction } from '@/db'
+import {
+  diveProfileSamples,
+  dives,
+  externalRecordLinks,
+  externalRecords,
+  tanks,
+} from '@/db/schema'
 import {
   performFullImport,
   performIncrementalImport,
 } from '@/modules/integrations/server/import-service.server'
-import type {
-  ExternalRecordInput,
-  IntegrationConnector,
-  PerformImportOptions,
+import {
+  type ExternalRecordInput,
+  type IntegrationConnector,
+  MATCHED_LINK_ROLE,
+  type PerformImportOptions,
 } from '@/modules/integrations/types'
 import { parseGarminActivityDetails } from '../activity-details'
 import { mapGarminActivity } from '../mapping'
+import { adjacentDiveDates, selectNearestDive } from '../matching'
 import type {
   GarminMappedDive,
   GarminSourceActivity,
@@ -41,6 +50,98 @@ function validDate(value: string | null) {
   if (!value) return null
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? null : date
+}
+
+function garminDiveValues(mapped: GarminMappedDive) {
+  return {
+    captureSource: 'computer' as const,
+    number: mapped.number,
+    diveDate: mapped.diveDate,
+    entryTime: mapped.entryTime,
+    utcOffsetMinutes: mapped.utcOffsetMinutes,
+    durationSeconds: mapped.durationSeconds,
+    surfaceIntervalSeconds: mapped.surfaceIntervalSeconds,
+    maximumDepthMeters: numeric(mapped.maximumDepthMeters),
+    averageDepthMeters: numeric(mapped.averageDepthMeters),
+    waterTemperatureCelsius: numeric(mapped.waterTemperatureCelsius),
+    maximumPpo2: numeric(mapped.maximumPpo2),
+    computer: mapped.computer,
+    notes: mapped.notes,
+    updatedAt: new Date(),
+  }
+}
+
+/**
+ * A matched log entry stays authoritative: Garmin values only fill fields the
+ * dive does not have yet, and the dive is marked as computer-captured.
+ */
+async function enrichMatchedDive(
+  transaction: DatabaseTransaction,
+  diveId: string,
+  mapped: GarminMappedDive,
+) {
+  const [current] = await transaction
+    .select({
+      durationSeconds: dives.durationSeconds,
+      surfaceIntervalSeconds: dives.surfaceIntervalSeconds,
+      maximumDepthMeters: dives.maximumDepthMeters,
+      averageDepthMeters: dives.averageDepthMeters,
+      waterTemperatureCelsius: dives.waterTemperatureCelsius,
+      maximumPpo2: dives.maximumPpo2,
+      utcOffsetMinutes: dives.utcOffsetMinutes,
+      computer: dives.computer,
+    })
+    .from(dives)
+    .where(eq(dives.id, diveId))
+    .limit(1)
+  if (!current) {
+    throw new Error(`Matched dive ${diveId} for Garmin ${mapped.externalId} is missing`)
+  }
+  await transaction
+    .update(dives)
+    .set({
+      captureSource: 'computer' as const,
+      updatedAt: new Date(),
+      ...(current.durationSeconds > 0 ? {} : { durationSeconds: mapped.durationSeconds }),
+      ...(current.surfaceIntervalSeconds === null
+        ? { surfaceIntervalSeconds: mapped.surfaceIntervalSeconds }
+        : {}),
+      ...(current.maximumDepthMeters === null
+        ? { maximumDepthMeters: numeric(mapped.maximumDepthMeters) }
+        : {}),
+      ...(current.averageDepthMeters === null
+        ? { averageDepthMeters: numeric(mapped.averageDepthMeters) }
+        : {}),
+      ...(current.waterTemperatureCelsius === null
+        ? { waterTemperatureCelsius: numeric(mapped.waterTemperatureCelsius) }
+        : {}),
+      ...(current.maximumPpo2 === null
+        ? { maximumPpo2: numeric(mapped.maximumPpo2) }
+        : {}),
+      ...(current.utcOffsetMinutes === null
+        ? { utcOffsetMinutes: mapped.utcOffsetMinutes }
+        : {}),
+      ...(current.computer === null ? { computer: mapped.computer } : {}),
+    })
+    .where(eq(dives.id, diveId))
+}
+
+async function diveHasProfileSamples(transaction: DatabaseTransaction, diveId: string) {
+  const [row] = await transaction
+    .select({ id: diveProfileSamples.id })
+    .from(diveProfileSamples)
+    .where(eq(diveProfileSamples.diveId, diveId))
+    .limit(1)
+  return Boolean(row)
+}
+
+async function diveHasTanks(transaction: DatabaseTransaction, diveId: string) {
+  const [row] = await transaction
+    .select({ id: tanks.id })
+    .from(tanks)
+    .where(eq(tanks.diveId, diveId))
+    .limit(1)
+  return Boolean(row)
 }
 
 function prepareBatch(batch: GarminSourceBatch) {
@@ -95,7 +196,7 @@ export function createGarminConnector(
       key: SOURCE_KEY,
       displayName: 'Garmin',
       capabilities: { fullImport: true, incrementalImport: true, export: false },
-      supportedEntities: ['dives', 'dive_sites', 'profile_samples', 'tanks', 'gases'],
+      supportedEntities: ['dives', 'profile_samples', 'tanks', 'gases'],
     },
     async prepareImport(context) {
       const batch =
@@ -124,9 +225,26 @@ export function createGarminConnector(
       let created = 0
       let updated = 0
       let skipped = 0
+      let matched = 0
       let profileSamplesCreated = 0
       let tanksCreated = 0
-      let sitesCreated = 0
+
+      // Dives that already carry a Garmin activity must not be matched again
+      // by a second activity in this or a later run.
+      const linkedDives = await context.transaction
+        .select({ diveId: externalRecordLinks.canonicalEntityId })
+        .from(externalRecordLinks)
+        .innerJoin(
+          externalRecords,
+          eq(externalRecordLinks.externalRecordId, externalRecords.id),
+        )
+        .where(
+          and(
+            eq(externalRecords.integrationKey, SOURCE_KEY),
+            eq(externalRecordLinks.canonicalEntityType, 'dive'),
+          ),
+        )
+      const reservedDiveIds = new Set(linkedDives.map((row) => row.diveId))
 
       for (const record of context.records) {
         if (record.change === 'unchanged') {
@@ -145,61 +263,36 @@ export function createGarminConnector(
           continue
         }
 
-        const existingDiveId = record.canonicalLinks.find(
+        const diveLink = record.canonicalLinks.find(
           (link) => link.canonicalEntityType === 'dive',
-        )?.canonicalEntityId
-        const existingSiteId = record.canonicalLinks.find(
-          (link) => link.canonicalEntityType === 'dive_site',
-        )?.canonicalEntityId
-        let siteId = existingSiteId ?? null
-        if (mapped.latitude !== null && mapped.longitude !== null) {
-          const siteValues = {
-            name: mapped.activityName ?? `Garmin dive ${mapped.externalId}`,
-            latitude: numeric(mapped.latitude),
-            longitude: numeric(mapped.longitude),
-            updatedAt: new Date(),
-          }
-          if (siteId) {
-            await context.transaction
-              .update(diveSites)
-              .set(siteValues)
-              .where(eq(diveSites.id, siteId))
-          } else {
-            const [site] = await context.transaction
-              .insert(diveSites)
-              .values(siteValues)
-              .returning({ id: diveSites.id })
-            siteId = site?.id ?? null
-            if (siteId) sitesCreated += 1
-          }
-          if (siteId) {
-            await context.linkCanonicalRecord(record.id, 'dive_site', siteId, 'location')
+        )
+        let diveId = diveLink?.canonicalEntityId ?? null
+        let ownsDive = diveLink ? diveLink.role !== MATCHED_LINK_ROLE : false
+
+        if (!diveId) {
+          const candidates = await context.transaction
+            .select({
+              id: dives.id,
+              diveDate: dives.diveDate,
+              entryTime: dives.entryTime,
+              utcOffsetMinutes: dives.utcOffsetMinutes,
+            })
+            .from(dives)
+            .where(inArray(dives.diveDate, adjacentDiveDates(mapped.diveDate)))
+          const match = selectNearestDive(
+            candidates.filter((candidate) => !reservedDiveIds.has(candidate.id)),
+            mapped.startEpochSeconds,
+            mapped.utcOffsetMinutes,
+          )
+          if (match) {
+            diveId = match.diveId
+            ownsDive = false
+            matched += 1
           }
         }
 
-        const diveValues = {
-          captureSource: 'computer' as const,
-          siteId,
-          number: mapped.number,
-          diveDate: mapped.diveDate,
-          entryTime: mapped.entryTime,
-          utcOffsetMinutes: mapped.utcOffsetMinutes,
-          durationSeconds: mapped.durationSeconds,
-          surfaceIntervalSeconds: mapped.surfaceIntervalSeconds,
-          maximumDepthMeters: numeric(mapped.maximumDepthMeters),
-          averageDepthMeters: numeric(mapped.averageDepthMeters),
-          waterTemperatureCelsius: numeric(mapped.waterTemperatureCelsius),
-          maximumPpo2: numeric(mapped.maximumPpo2),
-          computer: mapped.computer,
-          notes: mapped.notes,
-          updatedAt: new Date(),
-        }
-        let diveId = existingDiveId ?? null
         if (diveId) {
-          await context.transaction
-            .update(dives)
-            .set(diveValues)
-            .where(eq(dives.id, diveId))
+          // Re-imported records replace only their own derived rows.
           const importedSampleIds = record.canonicalLinks
             .filter((link) => link.canonicalEntityType === 'profile_sample')
             .map((link) => link.canonicalEntityId)
@@ -217,54 +310,81 @@ export function createGarminConnector(
               .where(inArray(tanks.id, importedTankIds))
           }
           await context.unlinkCanonicalRecords(record.id, ['profile_sample', 'tank'])
+        }
+
+        if (diveId && ownsDive) {
+          await context.transaction
+            .update(dives)
+            .set(garminDiveValues(mapped))
+            .where(eq(dives.id, diveId))
           updated += 1
+        } else if (diveId) {
+          await enrichMatchedDive(context.transaction, diveId, mapped)
+          if (diveLink) updated += 1
         } else {
           const [dive] = await context.transaction
             .insert(dives)
-            .values(diveValues)
+            .values(garminDiveValues(mapped))
             .returning({ id: dives.id })
           diveId = dive?.id ?? null
+          ownsDive = true
           created += 1
         }
         if (!diveId) throw new Error(`Could not store Garmin dive ${mapped.externalId}`)
-        await context.linkCanonicalRecord(record.id, 'dive', diveId)
+        reservedDiveIds.add(diveId)
+        await context.linkCanonicalRecord(
+          record.id,
+          'dive',
+          diveId,
+          ownsDive ? 'produced' : MATCHED_LINK_ROLE,
+        )
 
-        for (const [sampleIndex, sample] of mapped.profileSamples.entries()) {
-          const [inserted] = await context.transaction
-            .insert(diveProfileSamples)
-            .values({
-              diveId,
-              sampleIndex,
-              elapsedSeconds: sample.elapsedSeconds,
-              depthMeters: String(sample.depthMeters),
-              temperatureCelsius: numeric(sample.temperatureCelsius),
-              decoCeilingMeters: numeric(sample.decoCeilingMeters),
-            })
-            .returning({ id: diveProfileSamples.id })
-          if (inserted) {
-            profileSamplesCreated += 1
-            await context.linkCanonicalRecord(
-              record.id,
-              'profile_sample',
-              inserted.id,
-              'derived',
-            )
+        // A matched log entry keeps its existing profile and cylinders; Garmin
+        // data fills those in only when the dive has none of its own.
+        const insertSamples =
+          ownsDive || !(await diveHasProfileSamples(context.transaction, diveId))
+        const insertTanks = ownsDive || !(await diveHasTanks(context.transaction, diveId))
+
+        if (insertSamples) {
+          for (const [sampleIndex, sample] of mapped.profileSamples.entries()) {
+            const [inserted] = await context.transaction
+              .insert(diveProfileSamples)
+              .values({
+                diveId,
+                sampleIndex,
+                elapsedSeconds: sample.elapsedSeconds,
+                depthMeters: String(sample.depthMeters),
+                temperatureCelsius: numeric(sample.temperatureCelsius),
+                decoCeilingMeters: numeric(sample.decoCeilingMeters),
+              })
+              .returning({ id: diveProfileSamples.id })
+            if (inserted) {
+              profileSamplesCreated += 1
+              await context.linkCanonicalRecord(
+                record.id,
+                'profile_sample',
+                inserted.id,
+                'derived',
+              )
+            }
           }
         }
-        for (const gas of mapped.gases) {
-          const [inserted] = await context.transaction
-            .insert(tanks)
-            .values({
-              diveId,
-              name: `Garmin gas ${gas.index + 1}`,
-              sortOrder: gas.index,
-              oxygenPercent: numeric(gas.oxygenPercent),
-              heliumPercent: numeric(gas.heliumPercent),
-            })
-            .returning({ id: tanks.id })
-          if (inserted) {
-            tanksCreated += 1
-            await context.linkCanonicalRecord(record.id, 'tank', inserted.id, 'derived')
+        if (insertTanks) {
+          for (const gas of mapped.gases) {
+            const [inserted] = await context.transaction
+              .insert(tanks)
+              .values({
+                diveId,
+                name: `Garmin gas ${gas.index + 1}`,
+                sortOrder: gas.index,
+                oxygenPercent: numeric(gas.oxygenPercent),
+                heliumPercent: numeric(gas.heliumPercent),
+              })
+              .returning({ id: tanks.id })
+            if (inserted) {
+              tanksCreated += 1
+              await context.linkCanonicalRecord(record.id, 'tank', inserted.id, 'derived')
+            }
           }
         }
       }
@@ -276,7 +396,7 @@ export function createGarminConnector(
         byEntity: {
           divesCreated: created,
           divesUpdated: updated,
-          sitesCreated,
+          divesMatched: matched,
           profileSamplesCreated,
           tanksCreated,
         },

@@ -124,7 +124,44 @@
         "authorizationSecretKey": { "type": "string", "minLength": 1 },
         "timeoutMs": { "type": "integer", "minimum": 1 },
         "maxResponseBytes": { "type": "integer", "minimum": 1 },
-        "maxFitBytes": { "type": "integer", "minimum": 1 }
+        "maxFitBytes": { "type": "integer", "minimum": 1 },
+        "sync": {
+          "type": "object",
+          "required": ["enabled", "schedule"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "schedule": { "type": "string", "minLength": 1 },
+            "timeZone": { "type": "string" },
+            "concurrencyPolicy": {
+              "type": "string",
+              "enum": ["Allow", "Forbid", "Replace"]
+            },
+            "startingDeadlineSeconds": { "type": "integer", "minimum": 0 },
+            "successfulJobsHistoryLimit": { "type": "integer", "minimum": 0 },
+            "failedJobsHistoryLimit": { "type": "integer", "minimum": 0 },
+            "backoffLimit": { "type": "integer", "minimum": 0 },
+            "resources": { "type": "object" }
+          }
+        }
+      }
+    },
+    "garminAdapter": {
+      "type": "object",
+      "required": ["enabled", "port", "domain", "tokens"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "domain": { "type": "string", "enum": ["garmin.com", "garmin.cn"] },
+        "tokens": {
+          "type": "object",
+          "required": ["size"],
+          "properties": {
+            "size": { "type": "string", "minLength": 1 },
+            "storageClass": { "type": "string" },
+            "accessMode": { "type": "string", "minLength": 1 }
+          }
+        },
+        "resources": { "type": "object" }
       }
     },
     "storage": { "type": "object" },

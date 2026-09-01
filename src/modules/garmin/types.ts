@@ -56,6 +56,7 @@ export interface GarminGas {
 
 export interface GarminMappedDive {
   externalId: string
+  startEpochSeconds: number
   diveDate: string
   entryTime: string | null
   utcOffsetMinutes: number | null

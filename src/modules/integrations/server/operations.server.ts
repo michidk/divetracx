@@ -60,7 +60,7 @@ export async function loadIntegrationStatus() {
         configurationHint:
           connector.descriptor.key === 'divemate'
             ? 'Configure the Google Drive backup folder and server-side service account.'
-            : 'Configure approved Garmin Activity API adapter URLs after Garmin Developer Program approval.',
+            : 'Configure the Garmin adapter URL and shared authorization secret, then log the adapter in to Garmin Connect.',
         latestRun,
         stateUpdatedAt: storedState?.updatedAt ?? null,
       }

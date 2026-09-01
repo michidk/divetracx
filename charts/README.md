@@ -32,23 +32,42 @@ The CronJob uses `concurrencyPolicy: Forbid` by default and records its runs as
 `schedule`. The application receives the same Secret, so **Sync now** uses the
 same importer and records runs as `manual`.
 
-## Garmin Activity API adapter
+## Garmin adapter
 
-Garmin partner OAuth/feed details are available only after Garmin Developer
-Program approval. Configure an approved server-side adapter rather than putting
-Garmin credentials in the browser:
+Garmin transport goes through a server-side adapter so Garmin credentials never
+reach the browser. The chart can deploy the bundled adapter, which signs in to
+the Garmin Connect consumer API with tokens persisted on a small volume:
+
+```bash
+kubectl create secret generic divetracx-garmin \
+  --from-literal=authorization='Bearer replace-with-a-long-random-secret'
+```
 
 ```yaml
 garmin:
-  fullImportUrl: https://garmin-adapter.example.test/full
-  incrementalImportUrl: https://garmin-adapter.example.test/incremental
   existingSecret: divetracx-garmin
   authorizationSecretKey: authorization
+  sync:
+    enabled: true # daily incremental Garmin import CronJob
+garminAdapter:
+  enabled: true
 ```
 
+After the first deployment, log the adapter in to Garmin Connect once (the
+tokens land on the persistent volume and are refreshed automatically):
+
+```bash
+kubectl exec -it deploy/divetracx-garmin-adapter -- bun run garmin:login
+```
+
+Accounts with multi-factor authentication are not supported by this login flow.
+To use an external adapter instead, leave `garminAdapter.enabled` off and set
+`garmin.fullImportUrl`/`garmin.incrementalImportUrl`.
+
 The Secret value is used as the complete `Authorization` header sent to the
-adapter. The adapter returns Activity Details, optional base64 FIT data, and
-opaque next state. Garmin export is not supported.
+adapter and checked by the bundled adapter. The adapter returns Activity
+Details, base64 FIT data, and opaque next state. Garmin export is not
+supported.
 
 ## Install with external PostgreSQL
 

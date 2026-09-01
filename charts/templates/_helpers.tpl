@@ -68,3 +68,23 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- printf "%s-divemate" (include "divetracx.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end }}
+
+{{- define "divetracx.garminAdapterName" -}}
+{{- printf "%s-garmin-adapter" (include "divetracx.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end }}
+
+{{- define "divetracx.garminAdapterFullImportUrl" -}}
+{{- if .Values.garmin.fullImportUrl -}}
+{{- .Values.garmin.fullImportUrl -}}
+{{- else -}}
+{{- printf "http://%s:%d/import" (include "divetracx.garminAdapterName" .) (int .Values.garminAdapter.port) -}}
+{{- end -}}
+{{- end }}
+
+{{- define "divetracx.garminAdapterIncrementalImportUrl" -}}
+{{- if .Values.garmin.incrementalImportUrl -}}
+{{- .Values.garmin.incrementalImportUrl -}}
+{{- else -}}
+{{- printf "http://%s:%d/import" (include "divetracx.garminAdapterName" .) (int .Values.garminAdapter.port) -}}
+{{- end -}}
+{{- end }}
