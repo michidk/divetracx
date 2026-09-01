@@ -4,7 +4,10 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import type { getDiveMateSyncStatus } from '@/modules/divemate/server/status'
 import { runDiveMateSync } from '@/modules/divemate/server/sync'
-import { runDiveMateWriteBack } from '@/modules/divemate/server/writeback'
+import {
+  loadDiveMateWriteBackStatus,
+  runDiveMateWriteBack,
+} from '@/modules/divemate/server/writeback'
 
 type SyncStatus = Awaited<ReturnType<typeof getDiveMateSyncStatus>>
 
@@ -38,7 +41,25 @@ export function SyncPage({ status }: { status: SyncStatus }) {
     setPushing(true)
     setMessage(null)
     try {
-      const result = await runDiveMateWriteBack()
+      let status = await runDiveMateWriteBack()
+      const labels = {
+        'reading-drive': 'Reading the Google Drive backup…',
+        'reading-divetracx': 'Reading Divetracx records…',
+        'updating-database': 'Updating the DiveMate database…',
+        'uploading-drive': 'Uploading the database to Google Drive…',
+      }
+      while (status.state === 'running') {
+        setMessage(labels[status.stage])
+        await new Promise((resolve) => window.setTimeout(resolve, 1_000))
+        const latest = await loadDiveMateWriteBackStatus()
+        if (!latest || latest.id !== status.id)
+          throw new Error('Drive write-back status was lost')
+        status = latest
+      }
+      if (status.state === 'failed')
+        throw new Error(status.error ?? 'Drive write-back failed')
+      const result = status.result
+      if (!result) throw new Error('Drive write-back finished without a result')
       setMessage(
         `Updated ${result.updatedRecords} imported DiveMate records. Google Drive retained the previous database revision.`,
       )
