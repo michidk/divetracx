@@ -21,7 +21,9 @@ export async function openSqlite(
   if (process.versions.bun) {
     const moduleName = 'bun:sqlite'
     const { Database } = await import(moduleName)
-    return new Database(path, { readonly }) as SqliteDatabase
+    return (
+      readonly ? new Database(path, { readonly: true }) : new Database(path)
+    ) as SqliteDatabase
   }
   const moduleName = 'better-sqlite3'
   const imported = await import(moduleName)

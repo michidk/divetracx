@@ -21,7 +21,8 @@
     "db:migrate": "bun run scripts/migrate.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "sync:divemate": "bun run scripts/sync-divemate.ts"
+    "sync:divemate": "bun run scripts/sync-divemate.ts",
+    "export:divemate": "bun run scripts/export-divemate.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1068.0",
