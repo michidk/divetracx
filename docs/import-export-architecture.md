@@ -317,9 +317,11 @@ schedule; it is an export destination, not bidirectional synchronization.
 Divetracx now ships an implementation of the adapter contract in
 `src/modules/garmin-adapter` (entry point `scripts/garmin-adapter.ts`). Instead
 of the gated partner API it uses the Garmin Connect consumer API with
-garth-style persisted OAuth tokens: the adapter serves a browser setup page
-(optionally password-protected with `GARMIN_ADAPTER_UI_PASSWORD`) where a
-one-time Garmin Connect login stores tokens in `GARMIN_TOKEN_DIRECTORY`;
+garth-style persisted OAuth tokens. The Garmin account is connected from the
+Integrations settings page: Divetracx forwards the credentials
+server-to-server to the adapter's bearer-protected account endpoints
+(`GET /account`, `POST /account/login`, `POST /account/logout`), and the
+adapter stores only the resulting tokens in `GARMIN_TOKEN_DIRECTORY`;
 credentials are never persisted. The adapter refreshes and re-persists tokens,
 sweeps activities newest-first, keeps diving sub-sports, downloads original FIT
 files, and returns one transactional batch whose next state is a start-time
