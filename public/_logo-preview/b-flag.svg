@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Divetracx</title>
+  <defs>
+    <clipPath id="r"><rect x="2" y="2" width="60" height="60" rx="15"/></clipPath>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="#d62828"/>
+  <g clip-path="url(#r)">
+    <line x1="-4" y1="-4" x2="68" y2="68" stroke="#ffffff" stroke-width="16"/>
+  </g>
+</svg>

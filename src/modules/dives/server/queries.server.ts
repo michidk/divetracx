@@ -44,6 +44,7 @@ export async function loadDashboard() {
       maximumDepthMeters: dives.maximumDepthMeters,
       siteName: diveSites.name,
       country: diveSites.country,
+      diveTypeName: diveTypes.name,
       picturePath: sql<string | null>`(
         select coalesce(p.thumbnail_storage_path, p.storage_path)
         from pictures p
@@ -56,6 +57,7 @@ export async function loadDashboard() {
     })
     .from(dives)
     .leftJoin(diveSites, sql`${dives.siteId} = ${diveSites.id}`)
+    .leftJoin(diveTypes, eq(dives.diveTypeId, diveTypes.id))
     .orderBy(desc(dives.diveDate), desc(dives.entryTime))
     .limit(6)
 
@@ -110,6 +112,7 @@ export async function loadDives(search: string, requestedPage: number) {
       waterTemperatureCelsius: dives.waterTemperatureCelsius,
       siteName: diveSites.name,
       country: diveSites.country,
+      diveTypeName: diveTypes.name,
       picturePath: sql<string | null>`(
         select coalesce(p.thumbnail_storage_path, p.storage_path)
         from pictures p
@@ -122,6 +125,7 @@ export async function loadDives(search: string, requestedPage: number) {
     })
     .from(dives)
     .leftJoin(diveSites, sql`${dives.siteId} = ${diveSites.id}`)
+    .leftJoin(diveTypes, eq(dives.diveTypeId, diveTypes.id))
     .where(filter)
     .orderBy(desc(dives.diveDate), desc(dives.entryTime))
     .limit(DIVES_PAGE_SIZE)

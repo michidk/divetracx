@@ -1,6 +1,7 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { ChevronRight, Plus, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { diveTypeIcon } from '@/components/dive-type-icon'
 import { Input } from '@/components/ui/input'
 import {
   formatDiveDate,
@@ -73,8 +74,8 @@ export function DiveList({ list, search }: { list: DiveListData; search: string 
       </label>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="hidden grid-cols-[4rem_5rem_minmax(12rem,1fr)_10rem_7rem_7rem_7rem_2rem] border-b border-border bg-muted/50 px-5 py-4 text-xs uppercase tracking-wider text-muted-foreground md:grid">
-          <span>Picture</span>
+        <div className="hidden grid-cols-[3.5rem_5rem_minmax(12rem,1fr)_10rem_7rem_7rem_7rem_2rem] border-b border-border bg-muted/50 px-5 py-4 text-xs uppercase tracking-wider text-muted-foreground md:grid">
+          <span>Type</span>
           <span>Dive</span>
           <span>Site</span>
           <span>Date</span>
@@ -83,61 +84,74 @@ export function DiveList({ list, search }: { list: DiveListData; search: string 
           <span className="text-right">Water</span>
           <span />
         </div>
-        {list.records.map((dive) => (
-          <Link
-            key={dive.id}
-            to="/dives/$diveId"
-            params={{ diveId: dive.id }}
-            className="group grid min-h-20 grid-cols-[3.5rem_minmax(0,1fr)_auto_1.25rem] items-center gap-4 border-b border-border px-5 py-4 transition-colors last:border-0 hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary md:grid-cols-[4rem_5rem_minmax(12rem,1fr)_10rem_7rem_7rem_7rem_2rem]"
-          >
-            <span className="flex size-14 items-center justify-center overflow-hidden rounded-lg bg-muted">
+        {list.records.map((dive) => {
+          const TypeIcon = diveTypeIcon(dive.diveTypeName)
+          return (
+            <Link
+              key={dive.id}
+              to="/dives/$diveId"
+              params={{ diveId: dive.id }}
+              className="group relative isolate grid min-h-20 grid-cols-[3rem_minmax(0,1fr)_auto_1.25rem] items-center gap-4 overflow-hidden border-b border-border px-5 py-4 transition-colors last:border-0 hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary md:grid-cols-[3.5rem_5rem_minmax(12rem,1fr)_10rem_7rem_7rem_7rem_2rem]"
+            >
               {dive.picturePath ? (
-                <img
-                  src={mediaUrl(dive.picturePath)}
-                  alt=""
-                  className="size-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <span className="text-xs text-muted-foreground">—</span>
-              )}
-            </span>
-            <span className="hidden font-mono text-sm text-muted-foreground md:block">
-              #{dive.number ?? '—'}
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate font-semibold">
-                {dive.siteName ?? 'Unknown site'}
+                <>
+                  <img
+                    src={mediaUrl(dive.picturePath)}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 -z-20 size-full scale-105 object-cover blur-[2px]"
+                    loading="lazy"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-0 -z-10 bg-card/85 transition-colors group-hover:bg-card/70"
+                  />
+                </>
+              ) : null}
+              <span
+                title={dive.diveTypeName ?? undefined}
+                className="grid size-11 place-items-center rounded-xl bg-accent text-primary shadow-sm"
+              >
+                <TypeIcon size={19} aria-hidden="true" />
+                <span className="sr-only">{dive.diveTypeName ?? 'Dive'}</span>
               </span>
-              <span className="mt-1 block truncate text-xs text-muted-foreground md:hidden">
-                #{dive.number ?? '—'} · {formatDiveDate(dive.diveDate, 'medium')}
+              <span className="hidden font-mono text-sm text-muted-foreground md:block">
+                #{dive.number ?? '—'}
               </span>
-              <span className="mt-1 hidden truncate text-xs text-muted-foreground md:block">
-                {dive.country ?? 'Country not set'}
+              <span className="min-w-0">
+                <span className="block truncate font-semibold">
+                  {dive.siteName ?? 'Unknown site'}
+                </span>
+                <span className="mt-1 block truncate text-xs text-muted-foreground md:hidden">
+                  #{dive.number ?? '—'} · {formatDiveDate(dive.diveDate, 'medium')}
+                </span>
+                <span className="mt-1 hidden truncate text-xs text-muted-foreground md:block">
+                  {dive.country ?? 'Country not set'}
+                </span>
               </span>
-            </span>
-            <span className="hidden text-sm md:block">
-              {formatDiveDate(dive.diveDate, 'medium')}
-            </span>
-            <span className="hidden text-right font-mono text-sm md:block">
-              {formatDuration(dive.durationSeconds)}
-            </span>
-            <span className="text-right font-mono text-sm">
-              <span className="block">{formatMeters(dive.maximumDepthMeters)}</span>
-              <span className="mt-1 block text-xs text-muted-foreground md:hidden">
+              <span className="hidden text-sm md:block">
+                {formatDiveDate(dive.diveDate, 'medium')}
+              </span>
+              <span className="hidden text-right font-mono text-sm md:block">
                 {formatDuration(dive.durationSeconds)}
               </span>
-            </span>
-            <span className="hidden text-right font-mono text-sm md:block">
-              {formatTemperature(dive.waterTemperatureCelsius)}
-            </span>
-            <ChevronRight
-              className="text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
-              size={18}
-              aria-hidden="true"
-            />
-          </Link>
-        ))}
+              <span className="text-right font-mono text-sm">
+                <span className="block">{formatMeters(dive.maximumDepthMeters)}</span>
+                <span className="mt-1 block text-xs text-muted-foreground md:hidden">
+                  {formatDuration(dive.durationSeconds)}
+                </span>
+              </span>
+              <span className="hidden text-right font-mono text-sm md:block">
+                {formatTemperature(dive.waterTemperatureCelsius)}
+              </span>
+              <ChevronRight
+                className="text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
+                size={18}
+                aria-hidden="true"
+              />
+            </Link>
+          )
+        })}
         {list.records.length === 0 ? (
           <p className="p-10 text-center text-sm text-muted-foreground">
             {search
