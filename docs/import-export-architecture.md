@@ -306,3 +306,8 @@ transactions, provenance, capability-driven UI, and history. DiveMate `.ddb`
 export is rebuilt from the canonical snapshot. Garmin uses Activity Details and
 the official FIT SDK while gated partner transport stays behind a configurable,
 fail-closed adapter boundary.
+
+Users can download a one-off DiveMate export or explicitly publish it over the
+configured `DiveMate.ddb` in Google Drive. Publishing requires confirmation,
+retains the previous Drive revision, and is never invoked by an import or
+schedule; it is an export destination, not bidirectional synchronization.
