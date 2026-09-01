@@ -1,4 +1,4 @@
-import { Database } from 'bun:sqlite'
+import { openSqlite, type SqliteDatabase } from './server/sqlite.server'
 import type {
   DiveMateBuddy,
   DiveMateCertification,
@@ -17,7 +17,7 @@ import type {
 
 type SourceRow = Record<string, unknown>
 
-function hasTable(database: Database, name: string): boolean {
+function hasTable(database: SqliteDatabase, name: string): boolean {
   return Boolean(
     database
       .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1")
@@ -25,7 +25,7 @@ function hasTable(database: Database, name: string): boolean {
   )
 }
 
-function readRows(database: Database, table: string): SourceRow[] {
+function readRows(database: SqliteDatabase, table: string): SourceRow[] {
   if (!hasTable(database, table)) return []
   return database.prepare(`SELECT * FROM "${table}"`).all() as SourceRow[]
 }
@@ -485,8 +485,10 @@ function compact<T>(items: Array<T | null>): T[] {
   return items.filter((item): item is T => item !== null)
 }
 
-export function parseDiveMateDatabase(databasePath: string): DiveMateSnapshot {
-  const database = new Database(databasePath, { readonly: true })
+export async function parseDiveMateDatabase(
+  databasePath: string,
+): Promise<DiveMateSnapshot> {
+  const database = await openSqlite(databasePath, { readonly: true })
   try {
     const info = readRows(database, 'DBInfo')[0]
     return {

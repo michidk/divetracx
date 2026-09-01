@@ -21,7 +21,7 @@ afterEach(() => {
 })
 
 describe('parseDiveMateDatabase', () => {
-  test('normalizes a DiveMate logbook and its linked records', () => {
+  test('normalizes a DiveMate logbook and its linked records', async () => {
     const { database, path } = fixtureDatabase()
     database.exec(`
       CREATE TABLE DBInfo (DBVersion TEXT, PrgName TEXT, UUID TEXT, Updated TEXT);
@@ -141,7 +141,7 @@ describe('parseDiveMateDatabase', () => {
     `)
     database.close()
 
-    const snapshot = parseDiveMateDatabase(path)
+    const snapshot = await parseDiveMateDatabase(path)
 
     expect(snapshot.databaseVersion).toBe('4.0')
     expect(snapshot.databaseProgram).toBe('DiveMate')
@@ -282,7 +282,7 @@ describe('parseDiveMateDatabase', () => {
     })
   })
 
-  test('accepts a partial database and ignores records without stable IDs', () => {
+  test('accepts a partial database and ignores records without stable IDs', async () => {
     const { database, path } = fixtureDatabase()
     database.exec(`
       CREATE TABLE Logbook (ID INTEGER, Divedate TEXT);
@@ -290,7 +290,7 @@ describe('parseDiveMateDatabase', () => {
     `)
     database.close()
 
-    const snapshot = parseDiveMateDatabase(path)
+    const snapshot = await parseDiveMateDatabase(path)
 
     expect(snapshot.dives).toEqual([])
     expect(snapshot.sites).toEqual([])
@@ -298,7 +298,7 @@ describe('parseDiveMateDatabase', () => {
     expect(snapshot.profileSamples).toEqual([])
   })
 
-  test('ignores malformed fixed-width profiles instead of inventing samples', () => {
+  test('ignores malformed fixed-width profiles instead of inventing samples', async () => {
     const { database, path } = fixtureDatabase()
     database.exec(`
       CREATE TABLE Logbook (
@@ -309,7 +309,7 @@ describe('parseDiveMateDatabase', () => {
     `)
     database.close()
 
-    const snapshot = parseDiveMateDatabase(path)
+    const snapshot = await parseDiveMateDatabase(path)
 
     expect(snapshot.dives).toHaveLength(2)
     expect(snapshot.profileSamples).toEqual([])
