@@ -184,6 +184,7 @@ export interface DiveMateProfileSample extends DiveMateSourceRecord {
 }
 
 export interface DiveMateSnapshot {
+  sourceTables: string[]
   databaseVersion: string | null
   databaseProgram: string | null
   databaseUuid: string | null

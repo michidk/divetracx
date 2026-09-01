@@ -13,6 +13,7 @@
     "migrations",
     "sync",
     "divemate",
+    "garmin",
     "storage",
     "postgresql",
     "hodor",
@@ -103,6 +104,27 @@
         "googleCredentialsSecretKey": { "type": "string", "minLength": 1 },
         "maxBackupBytes": { "type": "integer", "minimum": 1 },
         "maxImageBytes": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "garmin": {
+      "type": "object",
+      "required": [
+        "fullImportUrl",
+        "incrementalImportUrl",
+        "existingSecret",
+        "authorizationSecretKey",
+        "timeoutMs",
+        "maxResponseBytes",
+        "maxFitBytes"
+      ],
+      "properties": {
+        "fullImportUrl": { "type": "string" },
+        "incrementalImportUrl": { "type": "string" },
+        "existingSecret": { "type": "string" },
+        "authorizationSecretKey": { "type": "string", "minLength": 1 },
+        "timeoutMs": { "type": "integer", "minimum": 1 },
+        "maxResponseBytes": { "type": "integer", "minimum": 1 },
+        "maxFitBytes": { "type": "integer", "minimum": 1 }
       }
     },
     "storage": { "type": "object" },

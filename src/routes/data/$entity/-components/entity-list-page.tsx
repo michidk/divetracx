@@ -76,7 +76,7 @@ export function EntityListPage({ entity, list }: { entity: EntityKey; list: List
                   </span>
                 ) : null}
                 <span className="mt-1 block text-xs text-muted-foreground">
-                  {record.sourceKey === 'divemate' ? 'DiveMate' : record.sourceKey} ·{' '}
+                  {record.sourceKey === 'canonical' ? 'Canonical' : record.sourceKey} ·{' '}
                   {formatUpdated(record.updatedAt)}
                 </span>
               </span>

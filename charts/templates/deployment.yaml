@@ -65,6 +65,27 @@ spec:
             - name: DIVEMATE_MAX_BACKUP_BYTES
               value: {{ .Values.divemate.maxBackupBytes | quote }}
             {{- end }}
+            {{- if .Values.garmin.fullImportUrl }}
+            - name: GARMIN_ADAPTER_FULL_IMPORT_URL
+              value: {{ .Values.garmin.fullImportUrl | quote }}
+            {{- end }}
+            {{- if .Values.garmin.incrementalImportUrl }}
+            - name: GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL
+              value: {{ .Values.garmin.incrementalImportUrl | quote }}
+            {{- end }}
+            {{- if .Values.garmin.existingSecret }}
+            - name: GARMIN_ADAPTER_AUTHORIZATION
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.garmin.existingSecret }}
+                  key: {{ .Values.garmin.authorizationSecretKey }}
+            {{- end }}
+            - name: GARMIN_ADAPTER_TIMEOUT_MS
+              value: {{ .Values.garmin.timeoutMs | quote }}
+            - name: GARMIN_ADAPTER_MAX_RESPONSE_BYTES
+              value: {{ .Values.garmin.maxResponseBytes | quote }}
+            - name: GARMIN_MAX_FIT_BYTES
+              value: {{ .Values.garmin.maxFitBytes | quote }}
             - name: STORAGE_PROVIDER
               value: {{ .Values.storage.provider | quote }}
             - name: STORAGE_URL

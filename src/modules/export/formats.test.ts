@@ -6,7 +6,7 @@ function fixture(): ExportSnapshot {
   const timestamp = new Date('2026-08-29T10:15:00.000Z')
   return {
     format: 'divetracx-backup',
-    version: 6,
+    version: 7,
     exportedAt: timestamp.toISOString(),
     data: {
       divers: [
@@ -28,11 +28,6 @@ function fixture(): ExportSnapshot {
           emergencyEmail: null,
           insurance: null,
           notes: null,
-          sourceKey: 'divemate',
-          externalId: '1',
-          externalUuid: null,
-          sourceUpdatedAt: null,
-          sourcePayload: null,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
@@ -46,19 +41,12 @@ function fixture(): ExportSnapshot {
           waterName: 'Sea',
           latitude: '-24.1234567',
           longitude: '35.1234567',
-          sourceLatitude: null,
-          sourceLongitude: null,
           maximumDepthMeters: '40.00',
           altitudeMeters: 0,
           difficulty: null,
           rating: 5,
           waterType: 1,
           notes: 'Rock < arch',
-          sourceKey: 'divemate',
-          externalId: '7',
-          externalUuid: null,
-          sourceUpdatedAt: null,
-          sourcePayload: null,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
@@ -102,11 +90,6 @@ function fixture(): ExportSnapshot {
           divemaster: 'Guide',
           legacyBuddyText: 'Buddy note',
           notes: '=HYPERLINK("bad")\notherwise memorable',
-          sourceKey: 'divemate',
-          externalId: '11',
-          externalUuid: null,
-          sourceUpdatedAt: null,
-          sourcePayload: null,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
@@ -126,11 +109,6 @@ function fixture(): ExportSnapshot {
           tank2PressureBar: '198.00',
           decoCeilingMeters: null,
           tankNumber: 1,
-          sourceKey: 'divemate',
-          externalId: '11:0',
-          externalUuid: null,
-          sourceUpdatedAt: null,
-          sourcePayload: null,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
@@ -146,18 +124,13 @@ function fixture(): ExportSnapshot {
           tank2PressureBar: '198.50',
           decoCeilingMeters: '3.00',
           tankNumber: 2,
-          sourceKey: 'divemate',
-          externalId: '11:1',
-          externalUuid: null,
-          sourceUpdatedAt: null,
-          sourcePayload: null,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
       ],
       tanks: [],
       pictures: [],
-      syncRuns: [],
+      importRuns: [],
     },
   }
 }
@@ -172,7 +145,7 @@ describe('export formats', () => {
     }
 
     expect(parsed.format).toBe('divetracx-backup')
-    expect(parsed.version).toBe(6)
+    expect(parsed.version).toBe(7)
     expect(parsed.data.dives).toHaveLength(1)
     expect(parsed.data.divers[0]?.createdAt).toBe('2026-08-29T10:15:00.000Z')
   })

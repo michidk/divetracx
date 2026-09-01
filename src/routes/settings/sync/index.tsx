@@ -1,12 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getDiveMateSyncStatus } from '@/modules/divemate/server/status'
+import { getIntegrationStatus } from '@/modules/integrations/server/operations'
 import { SyncPage } from './-components/sync-page'
 
 export const Route = createFileRoute('/settings/sync/')({
-  loader: () => getDiveMateSyncStatus(),
+  loader: () => getIntegrationStatus(),
   component: SyncRoute,
 })
 
 function SyncRoute() {
-  return <SyncPage status={Route.useLoaderData()} />
+  return <SyncPage integrations={Route.useLoaderData()} />
 }

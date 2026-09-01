@@ -9,9 +9,9 @@ import {
   dives,
   diveTypes,
   equipment,
+  importRuns,
   pictures,
   shops,
-  syncRuns,
   tanks,
 } from '@/db/schema'
 import { entityDefinitionList, entityDefinitions, entityKeySchema } from './entities'
@@ -28,7 +28,7 @@ const entityTables = {
   tanks,
   pictures,
   'profile-samples': diveProfileSamples,
-  'sync-runs': syncRuns,
+  'sync-runs': importRuns,
 } as const
 
 const recordMetadataColumns = new Set([
@@ -102,7 +102,7 @@ describe('data entity definitions', () => {
     }
   })
 
-  test('keeps synchronization audit records read-only', () => {
+  test('keeps import audit records read-only', () => {
     expect(entityDefinitions['sync-runs'].mutable).toBeFalse()
     expect(
       entityDefinitionList

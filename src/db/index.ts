@@ -5,7 +5,8 @@ import postgres from 'postgres'
 import { getServerEnv } from '@/env'
 import * as schema from './schema'
 
-type Database = ReturnType<typeof drizzle<typeof schema>>
+export type Database = ReturnType<typeof drizzle<typeof schema>>
+export type DatabaseTransaction = Parameters<Parameters<Database['transaction']>[0]>[0]
 type PostgresClient = ReturnType<typeof postgres>
 
 let instance: Database | undefined

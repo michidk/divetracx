@@ -9,15 +9,15 @@ import type {
   dives,
   diveTypes,
   equipment,
+  importRuns,
   pictures,
   shops,
-  syncRuns,
   tanks,
 } from '@/db/schema'
 
 export interface ExportSnapshot {
   format: 'divetracx-backup'
-  version: 6
+  version: 7
   exportedAt: string
   data: {
     divers: Array<typeof divers.$inferSelect>
@@ -33,7 +33,7 @@ export interface ExportSnapshot {
     diveProfileSamples: Array<typeof diveProfileSamples.$inferSelect>
     tanks: Array<typeof tanks.$inferSelect>
     pictures: Array<typeof pictures.$inferSelect>
-    syncRuns: Array<typeof syncRuns.$inferSelect>
+    importRuns: Array<typeof importRuns.$inferSelect>
   }
 }
 

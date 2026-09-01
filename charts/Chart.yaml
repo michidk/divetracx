@@ -1,6 +1,6 @@
 apiVersion: v2
 name: divetracx
-description: A self-hosted dive log with DiveMate synchronization
+description: A self-hosted canonical dive log with DiveMate and Garmin imports
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
@@ -13,4 +13,5 @@ maintainers:
 keywords:
   - diving
   - divemate
+  - garmin
   - self-hosted

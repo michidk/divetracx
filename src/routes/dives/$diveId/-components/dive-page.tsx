@@ -261,7 +261,6 @@ export function DivePage({ dive }: { dive: DiveData }) {
                             : `Tank ${tank.computerTankNumber}`
                         }
                       />
-                      <Value label="Tank type" value={formatSourceCode(tank.tankType)} />
                       <Value
                         label="Breathing time"
                         value={
@@ -284,14 +283,6 @@ export function DivePage({ dive }: { dive: DiveData }) {
                           tank.weightKg ? `${Number(tank.weightKg).toFixed(1)} kg` : '—'
                         }
                       />
-                      <Value
-                        label="Supply type"
-                        value={formatSourceCode(tank.supplyTypeCode)}
-                      />
-                      <Value
-                        label="Dive phase"
-                        value={formatSourceCode(tank.divePhaseCode)}
-                      />
                     </dl>
                   </article>
                 ))}
@@ -306,7 +297,7 @@ export function DivePage({ dive }: { dive: DiveData }) {
                 <h2 className="text-xl font-semibold">Photos</h2>
               </div>
               <p className="mt-3 text-sm text-muted-foreground">
-                Imported from DiveMate. Original device paths are retained for export.
+                Attachments linked to this canonical dive record.
               </p>
               <PictureGallery pictures={dive.photos} />
             </section>
@@ -420,15 +411,17 @@ export function DivePage({ dive }: { dive: DiveData }) {
             <Database className="text-primary" size={21} aria-hidden="true" />
             <h2 className="mt-4 text-lg font-semibold">Record</h2>
             <dl className="mt-5 space-y-5">
-              <Value
-                label="Source"
-                value={dive.sourceKey === 'divemate' ? 'DiveMate' : dive.sourceKey}
-              />
-              <Value label="Source ID" value={dive.externalId} />
-              <Value
-                label="Source updated"
-                value={formatRecordTime(dive.sourceUpdatedAt)}
-              />
+              {dive.sources.length === 0 ? (
+                <Value label="Provenance" value="Created in Divetracx" />
+              ) : (
+                dive.sources.map((source) => (
+                  <Value
+                    key={`${source.integrationKey}:${source.identityKey}`}
+                    label={source.integrationKey === 'divemate' ? 'DiveMate' : 'Garmin'}
+                    value={`${source.externalId ?? source.identityKey} · seen ${formatRecordTime(source.lastSeenAt)}`}
+                  />
+                ))
+              )}
               <Value label="Last changed" value={formatRecordTime(dive.updatedAt)} />
             </dl>
           </section>

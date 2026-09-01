@@ -27,7 +27,6 @@ function tankSummary(tank: ExportSnapshot['data']['tanks'][number]) {
   if (tank.computerTankNumber !== null) {
     parts.push(`channel ${tank.computerTankNumber}`)
   }
-  if (tank.tankType !== null) parts.push(`type code ${tank.tankType}`)
   if (tank.volumeLiters) parts.push(`${tank.volumeLiters} L`)
   if (tank.startPressureBar || tank.endPressureBar) {
     parts.push(`${tank.startPressureBar ?? '?'}-${tank.endPressureBar ?? '?'} bar`)
@@ -40,11 +39,7 @@ function tankSummary(tank: ExportSnapshot['data']['tanks'][number]) {
   if (tank.breathingTimeSeconds !== null) {
     parts.push(`${tank.breathingTimeSeconds} s breathing time`)
   }
-  if (tank.supplyTypeCode !== null) {
-    parts.push(`supply code ${tank.supplyTypeCode}`)
-  }
   if (tank.weightKg) parts.push(`${tank.weightKg} kg`)
-  if (tank.divePhaseCode !== null) parts.push(`phase code ${tank.divePhaseCode}`)
   return parts.join(' · ')
 }
 
@@ -164,8 +159,6 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
     'profile_sample_count',
     'profile_samples_seconds_depth_meters_temperature_celsius_active_pressure_bar_tank_1_pressure_bar_tank_2_pressure_bar_deco_ceiling_meters_tank_channel',
     'notes',
-    'source',
-    'source_id',
   ]
 
   const rows = data.dives
@@ -259,8 +252,6 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
             .join(';'),
         ),
         csvCell(dive.notes, true),
-        csvCell(dive.sourceKey, true),
-        csvCell(dive.externalId, true),
       ].join(',')
     })
 

@@ -15,6 +15,7 @@ import { Route as DataIndexRouteImport } from './routes/data/index'
 import { Route as DivesIndexRouteImport } from './routes/dives/index'
 import { Route as MapIndexRouteImport } from './routes/map/index'
 import { Route as ApiExportCsvRouteImport } from './routes/api/export/csv'
+import { Route as ApiExportDivemateRouteImport } from './routes/api/export/divemate'
 import { Route as ApiExportJsonRouteImport } from './routes/api/export/json'
 import { Route as ApiExportUddfRouteImport } from './routes/api/export/uddf'
 import { Route as DataEntityIndexRouteImport } from './routes/data/$entity/index'
@@ -52,6 +53,11 @@ const MapIndexRoute = MapIndexRouteImport.update({
 const ApiExportCsvRoute = ApiExportCsvRouteImport.update({
   id: '/api/export/csv',
   path: '/api/export/csv',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExportDivemateRoute = ApiExportDivemateRouteImport.update({
+  id: '/api/export/divemate',
+  path: '/api/export/divemate',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiExportJsonRoute = ApiExportJsonRouteImport.update({
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/dives/': typeof DivesIndexRoute
   '/map/': typeof MapIndexRoute
   '/api/export/csv': typeof ApiExportCsvRoute
+  '/api/export/divemate': typeof ApiExportDivemateRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
   '/data/$entity/': typeof DataEntityIndexRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/dives': typeof DivesIndexRoute
   '/map': typeof MapIndexRoute
   '/api/export/csv': typeof ApiExportCsvRoute
+  '/api/export/divemate': typeof ApiExportDivemateRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
   '/data/$entity': typeof DataEntityIndexRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/dives/': typeof DivesIndexRoute
   '/map/': typeof MapIndexRoute
   '/api/export/csv': typeof ApiExportCsvRoute
+  '/api/export/divemate': typeof ApiExportDivemateRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
   '/data/$entity/': typeof DataEntityIndexRoute
@@ -153,6 +162,7 @@ export interface FileRouteTypes {
     | '/dives/'
     | '/map/'
     | '/api/export/csv'
+    | '/api/export/divemate'
     | '/api/export/json'
     | '/api/export/uddf'
     | '/data/$entity/'
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/dives'
     | '/map'
     | '/api/export/csv'
+    | '/api/export/divemate'
     | '/api/export/json'
     | '/api/export/uddf'
     | '/data/$entity'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/dives/'
     | '/map/'
     | '/api/export/csv'
+    | '/api/export/divemate'
     | '/api/export/json'
     | '/api/export/uddf'
     | '/data/$entity/'
@@ -202,6 +214,7 @@ export interface RootRouteChildren {
   DivesIndexRoute: typeof DivesIndexRoute
   MapIndexRoute: typeof MapIndexRoute
   ApiExportCsvRoute: typeof ApiExportCsvRoute
+  ApiExportDivemateRoute: typeof ApiExportDivemateRoute
   ApiExportJsonRoute: typeof ApiExportJsonRoute
   ApiExportUddfRoute: typeof ApiExportUddfRoute
   DataEntityIndexRoute: typeof DataEntityIndexRoute
@@ -254,6 +267,13 @@ declare module '@tanstack/react-router' {
       path: '/api/export/csv'
       fullPath: '/api/export/csv'
       preLoaderRoute: typeof ApiExportCsvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/export/divemate': {
+      id: '/api/export/divemate'
+      path: '/api/export/divemate'
+      fullPath: '/api/export/divemate'
+      preLoaderRoute: typeof ApiExportDivemateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/export/json': {
@@ -322,6 +342,7 @@ const rootRouteChildren: RootRouteChildren = {
   DivesIndexRoute: DivesIndexRoute,
   MapIndexRoute: MapIndexRoute,
   ApiExportCsvRoute: ApiExportCsvRoute,
+  ApiExportDivemateRoute: ApiExportDivemateRoute,
   ApiExportJsonRoute: ApiExportJsonRoute,
   ApiExportUddfRoute: ApiExportUddfRoute,
   DataEntityIndexRoute: DataEntityIndexRoute,
