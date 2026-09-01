@@ -15,13 +15,23 @@ export type EditorValues = Record<string, EditorValue>
 export interface EntityField {
   key: string
   label: string
-  kind: 'text' | 'textarea' | 'email' | 'tel' | 'date' | 'number' | 'checkbox' | 'rating'
+  kind:
+    | 'text'
+    | 'textarea'
+    | 'email'
+    | 'tel'
+    | 'date'
+    | 'number'
+    | 'checkbox'
+    | 'rating'
+    | 'select'
   section: string
   required?: boolean
   min?: number
   max?: number
   step?: string
   help?: string
+  options?: Array<{ value: string; label: string }>
 }
 
 export interface EntityDefinition {
@@ -73,6 +83,16 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
         kind: 'number',
         section: 'Character',
         step: '1',
+      },
+      {
+        key: 'waterType',
+        label: 'Water',
+        kind: 'select',
+        section: 'Character',
+        options: [
+          { value: '1', label: 'Salt water' },
+          { value: '2', label: 'Fresh water' },
+        ],
       },
       { key: 'difficulty', label: 'Difficulty', kind: 'text', section: 'Character' },
       { key: 'rating', label: 'Rating', kind: 'rating', section: 'Character' },

@@ -29,6 +29,8 @@ export const diveEntryInputSchema = z.object({
     weightKg: formText,
     equipmentWeightKg: formText,
     decompressionDive: z.boolean().default(false),
+    waterType: formText,
+    entryType: formText,
     visibility: formText,
     current: formText,
     waves: formText,

@@ -1,6 +1,7 @@
 import { createFileRoute, Link, notFound, useRouter } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
 import { z } from 'zod'
+import { DeleteRecordButton } from '@/components/delete-record-button'
 import { EntityForm } from '@/components/entity-form'
 import { PictureGallery } from '@/components/picture-gallery'
 import { getCertification } from '@/modules/profile/server/queries'
@@ -65,6 +66,16 @@ function CertificationRoute() {
         record={detail?.certification ?? null}
         onSaved={() => router.navigate({ to: '/profile' })}
       />
+
+      {!isNew && detail ? (
+        <DeleteRecordButton
+          entity="certifications"
+          recordId={certificationId}
+          label="Delete certification"
+          confirmText={`Delete “${detail.certification.name}” and its card scans? A future full import may restore it.`}
+          onDeleted={() => router.navigate({ to: '/profile' })}
+        />
+      ) : null}
     </div>
   )
 }

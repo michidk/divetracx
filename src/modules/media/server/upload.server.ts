@@ -1,0 +1,118 @@
+import '@tanstack/react-start/server-only'
+
+import { createHash } from 'node:crypto'
+import { eq, sql } from 'drizzle-orm'
+import { z } from 'zod'
+import { getDb } from '@/db'
+import { diveSites, dives, pictures } from '@/db/schema'
+import { createThumbnail } from '@/lib/server/thumbnail.server'
+import { getStorage } from '@/lib/storage'
+
+const ALLOWED_IMAGE_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+}
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+
+const uploadTargetSchema = z.object({
+  target: z.enum(['dive', 'site']),
+  id: z.string().uuid(),
+})
+
+function errorResponse(status: number, message: string) {
+  return Response.json({ error: message }, { status })
+}
+
+async function targetExists(target: 'dive' | 'site', id: string) {
+  const db = getDb()
+  if (target === 'dive') {
+    const [row] = await db
+      .select({ id: dives.id })
+      .from(dives)
+      .where(eq(dives.id, id))
+      .limit(1)
+    return Boolean(row)
+  }
+  const [row] = await db
+    .select({ id: diveSites.id })
+    .from(diveSites)
+    .where(eq(diveSites.id, id))
+    .limit(1)
+  return Boolean(row)
+}
+
+export async function handlePhotoUpload(request: Request): Promise<Response> {
+  let formData: FormData
+  try {
+    formData = await request.formData()
+  } catch {
+    return errorResponse(400, 'Expected a multipart form upload')
+  }
+
+  const parsedTarget = uploadTargetSchema.safeParse({
+    target: formData.get('target'),
+    id: formData.get('id'),
+  })
+  if (!parsedTarget.success) return errorResponse(400, 'Invalid upload target')
+  const { target, id } = parsedTarget.data
+  if (!(await targetExists(target, id))) {
+    return errorResponse(404, `The ${target} was not found`)
+  }
+
+  const files = formData.getAll('files').filter((entry) => entry instanceof File)
+  if (files.length === 0) return errorResponse(400, 'No files were uploaded')
+
+  for (const file of files) {
+    if (!ALLOWED_IMAGE_TYPES[file.type]) {
+      return errorResponse(415, `${file.name || 'A file'} is not a supported image`)
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return errorResponse(413, `${file.name || 'A file'} exceeds 25 MB`)
+    }
+  }
+
+  const db = getDb()
+  const storage = getStorage()
+  const targetColumn = target === 'dive' ? pictures.diveId : pictures.siteId
+  const [sort] = await db
+    .select({ next: sql<number>`coalesce(max(${pictures.sortOrder}), 0) + 1` })
+    .from(pictures)
+    .where(eq(targetColumn, id))
+  let sortOrder = sort?.next ?? 1
+
+  let uploaded = 0
+  for (const file of files) {
+    const arrayBuffer = await file.arrayBuffer()
+    const bytes = new Uint8Array(arrayBuffer)
+    const hash = createHash('sha256').update(bytes).digest('hex')
+    const extension = ALLOWED_IMAGE_TYPES[file.type]
+    const basePath = `uploads/${target}s/${id}/${hash}`
+    const storagePath = `${basePath}.${extension}`
+    const thumbnailStoragePath = `${basePath}.thumb.webp`
+
+    const thumbnail = await createThumbnail(bytes)
+    await storage.upload(new Blob([arrayBuffer], { type: file.type }), storagePath)
+    await storage.upload(
+      new Blob([new Uint8Array(thumbnail).buffer], { type: 'image/webp' }),
+      thumbnailStoragePath,
+    )
+
+    await db.insert(pictures).values({
+      kind: 'photo',
+      diveId: target === 'dive' ? id : null,
+      siteId: target === 'site' ? id : null,
+      path: file.name || storagePath,
+      storagePath,
+      thumbnailStoragePath,
+      mimeType: file.type,
+      byteSize: bytes.byteLength,
+      sortOrder,
+    })
+    sortOrder += 1
+    uploaded += 1
+  }
+
+  return Response.json({ uploaded })
+}

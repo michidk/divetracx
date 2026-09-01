@@ -13,7 +13,9 @@ import {
   UserRound,
   Waves,
 } from 'lucide-react'
+import { PhotoManager } from '@/components/photo-manager'
 import { PictureGallery } from '@/components/picture-gallery'
+import { entryTypeLabel, waterTypeLabel } from '@/modules/dives/codes'
 import {
   formatDiveDate,
   formatDuration,
@@ -70,10 +72,6 @@ function formatRecordTime(value: Date | string | null) {
   if (!value) return '—'
   const date = value instanceof Date ? value : new Date(value)
   return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString()
-}
-
-function formatSourceCode(value: number | null) {
-  return value === null ? '—' : `Code ${value}`
 }
 
 export function DivePage({ dive }: { dive: DiveData }) {
@@ -187,8 +185,8 @@ export function DivePage({ dive }: { dive: DiveData }) {
                 label="Decompression dive"
                 value={dive.decompressionDive ? 'Yes' : 'No'}
               />
-              <Value label="Water type" value={formatSourceCode(dive.waterType)} />
-              <Value label="Entry type" value={formatSourceCode(dive.entryType)} />
+              <Value label="Water" value={waterTypeLabel(dive.waterType)} />
+              <Value label="Entry" value={entryTypeLabel(dive.entryType)} />
               <Value label="Visibility" value={dive.visibility} />
               <Value label="Current" value={dive.current} />
               <Value label="Waves" value={dive.waves} />
@@ -290,18 +288,13 @@ export function DivePage({ dive }: { dive: DiveData }) {
             </section>
           ) : null}
 
-          {dive.photos.length > 0 ? (
-            <section className="rounded-2xl border border-border bg-card p-6 md:p-8">
-              <div className="flex items-center gap-3">
-                <ImageIcon className="text-primary" size={21} aria-hidden="true" />
-                <h2 className="text-xl font-semibold">Photos</h2>
-              </div>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Attachments linked to this canonical dive record.
-              </p>
-              <PictureGallery pictures={dive.photos} />
-            </section>
-          ) : null}
+          <section className="rounded-2xl border border-border bg-card p-6 md:p-8">
+            <div className="flex items-center gap-3">
+              <ImageIcon className="text-primary" size={21} aria-hidden="true" />
+              <h2 className="text-xl font-semibold">Photos</h2>
+            </div>
+            <PhotoManager target="dive" targetId={dive.id} pictures={dive.photos} />
+          </section>
 
           {dive.signatures.length > 0 ? (
             <section className="rounded-2xl border border-border bg-card p-6 md:p-8">

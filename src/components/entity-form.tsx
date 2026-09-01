@@ -4,6 +4,13 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import type {
   EditorValue,
@@ -18,6 +25,8 @@ function initialValue(field: EntityField, record: Record<string, unknown> | null
   if (field.kind === 'checkbox') return record?.[field.key] === true
   const value = record?.[field.key]
   if (value === null || value === undefined) return ''
+  // Selects encode numeric source codes; 0 means "not set" in imported data.
+  if (field.kind === 'select' && value === 0) return ''
   if (value instanceof Date) return value.toISOString().slice(0, 10)
   return String(value)
 }
@@ -105,6 +114,34 @@ function FieldControl({
 
   const stringValue = typeof value === 'string' ? value : ''
 
+  if (field.kind === 'select') {
+    const items = [{ value: '', label: 'Not set' }, ...(field.options ?? [])]
+    if (stringValue && !items.some((item) => item.value === stringValue)) {
+      items.push({ value: stringValue, label: `Code ${stringValue}` })
+    }
+    return (
+      <div className="text-sm font-semibold">
+        {field.label}
+        <Select
+          value={stringValue}
+          items={items}
+          onValueChange={(value) => onChange(value ?? '')}
+        >
+          <SelectTrigger id={inputId} className="mt-2">
+            <SelectValue placeholder="Not set" />
+          </SelectTrigger>
+          <SelectContent>
+            {items.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    )
+  }
+
   if (field.kind === 'rating') {
     return (
       <div className="text-sm font-semibold">
@@ -158,11 +195,17 @@ export function EntityForm({
   recordId,
   record,
   onSaved,
+  renderSectionExtra,
 }: {
   entity: EntityKey
   recordId: string
   record: Record<string, unknown> | null
   onSaved?: (id: string) => void | Promise<void>
+  renderSectionExtra?: (
+    section: string,
+    values: EditorValues,
+    setValue: (key: string, value: EditorValue) => void,
+  ) => React.ReactNode
 }) {
   const definition = entityDefinitions[entity]
   const router = useRouter()
@@ -215,6 +258,9 @@ export function EntityForm({
                 </div>
               ))}
           </div>
+          {renderSectionExtra?.(section, values, (key, value) =>
+            setValues((current) => ({ ...current, [key]: value })),
+          )}
         </section>
       ))}
       <div className="flex flex-wrap items-center justify-between gap-4">

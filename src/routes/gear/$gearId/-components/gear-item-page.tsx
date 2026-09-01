@@ -1,5 +1,6 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Waves, Wrench } from 'lucide-react'
+import { DeleteRecordButton } from '@/components/delete-record-button'
 import { DiveLinkList } from '@/components/dive-link-list'
 import { EntityForm } from '@/components/entity-form'
 import { Badge } from '@/components/ui/badge'
@@ -9,6 +10,7 @@ import type { getGearItem } from '@/modules/gear/server/queries'
 type GearDetail = NonNullable<Awaited<ReturnType<typeof getGearItem>>>
 
 export function GearItemPage({ detail }: { detail: GearDetail }) {
+  const navigate = useNavigate()
   const { item, dives } = detail
   const today = new Date().toISOString().slice(0, 10)
   const serviceDue =
@@ -65,6 +67,15 @@ export function GearItemPage({ detail }: { detail: GearDetail }) {
             Item details
           </h2>
           <EntityForm entity="equipment" recordId={item.id} record={item} />
+          <div className="mt-4">
+            <DeleteRecordButton
+              entity="equipment"
+              recordId={item.id}
+              label="Delete gear item"
+              confirmText={`Delete “${item.name}”? It will be removed from ${dives.length} dives. A future full import may restore it.`}
+              onDeleted={() => navigate({ to: '/gear' })}
+            />
+          </div>
         </div>
       </div>
     </div>

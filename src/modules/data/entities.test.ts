@@ -17,7 +17,7 @@ const recordMetadataColumns = new Set(['id', 'createdAt', 'updatedAt'])
 // they are either assigned automatically, preserved for import round-trips,
 // or managed through the dive editor instead of the taxonomy form.
 const managedElsewhereColumns: Record<keyof typeof entityTables, Set<string>> = {
-  sites: new Set(['waterType']),
+  sites: new Set(),
   divers: new Set(),
   buddies: new Set(),
   equipment: new Set(['diverId']),

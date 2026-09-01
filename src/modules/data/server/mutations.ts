@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { entityKeySchema } from '../entities'
-import { saveDataRecord } from './mutations.server'
+import { deleteDataRecord, saveDataRecord } from './mutations.server'
 
 const recordIdSchema = z.union([z.string().uuid(), z.literal('new')])
 const editorValueSchema = z.union([z.string(), z.boolean()])
@@ -17,3 +17,14 @@ export const saveRecord = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => ({
     id: await saveDataRecord(data.entity, data.recordId, data.values),
   }))
+
+export const deleteRecord = createServerFn({ method: 'POST' })
+  .validator(
+    z.object({
+      entity: entityKeySchema.exclude(['divers']),
+      recordId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    await deleteDataRecord(data.entity, data.recordId)
+  })

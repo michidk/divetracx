@@ -144,6 +144,8 @@ export async function saveDiveEntry(input: DiveEntryInput) {
     weightKg: decimal(dive.weightKg, 'Weight', { min: 0 }),
     equipmentWeightKg: decimal(dive.equipmentWeightKg, 'Equipment weight', { min: 0 }),
     decompressionDive: dive.decompressionDive,
+    waterType: integer(dive.waterType, 'Water type', { min: 0 }),
+    entryType: integer(dive.entryType, 'Entry type', { min: 0 }),
     visibility: text(dive.visibility),
     current: text(dive.current),
     waves: text(dive.waves),

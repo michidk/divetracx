@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { ENTRY_TYPE_OPTIONS, WATER_TYPE_OPTIONS } from '@/modules/dives/codes'
 import { formatPersonName } from '@/modules/dives/format'
 import { deleteDive, saveDive } from '@/modules/dives/server/mutations'
 import type { getDiveEditor } from '@/modules/dives/server/queries'
@@ -55,6 +56,8 @@ function initialDiveState(data: DiveEditorData) {
     weightKg: numberString(dive?.weightKg ?? null),
     equipmentWeightKg: numberString(dive?.equipmentWeightKg ?? null),
     decompressionDive: dive?.decompressionDive ?? false,
+    waterType: dive?.waterType ? String(dive.waterType) : '',
+    entryType: dive?.entryType ? String(dive.entryType) : '',
     visibility: dive?.visibility ?? '',
     current: dive?.current ?? '',
     waves: dive?.waves ?? '',
@@ -84,6 +87,48 @@ function initialTanks(data: DiveEditorData): TankDraft[] {
     startPressureBar: numberString(tank.startPressureBar),
     endPressureBar: numberString(tank.endPressureBar),
   }))
+}
+
+function codeSelectOptions(
+  options: ReadonlyArray<{ code: number; label: string }>,
+  current: string,
+) {
+  const items = [
+    { value: '', label: 'Not set' },
+    ...options.map((option) => ({ value: String(option.code), label: option.label })),
+  ]
+  if (current && !items.some((item) => item.value === current)) {
+    items.push({ value: current, label: `Code ${current}` })
+  }
+  return items
+}
+
+function CodeSelect({
+  id,
+  value,
+  options,
+  onChange,
+}: {
+  id: string
+  value: string
+  options: ReadonlyArray<{ code: number; label: string }>
+  onChange: (value: string) => void
+}) {
+  const items = codeSelectOptions(options, value)
+  return (
+    <Select value={value} items={items} onValueChange={(next) => onChange(next ?? '')}>
+      <SelectTrigger id={id} className="mt-2">
+        <SelectValue placeholder="Not set" />
+      </SelectTrigger>
+      <SelectContent>
+        {items.map((item) => (
+          <SelectItem key={item.value} value={item.value}>
+            {item.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
 }
 
 function Field({
@@ -459,6 +504,26 @@ export function DiveEditor({
                 value={dive.airTemperatureCelsius}
                 onChange={(event) => update('airTemperatureCelsius', event.target.value)}
                 className="mt-2"
+              />
+            )}
+          </Field>
+          <Field label="Water">
+            {(id) => (
+              <CodeSelect
+                id={id}
+                value={dive.waterType}
+                options={WATER_TYPE_OPTIONS}
+                onChange={(value) => update('waterType', value)}
+              />
+            )}
+          </Field>
+          <Field label="Entry">
+            {(id) => (
+              <CodeSelect
+                id={id}
+                value={dive.entryType}
+                options={ENTRY_TYPE_OPTIONS}
+                onChange={(value) => update('entryType', value)}
               />
             )}
           </Field>
