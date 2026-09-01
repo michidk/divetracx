@@ -53,14 +53,19 @@ garminAdapter:
   enabled: true
 ```
 
-After the first deployment, log the adapter in to Garmin Connect once (the
-tokens land on the persistent volume and are refreshed automatically):
+After the first deployment, log the adapter in to Garmin Connect once through
+its browser setup page (the tokens land on the persistent volume and are
+refreshed automatically):
 
 ```bash
-kubectl exec -it deploy/divetracx-garmin-adapter -- bun run garmin:login
+kubectl port-forward svc/divetracx-garmin-adapter 8787:8787
+# then open http://localhost:8787 and log in
 ```
 
-Accounts with multi-factor authentication are not supported by this login flow.
+To password-protect the setup page, add a `ui-password` key to the same Secret
+(the key name is configurable via `garminAdapter.uiPasswordSecretKey`); the
+page then requires it as HTTP Basic auth password. Accounts with multi-factor
+authentication are not supported by this login flow.
 To use an external adapter instead, leave `garminAdapter.enabled` off and set
 `garmin.fullImportUrl`/`garmin.incrementalImportUrl`.
 

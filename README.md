@@ -84,12 +84,14 @@ Transport stays behind the fail-closed adapter boundary: the app only ever talks
 to the configured adapter URLs. Divetracx bundles such an adapter
 (`bun run garmin:adapter`), a small server-side service that signs in to the
 Garmin Connect consumer API the same way garth-based tools such as
-liftosaur2garmin do. A one-time interactive login
-(`bun run garmin:login`) stores OAuth tokens in `GARMIN_TOKEN_DIRECTORY` (a
-persistent volume in Docker Compose and Helm); the adapter refreshes and
-re-persists them on use, sweeps dive activities newest-first, downloads the
-original FIT files, and returns one transactional batch with an opaque
-watermark as next state. Requests must carry the shared
+liftosaur2garmin do. Like liftosaur2garmin's dashboard, the adapter serves a
+small browser setup page: open it, log in to Garmin Connect once, and the
+resulting OAuth tokens are stored in `GARMIN_TOKEN_DIRECTORY` (a persistent
+volume in Docker Compose and Helm) — credentials are never persisted. The page
+can be password-protected with `GARMIN_ADAPTER_UI_PASSWORD`. The adapter
+refreshes and re-persists tokens on use, sweeps dive activities newest-first,
+downloads the original FIT files, and returns one transactional batch with an
+opaque watermark as next state. Import requests must carry the shared
 `GARMIN_ADAPTER_AUTHORIZATION` value. Accounts with multi-factor authentication
 are not supported by the login flow yet.
 
@@ -125,7 +127,7 @@ only and calls the same generic service as the UI/CLI. Enabling
 `garminAdapter.enabled` deploys the bundled Garmin adapter with a persistent
 token volume, and `garmin.sync.enabled` adds a Garmin incremental-import
 CronJob; both require `garmin.existingSecret` with the shared authorization
-value. Log the adapter in once with
-`kubectl exec -it deploy/<release>-garmin-adapter -- bun run garmin:login`.
-Garmin adapter configuration is server-only. See
+value. Log the adapter in once through its setup page, e.g.
+`kubectl port-forward svc/<release>-garmin-adapter 8787:8787` and open
+`http://localhost:8787`. Garmin adapter configuration is server-only. See
 [the chart guide](charts/README.md).
