@@ -17,5 +17,5 @@ const server = Bun.serve({
 console.log(
   `Garmin adapter listening on port ${server.port} ` +
     `(tokens: ${environment.GARMIN_TOKEN_DIRECTORY}, domain: ${environment.GARMIN_DOMAIN}). ` +
-    'Open the adapter page in a browser to log in to Garmin Connect.',
+    'Connect the Garmin account from Divetracx under Settings → Integrations.',
 )

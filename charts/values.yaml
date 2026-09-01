@@ -147,14 +147,11 @@ garmin:
 
 garminAdapter:
   # Bundled Garmin Connect adapter (unofficial consumer API, garth-style token
-  # persistence). Log in once through its browser setup page, e.g.
-  # kubectl port-forward svc/<release>-garmin-adapter 8787:8787 and open
-  # http://localhost:8787 — tokens persist on the tokens volume. Add the
-  # optional key below to garmin.existingSecret to password-protect the page.
+  # persistence). Connect the Garmin account once from the Divetracx UI under
+  # Settings -> Integrations; tokens persist on the tokens volume.
   enabled: false
   port: 8787
   domain: garmin.com
-  uiPasswordSecretKey: "ui-password"
   tokens:
     size: 16Mi
     storageClass: ""

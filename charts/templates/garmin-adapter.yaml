@@ -73,13 +73,6 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.garmin.existingSecret }}
                   key: {{ .Values.garmin.authorizationSecretKey }}
-            # Optional password protecting the browser setup UI (Basic auth).
-            - name: GARMIN_ADAPTER_UI_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.garmin.existingSecret }}
-                  key: {{ .Values.garminAdapter.uiPasswordSecretKey }}
-                  optional: true
           readinessProbe:
             httpGet:
               path: /healthz
