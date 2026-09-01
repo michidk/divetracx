@@ -37,6 +37,7 @@ export async function loadStatistics() {
         bestBuddies,
         certificationList,
         divesPerYear,
+        divesPerDay,
       ] = await Promise.all([
         transaction
           .select({
@@ -161,6 +162,14 @@ export async function loadStatistics() {
           .from(dives)
           .groupBy(sql`extract(year from ${dives.diveDate})`)
           .orderBy(sql`extract(year from ${dives.diveDate})`),
+        transaction
+          .select({
+            date: dives.diveDate,
+            diveCount: count(),
+          })
+          .from(dives)
+          .groupBy(dives.diveDate)
+          .orderBy(asc(dives.diveDate)),
       ])
 
       const sacRow = sacRows[0]
@@ -184,6 +193,7 @@ export async function loadStatistics() {
         bestBuddy: bestBuddies[0] ?? null,
         certifications: certificationList,
         divesPerYear,
+        divesPerDay,
       }
     },
     { isolationLevel: 'repeatable read', accessMode: 'read only' },
