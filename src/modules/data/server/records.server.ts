@@ -86,6 +86,37 @@ function editorRecord(
     updatedAt: Date
   },
 ): DataEditorRecord {
+  const source = row as typeof row & Record<string, unknown>
+  const media: DataEditorRecord['media'] = []
+  if (entity === 'pictures') {
+    media.push({
+      id: row.id,
+      path: String(source.path ?? ''),
+      storagePath: typeof source.storagePath === 'string' ? source.storagePath : null,
+      thumbnailStoragePath:
+        typeof source.thumbnailStoragePath === 'string'
+          ? source.thumbnailStoragePath
+          : null,
+      description: typeof source.description === 'string' ? source.description : null,
+    })
+  }
+  if (entity === 'certifications') {
+    for (const side of ['1', '2'] as const) {
+      const path = source[`scan${side}Path`]
+      const storagePath = source[`scan${side}StoragePath`]
+      if (typeof path !== 'string' && typeof storagePath !== 'string') continue
+      media.push({
+        id: `${row.id}-${side}`,
+        path: typeof path === 'string' ? path : `Certification scan ${side}`,
+        storagePath: typeof storagePath === 'string' ? storagePath : null,
+        thumbnailStoragePath:
+          typeof source[`scan${side}ThumbnailStoragePath`] === 'string'
+            ? String(source[`scan${side}ThumbnailStoragePath`])
+            : null,
+        description: side === '1' ? 'Certification front' : 'Certification back',
+      })
+    }
+  }
   return {
     id: row.id,
     values: fieldValues(entity, row),
@@ -96,6 +127,7 @@ function editorRecord(
     sourcePayload: row.sourcePayload ? JSON.stringify(row.sourcePayload, null, 2) : null,
     createdAt: row.createdAt ? timestamp(row.createdAt) : null,
     updatedAt: timestamp(row.updatedAt),
+    media,
   }
 }
 
@@ -360,8 +392,10 @@ async function referenceOptions(entity: EntityKey): Promise<EditorOption[]> {
 
 async function loadOptions(entity: EntityKey) {
   const references = new Map<string, EntityKey>()
+  const staticOptions = new Map<string, EditorOption[]>()
   for (const field of entityDefinitions[entity].fields) {
     if (field.reference) references.set(field.key, field.reference)
+    if (field.options) staticOptions.set(field.key, field.options)
   }
 
   const entries = await Promise.all(
@@ -370,7 +404,7 @@ async function loadOptions(entity: EntityKey) {
       async ([field, reference]) => [field, await referenceOptions(reference)] as const,
     ),
   )
-  return Object.fromEntries(entries)
+  return Object.fromEntries([...staticOptions, ...entries])
 }
 
 async function loadRecord(
@@ -459,6 +493,7 @@ async function loadRecord(
         sourcePayload: null,
         createdAt: timestamp(row.startedAt),
         updatedAt: timestamp(row.finishedAt ?? row.startedAt),
+        media: [],
         values: {
           sourceKey: row.sourceKey,
           trigger: row.trigger,

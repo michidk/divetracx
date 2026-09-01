@@ -1,6 +1,9 @@
 import { Link } from '@tanstack/react-router'
 import { ExternalLink, MapPin, Pencil, Search } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { formatDiveDate, formatMeters } from '@/modules/dives/format'
 import type { getDiveSiteMap } from '@/modules/dives/server/queries'
@@ -71,33 +74,34 @@ export function MapPage({ sites }: { sites: DiveSiteMapData }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
-          <span className="rounded-full bg-accent px-3 py-1.5 font-semibold text-foreground">
+          <Badge variant="accent" className="py-1.5">
             {mappedSites.length} mapped spots
-          </span>
-          <span className="rounded-full bg-muted px-3 py-1.5 text-muted-foreground">
+          </Badge>
+          <Badge variant="secondary" className="py-1.5">
             {mappedDives} mapped dives
-          </span>
+          </Badge>
           {unmappedSiteCount > 0 ? (
-            <span className="rounded-full bg-orange-100 px-3 py-1.5 text-orange-800">
+            <Badge variant="warning" className="py-1.5">
               {unmappedSiteCount} need coordinates
-            </span>
+            </Badge>
           ) : null}
         </div>
       </header>
 
-      <label className="relative block max-w-xl">
+      <label htmlFor="site-search" className="relative block max-w-xl">
         <span className="sr-only">Search dive spots</span>
         <Search
           size={17}
           aria-hidden="true"
           className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
         />
-        <input
+        <Input
+          id="site-search"
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search site, water, region, or country…"
-          className="min-h-12 w-full rounded-xl border border-border bg-card pl-11 pr-4 text-sm shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+          className="min-h-12 bg-card pl-11 pr-4 shadow-sm"
         />
       </label>
 
@@ -117,7 +121,7 @@ export function MapPage({ sites }: { sites: DiveSiteMapData }) {
               {filteredSites.length} of {sites.length} sites
             </p>
           </div>
-          <ScrollArea className="min-h-0 flex-1" type="always">
+          <ScrollArea className="min-h-0 flex-1">
             {filteredSites.map((site) => {
               const mappedSite = mapSiteCoordinates(site)
               const selected = site.id === selectedSiteId
@@ -160,14 +164,16 @@ export function MapPage({ sites }: { sites: DiveSiteMapData }) {
                   <div className="px-5 pb-2 pt-5">{summary}</div>
                   <div className="flex flex-wrap items-center gap-3 px-5 pb-3 text-xs font-semibold">
                     {mappedSite ? (
-                      <button
+                      <Button
                         type="button"
                         aria-label={`Jump to map: ${site.name}`}
                         onClick={() => jumpToSiteOnMap(site.id)}
-                        className="inline-flex min-h-9 items-center gap-1.5 text-primary hover:underline"
+                        variant="link"
+                        size="sm"
+                        className="px-0 text-xs"
                       >
                         <MapPin size={13} aria-hidden="true" /> Jump to map
-                      </button>
+                      </Button>
                     ) : null}
                     <Link
                       to="/data/$entity/$recordId"

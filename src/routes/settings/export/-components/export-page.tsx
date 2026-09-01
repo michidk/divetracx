@@ -1,5 +1,9 @@
 import { Download, FileCode2, FileJson2, ShieldAlert, Table2 } from 'lucide-react'
 import type { ComponentType } from 'react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { buttonVariants } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 interface ExportOption {
   title: string
@@ -15,7 +19,7 @@ const exportOptions: ExportOption[] = [
     title: 'Divetracx backup',
     description: 'A complete, versioned copy of your Divetracx database records.',
     details:
-      'JSON · dives, sites, people, equipment, tanks, picture references, certifications, and sync history',
+      'JSON · dives, sites, people, equipment, tanks, pictures, certifications, and sync history',
     href: '/api/export/json',
     label: 'Download JSON',
     icon: FileJson2,
@@ -54,7 +58,7 @@ export function ExportPage() {
 
       <section className="grid gap-4 lg:grid-cols-3">
         {exportOptions.map((option) => (
-          <article
+          <Card
             key={option.href}
             className="flex flex-col rounded-2xl border border-border bg-card p-6"
           >
@@ -71,29 +75,29 @@ export function ExportPage() {
             <a
               href={option.href}
               download
-              className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 lg:mt-auto lg:translate-y-2"
+              className={cn(buttonVariants(), 'mt-6 lg:mt-auto lg:translate-y-2')}
             >
               <Download size={16} aria-hidden="true" />
               {option.label}
             </a>
-          </article>
+          </Card>
         ))}
       </section>
 
-      <aside className="flex gap-4 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-5">
+      <Alert variant="warning">
         <ShieldAlert
           className="mt-0.5 shrink-0 text-amber-600"
           size={22}
           aria-hidden="true"
         />
         <div>
-          <h2 className="font-semibold">Treat exports as personal data</h2>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+          <AlertTitle>Treat exports as personal data</AlertTitle>
+          <AlertDescription>
             Downloads can contain contact details, locations, health information, and
             private notes. Store them securely and delete copies you no longer need.
-          </p>
+          </AlertDescription>
         </div>
-      </aside>
+      </Alert>
 
       <p className="text-sm leading-6 text-muted-foreground">
         DiveMate&apos;s native <code>.ddb</code> format is proprietary and is not

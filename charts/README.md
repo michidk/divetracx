@@ -6,25 +6,27 @@ daily CronJob that imports the configured DiveMate backup.
 
 ## DiveMate backup Secret
 
-The recommended setup keeps the backup URL out of Helm values:
+Create a service account, share the DiveMate folder with it, and store its downloaded
+JSON credential in a Secret:
 
 ```bash
 kubectl create secret generic divetracx-divemate \
-  --from-literal=backup-url='https://example.com/private/DiveMate.ddb'
+  --from-file=google-credentials.json=/secure/path/divetracx-service-account.json
 ```
-
-Then enable the daily sync:
 
 ```yaml
 divemate:
   existingSecret: divetracx-divemate
-  existingSecretKey: backup-url
+  googleDriveFolderId: 1j1_x_2tGZxx9hkmfWBhplErr-6UMamF8
+  googleCredentialsSecretKey: google-credentials.json
 
 sync:
   enabled: true
-  schedule: "0 3 * * *"
-  timeZone: Etc/UTC
 ```
+
+The credential is mounted read-only and never stored in Helm values. Viewer
+access is sufficient for imports; Editor access is required for the explicit
+manual **Push edits to Drive** action.
 
 The CronJob uses `concurrencyPolicy: Forbid` by default and records its runs as
 `schedule`. The application receives the same Secret, so **Sync now** uses the
@@ -43,9 +45,8 @@ helm install divetracx ./charts \
   --set sync.enabled=true
 ```
 
-For a simple test installation, `postgresql.external.url` and
-`divemate.backupUrl` can be supplied directly, but both values are then stored
-in Helm release state.
+For a simple test installation, `postgresql.external.url` can be supplied
+directly, but it is then stored in Helm release state.
 
 ## Install with bundled PostgreSQL
 
@@ -67,6 +68,7 @@ managed database when backups and high availability matter.
 helm lint charts \
   --set hodor.enabled=false \
   --set postgresql.external.url='postgresql://user:pass@postgres:5432/divetracx' \
-  --set divemate.backupUrl='https://example.com/DiveMate.ddb' \
+  --set divemate.existingSecret='divetracx-divemate' \
+  --set divemate.googleDriveFolderId='example-folder-id' \
   --set sync.enabled=true
 ```

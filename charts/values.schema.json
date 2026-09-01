@@ -13,6 +13,7 @@
     "migrations",
     "sync",
     "divemate",
+    "storage",
     "postgresql",
     "hodor",
     "networkPolicy"
@@ -89,14 +90,22 @@
     },
     "divemate": {
       "type": "object",
-      "required": ["existingSecret", "existingSecretKey", "backupUrl", "maxBackupBytes"],
+      "required": [
+        "existingSecret",
+        "googleDriveFolderId",
+        "googleCredentialsSecretKey",
+        "maxBackupBytes",
+        "maxImageBytes"
+      ],
       "properties": {
         "existingSecret": { "type": "string" },
-        "existingSecretKey": { "type": "string", "minLength": 1 },
-        "backupUrl": { "type": "string" },
-        "maxBackupBytes": { "type": "integer", "minimum": 1 }
+        "googleDriveFolderId": { "type": "string" },
+        "googleCredentialsSecretKey": { "type": "string", "minLength": 1 },
+        "maxBackupBytes": { "type": "integer", "minimum": 1 },
+        "maxImageBytes": { "type": "integer", "minimum": 1 }
       }
     },
+    "storage": { "type": "object" },
     "postgresql": {
       "type": "object",
       "required": [

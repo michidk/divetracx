@@ -87,6 +87,10 @@ export interface DiveMateCertification extends DiveMateSourceRecord {
   sortOrder: number | null
   scan1Path: string | null
   scan2Path: string | null
+  scan1Bytes: Uint8Array | null
+  scan1MimeType: string | null
+  scan2Bytes: Uint8Array | null
+  scan2MimeType: string | null
 }
 
 export interface DiveMateShop extends DiveMateSourceRecord {
@@ -158,7 +162,10 @@ export interface DiveMatePicture extends DiveMateSourceRecord {
   buddyExternalId: string | null
   equipmentExternalId: string | null
   diverExternalId: string | null
+  kind: 'photo' | 'signature'
   path: string
+  imageBytes: Uint8Array | null
+  mimeType: string | null
   description: string | null
   sortOrder: number | null
 }

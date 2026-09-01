@@ -19,6 +19,13 @@ export interface PositionedDiveProfilePoint extends DiveProfilePoint {
   ceilingY: number | null
 }
 
+export interface DiveProfileCeilingCrossing {
+  x: number
+  y: number
+  elapsedSeconds: number
+  direction: 'exceeded' | 'cleared'
+}
+
 export const PROFILE_CHART_VIEWBOX = {
   width: 960,
   height: 610,
@@ -32,6 +39,10 @@ export const PROFILE_CHART_VIEWBOX = {
   pressureTop: 476,
   pressureHeight: 82,
 } as const
+
+const PROFILE_MAGNIFIER_ASPECT_RATIO = 360 / 220
+const PROFILE_MAGNIFIER_MINIMUM_HEIGHT = 96
+const PROFILE_MAGNIFIER_FOCUS_PADDING = 18
 
 const X_TICK_COUNT = 4
 const Y_TICK_COUNT = 4
@@ -83,36 +94,106 @@ export function createSegmentedPath<T>(
     .join(' ')
 }
 
-function createSegmentedAreaPath<T>(
-  points: T[],
-  position: (point: T) => { x: number; y: number } | null,
-  baselineY: number,
-) {
-  const paths: string[] = []
-  let segment: Array<{ x: number; y: number }> = []
+function createCeilingPaths(points: PositionedDiveProfilePoint[]) {
+  const lineSegments: string[] = []
+  const areaSegments: string[] = []
+  let index = 0
 
-  function closeSegment() {
-    const first = segment[0]
-    const last = segment.at(-1)
-    if (!first || !last) return
-    paths.push(
-      `M ${first.x} ${baselineY} L ${segment
-        .map((point) => `${point.x} ${point.y}`)
-        .join(' L ')} L ${last.x} ${baselineY} Z`,
-    )
-    segment = []
-  }
+  while (index < points.length) {
+    while (index < points.length && points[index]?.ceilingY === null) index += 1
+    const first = points[index]
+    if (!first || first.ceilingY === null) break
 
-  for (const point of points) {
-    const positioned = position(point)
-    if (positioned) {
-      segment.push(positioned)
-    } else {
-      closeSegment()
+    const commands = [
+      `M ${first.x} ${PROFILE_CHART_VIEWBOX.top}`,
+      `L ${first.x} ${first.ceilingY}`,
+    ]
+    let previous = first
+    index += 1
+
+    while (index < points.length) {
+      const point = points[index]
+      if (!point || point.ceilingY === null) break
+      commands.push(`L ${point.x} ${previous.ceilingY}`, `L ${point.x} ${point.ceilingY}`)
+      previous = point
+      index += 1
     }
+
+    const closureX = points[index]?.x ?? previous.x
+    commands.push(
+      `L ${closureX} ${previous.ceilingY}`,
+      `L ${closureX} ${PROFILE_CHART_VIEWBOX.top}`,
+    )
+    lineSegments.push(commands.join(' '))
+    areaSegments.push(`${commands.join(' ')} Z`)
   }
-  closeSegment()
-  return paths.join(' ')
+
+  return { line: lineSegments.join(' '), area: areaSegments.join(' ') }
+}
+
+function findCeilingCrossings(points: PositionedDiveProfilePoint[]) {
+  const crossings: DiveProfileCeilingCrossing[] = []
+
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1]
+    const current = points[index]
+    if (!previous || !current || previous.ceilingY === null) continue
+
+    const previousDistance = previous.depthY - previous.ceilingY
+    const currentDistance = current.depthY - previous.ceilingY
+    const crossedAbove = previousDistance >= 0 && currentDistance < 0
+    const crossedBelow = previousDistance < 0 && currentDistance >= 0
+    if (!crossedAbove && !crossedBelow) continue
+
+    const ratio = previousDistance / (previousDistance - currentDistance)
+    crossings.push({
+      x: previous.x + (current.x - previous.x) * ratio,
+      y: previous.ceilingY,
+      elapsedSeconds:
+        previous.elapsedSeconds +
+        (current.elapsedSeconds - previous.elapsedSeconds) * ratio,
+      direction: crossedAbove ? 'exceeded' : 'cleared',
+    })
+  }
+
+  return crossings
+}
+
+function createCeilingViolationPath(points: PositionedDiveProfilePoint[]) {
+  const segments: string[] = []
+
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1]
+    const current = points[index]
+    if (!previous || !current || previous.ceilingY === null) continue
+
+    const previousDistance = previous.depthY - previous.ceilingY
+    const currentDistance = current.depthY - previous.ceilingY
+    const previousViolated = previousDistance < 0
+    const currentViolated = currentDistance < 0
+    if (!previousViolated && !currentViolated) continue
+
+    let startX = previous.x
+    let startY = previous.depthY
+    let endX = current.x
+    let endY = current.depthY
+
+    if (previousViolated !== currentViolated) {
+      const ratio = previousDistance / (previousDistance - currentDistance)
+      const crossingX = previous.x + (current.x - previous.x) * ratio
+      if (previousViolated) {
+        endX = crossingX
+        endY = previous.ceilingY
+      } else {
+        startX = crossingX
+        startY = previous.ceilingY
+      }
+    }
+
+    segments.push(`M ${startX} ${startY} L ${endX} ${endY}`)
+  }
+
+  return segments.join(' ')
 }
 
 export function createProfileGeometry(samples: DiveProfilePoint[]) {
@@ -220,16 +301,33 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
   const tank2PressurePath = createSegmentedPath(positionedPoints, (point) =>
     point.tank2PressureY === null ? null : { x: point.x, y: point.tank2PressureY },
   )
-  const ceilingPath = createSegmentedPath(positionedPoints, (point) =>
-    point.ceilingY === null ? null : { x: point.x, y: point.ceilingY },
-  )
-  const ceilingAreaPath = createSegmentedAreaPath(
-    positionedPoints,
-    (point) => (point.ceilingY === null ? null : { x: point.x, y: point.ceilingY }),
-    PROFILE_CHART_VIEWBOX.top,
-  )
+  const ceilingPaths = createCeilingPaths(positionedPoints)
+  const ceilingPath = ceilingPaths.line
+  const ceilingAreaPath = ceilingPaths.area
+  const ceilingCrossings = findCeilingCrossings(positionedPoints)
+  const ceilingViolationPath = createCeilingViolationPath(positionedPoints)
   const firstPoint = positionedPoints[0]
   const lastPoint = positionedPoints.at(-1)
+  const deepestPoint = positionedPoints.reduce<PositionedDiveProfilePoint | null>(
+    (deepest, point) =>
+      deepest === null || point.depthMeters > deepest.depthMeters ? point : deepest,
+    null,
+  )
+  const minimumTemperaturePoint =
+    positionedPoints.reduce<PositionedDiveProfilePoint | null>(
+      (minimum, point) =>
+        point.temperatureCelsius !== null &&
+        (minimum === null ||
+          minimum.temperatureCelsius === null ||
+          point.temperatureCelsius < minimum.temperatureCelsius)
+          ? point
+          : minimum,
+      null,
+    )
+  const closedDepthPath =
+    firstPoint && lastPoint
+      ? `M ${firstPoint.x} ${PROFILE_CHART_VIEWBOX.top} L ${firstPoint.x} ${firstPoint.depthY} ${depthPath.replace(/^M [^ ]+ [^ ]+/, '')} L ${lastPoint.x} ${PROFILE_CHART_VIEWBOX.top}`
+      : ''
   const depthAreaPath =
     firstPoint && lastPoint
       ? `M ${firstPoint.x} ${PROFILE_CHART_VIEWBOX.top} ${depthPath.replace(/^M/, 'L')} L ${lastPoint.x} ${PROFILE_CHART_VIEWBOX.top} Z`
@@ -242,7 +340,7 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
 
   return {
     points: positionedPoints,
-    depthPath,
+    depthPath: closedDepthPath,
     depthAreaPath,
     temperaturePath,
     pressurePath,
@@ -250,9 +348,13 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
     tank2PressurePath,
     ceilingPath,
     ceilingAreaPath,
+    ceilingCrossings,
+    ceilingViolationPath,
     tankSwitches,
     maximumElapsedSeconds,
     maximumDepthMeters,
+    deepestPoint,
+    minimumTemperaturePoint,
     chartDepthMeters,
     temperatureRange,
     pressureRange,
@@ -291,4 +393,32 @@ export function findNearestProfilePoint(
     nearestDistance = distance
   }
   return nearestIndex
+}
+
+export function createProfileMagnifierViewBox(
+  point: PositionedDiveProfilePoint,
+  plotWidth: number,
+) {
+  const plotLeft = PROFILE_CHART_VIEWBOX.left
+  const plotRight = plotLeft + plotWidth
+  const plotTop = PROFILE_CHART_VIEWBOX.top - 8
+  const plotBottom = PROFILE_CHART_VIEWBOX.top + PROFILE_CHART_VIEWBOX.depthHeight + 8
+  const focusTop = Math.min(point.depthY, point.ceilingY ?? point.depthY)
+  const focusBottom = Math.max(point.depthY, point.ceilingY ?? point.depthY)
+  const height = Math.min(
+    plotBottom - plotTop,
+    Math.max(
+      PROFILE_MAGNIFIER_MINIMUM_HEIGHT,
+      focusBottom - focusTop + PROFILE_MAGNIFIER_FOCUS_PADDING,
+    ),
+  )
+  const width = height * PROFILE_MAGNIFIER_ASPECT_RATIO
+  const focusCenterY = (focusTop + focusBottom) / 2
+
+  return {
+    x: Math.max(plotLeft, Math.min(point.x - width / 2, plotRight - width)),
+    y: Math.max(plotTop, Math.min(focusCenterY - height / 2, plotBottom - height)),
+    width,
+    height,
+  }
 }

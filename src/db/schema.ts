@@ -179,6 +179,14 @@ export const certifications = pgTable(
     sortOrder: integer('sort_order'),
     scan1Path: text('scan_1_path'),
     scan2Path: text('scan_2_path'),
+    scan1StoragePath: text('scan_1_storage_path'),
+    scan1ThumbnailStoragePath: text('scan_1_thumbnail_storage_path'),
+    scan1MimeType: text('scan_1_mime_type'),
+    scan1ByteSize: integer('scan_1_byte_size'),
+    scan2StoragePath: text('scan_2_storage_path'),
+    scan2ThumbnailStoragePath: text('scan_2_thumbnail_storage_path'),
+    scan2MimeType: text('scan_2_mime_type'),
+    scan2ByteSize: integer('scan_2_byte_size'),
     ...sourceColumns,
     ...auditColumns,
   },
@@ -370,6 +378,8 @@ export const tanks = pgTable(
   ],
 )
 
+export const pictureKind = pgEnum('picture_kind', ['photo', 'signature'])
+
 export const pictures = pgTable(
   'pictures',
   {
@@ -381,7 +391,12 @@ export const pictures = pgTable(
       onDelete: 'set null',
     }),
     diverId: uuid('diver_id').references(() => divers.id, { onDelete: 'set null' }),
+    kind: pictureKind('kind').notNull().default('photo'),
     path: text('path').notNull(),
+    storagePath: text('storage_path'),
+    thumbnailStoragePath: text('thumbnail_storage_path'),
+    mimeType: text('mime_type'),
+    byteSize: integer('byte_size'),
     description: text('description'),
     sortOrder: integer('sort_order'),
     ...sourceColumns,

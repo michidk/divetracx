@@ -76,12 +76,14 @@ describe('parseDiveMateDatabase', () => {
       CREATE TABLE Brevets (
         ID INTEGER, DiverID INTEGER, Brevet TEXT, Org TEXT, Number TEXT,
         CertDate TEXT, Instructor TEXT, InstructorNo TEXT, UUID TEXT,
-        Updated TEXT, Scan1Path TEXT, Scan2Path TEXT, SortOrd INTEGER
+        Updated TEXT, Scan1Path TEXT, Scan2Path TEXT, SortOrd INTEGER,
+        Scan1 BLOB, Scan2 BLOB
       );
       INSERT INTO Brevets VALUES (
         3, 1, 'Advanced', 'Example Org', 'C-123', '2024-06-01',
         'Instructor', 'I-1', 'cert-uuid', '2026-01-01',
-        '/media/front.jpg', '/media/back.jpg', 3
+        '/media/front.jpg', '/media/back.jpg', 3,
+        X'FFD8FF00', X'89504E470D0A1A0A'
       );
       CREATE TABLE Shop (ID INTEGER, ShopName TEXT, UUID TEXT, Updated TEXT);
       INSERT INTO Shop VALUES (2, 'Dive Center', 'shop-uuid', '2026-01-01');
@@ -125,11 +127,16 @@ describe('parseDiveMateDatabase', () => {
       CREATE TABLE Pictures (
         ID INTEGER, LogID INTEGER, PlaceID INTEGER, BuddyID INTEGER,
         EquipmentID INTEGER, DiverID INTEGER, Path TEXT, Description TEXT,
-        SortOrd INTEGER, UUID TEXT, Updated TEXT
+        SortOrd INTEGER, UUID TEXT, Updated TEXT, Graphic BLOB
       );
       INSERT INTO Pictures VALUES (
         13, 11, NULL, NULL, NULL, 1, '/media/dive.jpg', 'Dive photo', 1,
-        'picture-uuid', '2026-07-26'
+        'picture-uuid', '2026-07-26', X'89504E470D0A1A0A'
+      );
+      INSERT INTO Pictures VALUES (
+        14, 11, NULL, NULL, NULL, 1,
+        '/storage/emulated/0/DiveMate/Signatures/Signature_260726151343.png',
+        NULL, 2, 'signature-uuid', '2026-07-26', NULL
       );
     `)
     database.close()
@@ -197,6 +204,11 @@ describe('parseDiveMateDatabase', () => {
       scan1Path: '/media/front.jpg',
       scan2Path: '/media/back.jpg',
       sortOrder: 3,
+      scan1MimeType: 'image/jpeg',
+      scan2MimeType: 'image/png',
+    })
+    expect(snapshot.certifications[0]?.sourcePayload.Scan1).toEqual({
+      omittedBinaryBytes: 4,
     })
     expect(snapshot.pictures[0]).toMatchObject({
       externalId: '13',
@@ -205,6 +217,19 @@ describe('parseDiveMateDatabase', () => {
       path: '/media/dive.jpg',
       description: 'Dive photo',
       sortOrder: 1,
+      mimeType: 'image/png',
+      kind: 'photo',
+    })
+    expect(snapshot.pictures[0]?.imageBytes).toEqual(
+      new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    )
+    expect(snapshot.pictures[0]?.sourcePayload.Graphic).toEqual({
+      omittedBinaryBytes: 8,
+    })
+    expect(snapshot.pictures[1]).toMatchObject({
+      externalId: '14',
+      kind: 'signature',
+      path: '/storage/emulated/0/DiveMate/Signatures/Signature_260726151343.png',
     })
     expect(snapshot.profileSamples).toEqual([
       expect.objectContaining({

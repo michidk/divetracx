@@ -22,7 +22,8 @@ run_helm() {
 external_values=(
   --set hodor.enabled=false
   --set postgresql.external.url=postgresql://user:pass@postgres:5432/divetracx
-  --set divemate.backupUrl=https://example.com/DiveMate.ddb
+  --set divemate.existingSecret=divetracx-divemate
+  --set divemate.googleDriveFolderId=example-folder-id
   --set sync.enabled=true
 )
 
@@ -31,6 +32,7 @@ bundled_values=(
   --set postgresql.enabled=true
   --set postgresql.auth.password=database-password
   --set divemate.existingSecret=divetracx-divemate
+  --set divemate.googleDriveFolderId=example-folder-id
   --set sync.enabled=true
 )
 

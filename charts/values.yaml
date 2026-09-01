@@ -89,7 +89,7 @@ migrations:
       memory: 64Mi
 
 sync:
-  # Enable after configuring divemate.backupUrl or divemate.existingSecret.
+  # Enable after configuring the Google Drive folder and credential Secret.
   enabled: false
   schedule: "0 3 * * *"
   timeZone: "Etc/UTC"
@@ -107,11 +107,28 @@ sync:
       memory: 128Mi
 
 divemate:
-  # Prefer an existing Secret so the backup URL never enters Helm release values.
+  # Secret containing the Google service-account JSON credential.
   existingSecret: ""
-  existingSecretKey: "backup-url"
-  backupUrl: ""
+  # Drive folder containing DiveMate.ddb, Media, and Cards.
+  googleDriveFolderId: ""
+  googleCredentialsSecretKey: "google-credentials.json"
   maxBackupBytes: 52428800
+  maxImageBytes: 104857600
+
+storage:
+  provider: local
+  local:
+    path: /data/uploads
+    size: 10Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+  s3:
+    bucket: ""
+    region: us-east-1
+    endpoint: ""
+    existingSecret: ""
+    existingSecretAccessKeyIdKey: access-key-id
+    existingSecretSecretAccessKeyKey: secret-access-key
 
 postgresql:
   enabled: false

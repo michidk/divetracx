@@ -1,6 +1,8 @@
 import { Link } from '@tanstack/react-router'
 import { ExternalLink, MapPin, Pencil, X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { formatMeters } from '@/modules/dives/format'
 import type { MappedDiveSite } from '../-lib/map-sites'
 
@@ -44,23 +46,25 @@ export function SiteMapInspector({
             {location || 'Location details available on the map'}
           </p>
         </div>
-        <button
+        <Button
           type="button"
           onClick={onClose}
           aria-label="Close dive spot details"
-          className="-mr-2 -mt-2 grid min-h-11 min-w-11 place-items-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          variant="ghost"
+          size="icon"
+          className="-mr-2 -mt-2 text-muted-foreground"
         >
           <X size={18} aria-hidden="true" />
-        </button>
+        </Button>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-        <span className="rounded-lg bg-muted px-2.5 py-1 font-semibold">
+        <Badge variant="secondary" className="rounded-lg px-2.5">
           {site.diveCount} {site.diveCount === 1 ? 'dive' : 'dives'}
-        </span>
-        <span className="rounded-lg bg-accent px-2.5 py-1 font-semibold text-foreground">
+        </Badge>
+        <Badge variant="accent" className="rounded-lg px-2.5">
           Deepest {formatMeters(site.deepestMeters)}
-        </span>
+        </Badge>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">

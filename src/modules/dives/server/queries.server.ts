@@ -38,6 +38,15 @@ export async function loadDashboard() {
       maximumDepthMeters: dives.maximumDepthMeters,
       siteName: diveSites.name,
       country: diveSites.country,
+      picturePath: sql<string | null>`(
+        select coalesce(p.thumbnail_storage_path, p.storage_path)
+        from pictures p
+        where p.dive_id = ${dives.id}
+          and p.kind = 'photo'
+          and p.storage_path is not null
+        order by p.sort_order nulls last, p.path
+        limit 1
+      )`,
     })
     .from(dives)
     .leftJoin(diveSites, sql`${dives.siteId} = ${diveSites.id}`)
@@ -82,6 +91,15 @@ export async function loadDives() {
       waterTemperatureCelsius: dives.waterTemperatureCelsius,
       siteName: diveSites.name,
       country: diveSites.country,
+      picturePath: sql<string | null>`(
+        select coalesce(p.thumbnail_storage_path, p.storage_path)
+        from pictures p
+        where p.dive_id = ${dives.id}
+          and p.kind = 'photo'
+          and p.storage_path is not null
+        order by p.sort_order nulls last, p.path
+        limit 1
+      )`,
     })
     .from(dives)
     .leftJoin(diveSites, sql`${dives.siteId} = ${diveSites.id}`)
@@ -281,7 +299,11 @@ export async function loadDive(diveId: string) {
       const divePictures = await transaction
         .select({
           id: pictures.id,
+          kind: pictures.kind,
           path: pictures.path,
+          storagePath: pictures.storagePath,
+          thumbnailStoragePath: pictures.thumbnailStoragePath,
+          mimeType: pictures.mimeType,
           description: pictures.description,
           sortOrder: pictures.sortOrder,
         })
@@ -314,7 +336,8 @@ export async function loadDive(diveId: string) {
         buddies: diveBuddiesData,
         equipment: diveEquipmentData,
         tanks: diveTanks,
-        pictures: divePictures,
+        photos: divePictures.filter((picture) => picture.kind === 'photo'),
+        signatures: divePictures.filter((picture) => picture.kind === 'signature'),
         profileSamples,
       }
     },

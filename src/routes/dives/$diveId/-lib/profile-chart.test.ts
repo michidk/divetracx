@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import {
   createProfileGeometry,
+  createProfileMagnifierViewBox,
   findNearestProfilePoint,
   PROFILE_CHART_VIEWBOX,
 } from './profile-chart'
@@ -44,6 +45,13 @@ describe('dive profile chart geometry', () => {
     expect(geometry.points[2]?.depthY).toBeGreaterThan(geometry.points[1]?.depthY ?? 0)
     expect(geometry.chartDepthMeters).toBe(20)
     expect(geometry.depthAreaPath).toEndWith('Z')
+    expect(geometry.depthPath).toStartWith(
+      `M ${PROFILE_CHART_VIEWBOX.left} ${PROFILE_CHART_VIEWBOX.top}`,
+    )
+    expect(geometry.depthPath).toEndWith(
+      `${geometry.points[2]?.x} ${PROFILE_CHART_VIEWBOX.top}`,
+    )
+    expect(geometry.deepestPoint?.elapsedSeconds).toBe(120)
   })
 
   test('filters invalid values and locates the nearest plotted sample', () => {
@@ -58,6 +66,49 @@ describe('dive profile chart geometry', () => {
       findNearestProfilePoint(geometry.points, (geometry.points[1]?.x ?? 0) - 1),
     ).toBe(1)
     expect(findNearestProfilePoint([], 100)).toBe(-1)
+  })
+
+  test('creates an undistorted magnifier window around depth and ceiling', () => {
+    const geometry = createProfileGeometry([
+      sample(0, 0),
+      sample(60, 24, { decoCeilingMeters: 6 }),
+      sample(120, 0),
+    ])
+    const selected = geometry.points[1]
+    expect(selected).toBeDefined()
+    if (!selected) return
+
+    const viewBox = createProfileMagnifierViewBox(selected, geometry.plotWidth)
+
+    expect(viewBox.width / viewBox.height).toBeCloseTo(360 / 220)
+    expect(viewBox.x).toBeLessThanOrEqual(selected.x)
+    expect(viewBox.x + viewBox.width).toBeGreaterThanOrEqual(selected.x)
+    expect(viewBox.y).toBeLessThanOrEqual(selected.depthY)
+    expect(viewBox.y + viewBox.height).toBeGreaterThanOrEqual(selected.depthY)
+    expect(viewBox.y).toBeLessThanOrEqual(selected.ceilingY ?? selected.depthY)
+  })
+
+  test('locates depth crossings along active ceiling steps', () => {
+    const geometry = createProfileGeometry([
+      sample(0, 10, { decoCeilingMeters: 5 }),
+      sample(30, 3, { decoCeilingMeters: 5 }),
+      sample(60, 10, { decoCeilingMeters: 5 }),
+    ])
+
+    expect(geometry.ceilingCrossings).toHaveLength(2)
+    expect(geometry.ceilingCrossings.map((crossing) => crossing.direction)).toEqual([
+      'exceeded',
+      'cleared',
+    ])
+    expect(geometry.ceilingCrossings[0]?.elapsedSeconds).toBeCloseTo(21.43, 1)
+    expect(geometry.ceilingCrossings[1]?.elapsedSeconds).toBeCloseTo(38.57, 1)
+    expect(geometry.ceilingCrossings[0]?.y).toBe(
+      geometry.points[0]?.ceilingY ?? Number.NaN,
+    )
+    expect(geometry.ceilingViolationPath.match(/M/g)).toHaveLength(2)
+    expect(geometry.ceilingViolationPath).toContain(
+      `${geometry.ceilingCrossings[0]?.x} ${geometry.ceilingCrossings[0]?.y}`,
+    )
   })
 
   test('builds aligned auxiliary tracks, gaps, ceilings, and tank switches', () => {
@@ -92,11 +143,19 @@ describe('dive profile chart geometry', () => {
     expect(geometry.tank2PressurePath.match(/M/g)).toHaveLength(2)
     expect(geometry.pressurePath).toBe('')
     expect(geometry.ceilingPath).toContain('L')
+    expect(geometry.ceilingPath).toStartWith(
+      `M ${geometry.points[1]?.x} ${PROFILE_CHART_VIEWBOX.top}`,
+    )
+    expect(geometry.ceilingPath).toEndWith(
+      `${geometry.points[2]?.x} ${PROFILE_CHART_VIEWBOX.top}`,
+    )
     expect(geometry.ceilingAreaPath).toStartWith(
       `M ${geometry.points[1]?.x} ${PROFILE_CHART_VIEWBOX.top}`,
     )
     expect(geometry.ceilingAreaPath).toEndWith('Z')
     expect(geometry.tankSwitches.map((point) => point.tankNumber)).toEqual([1, 2])
+    expect(geometry.minimumTemperaturePoint?.elapsedSeconds).toBe(30)
+    expect(geometry.minimumTemperaturePoint?.temperatureCelsius).toBe(12)
     expect(geometry.pressureRange).toEqual({ minimum: 0, maximum: 200 })
   })
 })

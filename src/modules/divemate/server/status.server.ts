@@ -13,7 +13,7 @@ export async function loadSyncStatus() {
     .limit(1)
 
   return {
-    configured: Boolean(getServerEnv().DIVEMATE_BACKUP_URL),
+    configured: Boolean(getServerEnv().DIVEMATE_GOOGLE_DRIVE_FOLDER_ID),
     latestRun: latestRun ?? null,
   }
 }

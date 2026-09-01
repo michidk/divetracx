@@ -264,6 +264,8 @@ function mapCertification(row: SourceRow): DiveMateCertification | null {
   const source = sourceRecord(row)
   const name = text(row.Brevet)
   if (!source || !name) return null
+  const scan1Bytes = row.Scan1 instanceof Uint8Array ? row.Scan1 : null
+  const scan2Bytes = row.Scan2 instanceof Uint8Array ? row.Scan2 : null
   return {
     ...source,
     diverExternalId: externalId(row.DiverID),
@@ -276,6 +278,10 @@ function mapCertification(row: SourceRow): DiveMateCertification | null {
     sortOrder: integer(row.SortOrd),
     scan1Path: text(row.Scan1Path),
     scan2Path: text(row.Scan2Path),
+    scan1Bytes,
+    scan1MimeType: scan1Bytes ? imageMimeType(scan1Bytes) : null,
+    scan2Bytes,
+    scan2MimeType: scan2Bytes ? imageMimeType(scan2Bytes) : null,
   }
 }
 
@@ -364,6 +370,7 @@ function mapPicture(row: SourceRow): DiveMatePicture | null {
   const source = sourceRecord(row)
   const path = text(row.Path)
   if (!source || !path) return null
+  const imageBytes = row.Graphic instanceof Uint8Array ? row.Graphic : null
   return {
     ...source,
     diveExternalId: externalId(row.LogID),
@@ -371,10 +378,28 @@ function mapPicture(row: SourceRow): DiveMatePicture | null {
     buddyExternalId: externalId(row.BuddyID),
     equipmentExternalId: externalId(row.EquipmentID),
     diverExternalId: externalId(row.DiverID),
+    kind: /(^|\/)Signatures?(\/|$)|(^|\/)Signature_[^/]*$/i.test(path)
+      ? 'signature'
+      : 'photo',
     path,
+    imageBytes,
+    mimeType: imageBytes ? imageMimeType(imageBytes) : null,
     description: text(row.Description),
     sortOrder: integer(row.SortOrd),
   }
+}
+
+function imageMimeType(bytes: Uint8Array): string | null {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg'
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47)
+    return 'image/png'
+  if (new TextDecoder().decode(bytes.slice(0, 6)).startsWith('GIF8')) return 'image/gif'
+  if (
+    new TextDecoder().decode(bytes.slice(0, 4)) === 'RIFF' &&
+    new TextDecoder().decode(bytes.slice(8, 12)) === 'WEBP'
+  )
+    return 'image/webp'
+  return null
 }
 
 const PROFILE_SAMPLE_WIDTH = 12

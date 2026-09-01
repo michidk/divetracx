@@ -37,6 +37,13 @@ export interface DataEditorRecord {
   sourcePayload: string | null
   createdAt: string | null
   updatedAt: string
+  media: Array<{
+    id: string
+    path: string
+    storagePath: string | null
+    thumbnailStoragePath: string | null
+    description: string | null
+  }>
 }
 
 export interface DataEditorPayload {

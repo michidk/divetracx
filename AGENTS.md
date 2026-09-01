@@ -15,7 +15,7 @@ SQLite backups without making the application depend on DiveMate at runtime.
   server-only.
 - DiveMate synchronization is additive and idempotent. Imported external IDs
   are upserted; records missing from a later backup are not deleted.
-- Do not expose `DATABASE_URL` or `DIVEMATE_BACKUP_URL` to browser code.
+- Do not expose `DATABASE_URL` or Google service-account credentials to browser code.
 
 ## Commands
 

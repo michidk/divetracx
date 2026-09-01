@@ -11,6 +11,7 @@ does not understand yet.
 - TanStack Start and TanStack Router
 - React 19 and Tailwind CSS 4
 - PostgreSQL 17, Drizzle ORM, and committed migrations
+- Local or S3-compatible picture storage
 - Zod-validated server configuration
 - Docker and Helm deployment with optional Hodor authentication
 
@@ -18,7 +19,7 @@ does not understand yet.
 
 ```bash
 cp .env.example .env
-# Set DIVEMATE_BACKUP_URL to a direct or Google Drive file URL.
+# Configure the private Google Drive folder and service-account credential.
 docker compose up -d postgres
 bun install --frozen-lockfile
 bun run db:migrate
@@ -59,8 +60,28 @@ refreshed by a later synchronization.
 The importer downloads the configured `.ddb` backup, verifies that it is a
 SQLite database, parses it read-only, and transactionally upserts supported
 records. It currently maps DiveMate logbook entries, places, buddies,
-equipment, tanks, shops, and certifications. Unmapped source fields are kept in
+equipment, tanks, shops, certifications, and pictures. When a Google Drive
+folder is configured, the importer recursively reads `DiveMate.ddb` and resolves
+referenced originals from its `Media` and `Cards` folders. Embedded
+`Pictures.Graphic` bytes remain supported as a fallback. Images are copied into
+configured local or S3-compatible storage while the original DiveMate device
+path remains unchanged for future
+round-trip export. The stored original bytes are immutable; the dive gallery
+uses a separate generated WebP thumbnail and opens the original in a lightbox.
+Unmapped source fields are kept in
 JSONB so migration can become more complete without re-reading an old backup.
+
+Enable the Google Drive API, share the backup folder with a service account,
+and configure `DIVEMATE_GOOGLE_DRIVE_FOLDER_ID` plus
+`GOOGLE_APPLICATION_CREDENTIALS`. Google Drive service-account access is the
+only supported DiveMate synchronization source.
+
+Automatic and scheduled synchronization imports from Drive only. The settings
+page also provides an explicit **Push edits to Drive** action. It updates fields
+on records originally imported from DiveMate while preserving unknown columns,
+profile binaries, and original media paths. Google Drive retains the previous
+`DiveMate.ddb` revision. Divetracx-only records without a DiveMate external ID
+are skipped rather than assigned speculative IDs.
 
 Sync never deletes a Divetracx record merely because it disappeared from a
 later backup. This protects manual edits and makes repeated imports safe.
@@ -74,5 +95,5 @@ same idempotent importer every day at 03:00 UTC. See
 [the chart documentation](charts/README.md) for values and installation
 examples.
 
-The DiveMate backup contains personal data. Prefer a private authenticated URL;
-do not commit a real backup URL or `.ddb` file.
+The DiveMate backup contains personal data. Keep the service-account credential
+out of source control and grant it access only to the required Drive folder.
