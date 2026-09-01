@@ -18,6 +18,7 @@ import { Route as MapIndexRouteImport } from './routes/map/index'
 import { Route as ProfileIndexRouteImport } from './routes/profile/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as SitesIndexRouteImport } from './routes/sites/index'
+import { Route as StatsIndexRouteImport } from './routes/stats/index'
 import { Route as ApiExportCsvRouteImport } from './routes/api/export/csv'
 import { Route as ApiExportDivemateRouteImport } from './routes/api/export/divemate'
 import { Route as ApiExportJsonRouteImport } from './routes/api/export/json'
@@ -82,6 +83,11 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
 const SitesIndexRoute = SitesIndexRouteImport.update({
   id: '/sites/',
   path: '/sites/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatsIndexRoute = StatsIndexRouteImport.update({
+  id: '/stats/',
+  path: '/stats/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiExportCsvRoute = ApiExportCsvRouteImport.update({
@@ -196,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/profile/': typeof ProfileIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/sites/': typeof SitesIndexRoute
+  '/stats/': typeof StatsIndexRoute
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/divemate': typeof ApiExportDivemateRoute
   '/api/export/json': typeof ApiExportJsonRoute
@@ -227,6 +234,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/sites': typeof SitesIndexRoute
+  '/stats': typeof StatsIndexRoute
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/divemate': typeof ApiExportDivemateRoute
   '/api/export/json': typeof ApiExportJsonRoute
@@ -259,6 +267,7 @@ export interface FileRoutesById {
   '/profile/': typeof ProfileIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/sites/': typeof SitesIndexRoute
+  '/stats/': typeof StatsIndexRoute
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/divemate': typeof ApiExportDivemateRoute
   '/api/export/json': typeof ApiExportJsonRoute
@@ -292,6 +301,7 @@ export interface FileRouteTypes {
     | '/profile/'
     | '/settings/'
     | '/sites/'
+    | '/stats/'
     | '/api/export/csv'
     | '/api/export/divemate'
     | '/api/export/json'
@@ -323,6 +333,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/sites'
+    | '/stats'
     | '/api/export/csv'
     | '/api/export/divemate'
     | '/api/export/json'
@@ -354,6 +365,7 @@ export interface FileRouteTypes {
     | '/profile/'
     | '/settings/'
     | '/sites/'
+    | '/stats/'
     | '/api/export/csv'
     | '/api/export/divemate'
     | '/api/export/json'
@@ -386,6 +398,7 @@ export interface RootRouteChildren {
   ProfileIndexRoute: typeof ProfileIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
   SitesIndexRoute: typeof SitesIndexRoute
+  StatsIndexRoute: typeof StatsIndexRoute
   ApiExportCsvRoute: typeof ApiExportCsvRoute
   ApiExportDivemateRoute: typeof ApiExportDivemateRoute
   ApiExportJsonRoute: typeof ApiExportJsonRoute
@@ -471,6 +484,13 @@ declare module '@tanstack/react-router' {
       path: '/sites'
       fullPath: '/sites/'
       preLoaderRoute: typeof SitesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stats/': {
+      id: '/stats/'
+      path: '/stats'
+      fullPath: '/stats/'
+      preLoaderRoute: typeof StatsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/export/csv': {
@@ -626,6 +646,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileIndexRoute: ProfileIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   SitesIndexRoute: SitesIndexRoute,
+  StatsIndexRoute: StatsIndexRoute,
   ApiExportCsvRoute: ApiExportCsvRoute,
   ApiExportDivemateRoute: ApiExportDivemateRoute,
   ApiExportJsonRoute: ApiExportJsonRoute,

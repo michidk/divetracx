@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import {
   Backpack,
+  ChartColumn,
   CircleUserRound,
   MapPinned,
   Settings,
@@ -14,6 +15,7 @@ const navigation = [
   { to: '/sites', label: 'Sites', icon: MapPinned, exact: false },
   { to: '/buddies', label: 'Buddies', icon: UsersRound, exact: false },
   { to: '/gear', label: 'Gear', icon: Backpack, exact: false },
+  { to: '/stats', label: 'Stats', icon: ChartColumn, exact: false },
   { to: '/profile', label: 'Profile', icon: CircleUserRound, exact: false },
 ] as const
 
