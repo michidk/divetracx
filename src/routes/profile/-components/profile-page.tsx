@@ -1,14 +1,11 @@
 import { Link } from '@tanstack/react-router'
-import { Award, Clock3, Pencil, Plus, Waves } from 'lucide-react'
+import { Award, Clock3, Plus, Waves } from 'lucide-react'
 import { EntityForm } from '@/components/entity-form'
 import { formatDiveDate, formatPersonName } from '@/modules/dives/format'
 import type { getProfile } from '@/modules/profile/server/queries'
+import { CertificationList } from './certification-list'
 
 type ProfileData = Awaited<ReturnType<typeof getProfile>>
-
-function mediaUrl(path: string) {
-  return `/media/${path.split('/').map(encodeURIComponent).join('/')}`
-}
 
 function formatHours(seconds: number) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(
@@ -80,56 +77,7 @@ export function ProfilePage({ profile }: { profile: ProfileData }) {
               No certifications yet.
             </p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {certifications.map((certification) => (
-                <article
-                  key={certification.id}
-                  className="flex flex-col rounded-2xl border border-border bg-card p-5"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="font-semibold leading-snug">{certification.name}</h3>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {[certification.organization, certification.certificationNumber]
-                          .filter(Boolean)
-                          .join(' · ') || 'No details'}
-                      </p>
-                    </div>
-                    <Link
-                      to="/profile/certifications/$certificationId"
-                      params={{ certificationId: certification.id }}
-                      aria-label={`Edit ${certification.name}`}
-                      className="shrink-0 rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                    >
-                      <Pencil size={15} aria-hidden="true" />
-                    </Link>
-                  </div>
-                  {certification.scans.length > 0 ? (
-                    <div className="mt-4 flex gap-3">
-                      {certification.scans.map((scan) => (
-                        <img
-                          key={scan.id}
-                          src={mediaUrl(
-                            scan.thumbnailStoragePath ?? scan.storagePath ?? '',
-                          )}
-                          alt={scan.description ?? 'Certification scan'}
-                          className="h-20 w-32 rounded-lg object-cover"
-                          loading="lazy"
-                        />
-                      ))}
-                    </div>
-                  ) : null}
-                  <p className="mt-auto pt-4 text-xs text-muted-foreground">
-                    {certification.certifiedAt
-                      ? `Certified ${formatDiveDate(certification.certifiedAt)}`
-                      : 'Certification date not set'}
-                    {certification.instructorName
-                      ? ` · ${certification.instructorName}`
-                      : ''}
-                  </p>
-                </article>
-              ))}
-            </div>
+            <CertificationList certifications={certifications} />
           )}
         </section>
 
