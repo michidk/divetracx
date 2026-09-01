@@ -1,7 +1,7 @@
 import '@tanstack/react-start/server-only'
 
 import { randomUUID } from 'node:crypto'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { getServerEnv } from '@/env'
@@ -20,6 +20,20 @@ function interval(seconds: number | null) {
   const hours = Math.floor(seconds / 3600)
   const mins = Math.floor((seconds % 3600) / 60)
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
+}
+
+function coordinate(value: string | null, latitude: boolean) {
+  if (value === null) return null
+  const decimal = Number(value)
+  const limit = latitude ? 90 : 180
+  if (!Number.isFinite(decimal) || Math.abs(decimal) > limit) return null
+  const absolute = Math.abs(decimal)
+  const degrees = Math.floor(absolute)
+  const minutesValue = (absolute - degrees) * 60
+  const minutes = Math.floor(minutesValue)
+  const seconds = (minutesValue - minutes) * 60
+  const direction = latitude ? (decimal < 0 ? 'S' : 'N') : decimal < 0 ? 'W' : 'E'
+  return `${degrees}°${String(minutes).padStart(2, '0')}'${seconds.toFixed(2)}"${direction}`
 }
 
 function updateExisting(
@@ -55,6 +69,11 @@ export interface DiveMateWriteBackResult {
   driveFileId: string
 }
 
+interface DiveMateWriteBackOptions {
+  upload?: boolean
+  outputPath?: string
+}
+
 export type DiveMateWriteBackStage =
   | 'reading-drive'
   | 'reading-divetracx'
@@ -80,7 +99,9 @@ function setStage(stage: DiveMateWriteBackStage) {
     writeBackState.__divetracxWriteBack.stage = stage
 }
 
-export async function writeBackDiveMate(): Promise<DiveMateWriteBackResult> {
+export async function writeBackDiveMate(
+  options: DiveMateWriteBackOptions = {},
+): Promise<DiveMateWriteBackResult> {
   const environment = getServerEnv()
   if (!environment.DIVEMATE_GOOGLE_DRIVE_FOLDER_ID) {
     throw new Error('DIVEMATE_GOOGLE_DRIVE_FOLDER_ID is not configured')
@@ -172,8 +193,8 @@ export async function writeBackDiveMate(): Promise<DiveMateWriteBackResult> {
           Country: row.country,
           Region: row.region,
           WaterName: row.waterName,
-          Lat: row.latitude,
-          Lon: row.longitude,
+          Lat: coordinate(row.latitude, true),
+          Lon: coordinate(row.longitude, false),
           MaxDepth: row.maximumDepthMeters,
           Altitude: row.altitudeMeters,
           Difficulty: row.difficulty,
@@ -307,8 +328,14 @@ export async function writeBackDiveMate(): Promise<DiveMateWriteBackResult> {
     database.exec('PRAGMA wal_checkpoint(TRUNCATE)')
     database.close()
     const bytes = new Uint8Array(await readFile(path))
-    setStage('uploading-drive')
-    await drive.replaceDatabase(bytes)
+    if (options.outputPath) {
+      await mkdir(join(options.outputPath, '..'), { recursive: true })
+      await writeFile(options.outputPath, bytes)
+    }
+    if (options.upload !== false) {
+      setStage('uploading-drive')
+      await drive.replaceDatabase(bytes)
+    }
     return { updatedRecords, skippedLocalRecords, driveFileId: drive.databaseFile.id }
   } finally {
     await rm(directory, { recursive: true, force: true })
