@@ -1,5 +1,15 @@
 import { Link } from '@tanstack/react-router'
-import { ArrowRight, Clock3, Gauge, Waves } from 'lucide-react'
+import {
+  ArrowRight,
+  Backpack,
+  CircleUserRound,
+  Clock3,
+  Gauge,
+  MapPinned,
+  Plus,
+  UsersRound,
+  Waves,
+} from 'lucide-react'
 import type { getDashboard } from '@/modules/dives/server/queries'
 
 type DashboardData = Awaited<ReturnType<typeof getDashboard>>
@@ -41,11 +51,44 @@ export function OverviewPage({ data }: { data: DashboardData }) {
       detail: 'Maximum recorded depth',
       icon: Gauge,
     },
+    {
+      label: 'Sites visited',
+      value: data.summary.sitesVisited.toLocaleString(),
+      detail: `${data.summary.siteCount.toLocaleString()} sites in your logbook`,
+      icon: MapPinned,
+    },
   ]
+
+  const shortcuts = [
+    {
+      to: '/sites',
+      label: 'Dive sites',
+      value: data.summary.siteCount,
+      icon: MapPinned,
+    },
+    {
+      to: '/buddies',
+      label: 'Buddies',
+      value: data.summary.buddyCount,
+      icon: UsersRound,
+    },
+    {
+      to: '/gear',
+      label: 'Gear in use',
+      value: data.summary.gearCount,
+      icon: Backpack,
+    },
+    {
+      to: '/profile',
+      label: 'Certifications',
+      value: data.summary.certificationCount,
+      icon: CircleUserRound,
+    },
+  ] as const
 
   return (
     <div className="space-y-10">
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {metrics.map((metric) => (
           <article
             key={metric.label}
@@ -67,17 +110,25 @@ export function OverviewPage({ data }: { data: DashboardData }) {
             </p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight">Recent dives</h2>
           </div>
-          <Link
-            to="/dives"
-            className="flex items-center gap-2 text-sm font-semibold text-primary"
-          >
-            All dives <ArrowRight size={16} aria-hidden="true" />
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              to="/dives/new"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20"
+            >
+              <Plus size={16} aria-hidden="true" /> Log dive
+            </Link>
+            <Link
+              to="/dives"
+              className="flex items-center gap-2 text-sm font-semibold text-primary"
+            >
+              All dives <ArrowRight size={16} aria-hidden="true" />
+            </Link>
+          </div>
         </div>
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           {data.recentDives.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
-              No dives yet. Open Integrations to import a logbook or create a dive.
+              No dives yet. Log your first dive or import a logbook in Settings.
             </div>
           ) : (
             data.recentDives.map((dive, index) => (
@@ -121,6 +172,33 @@ export function OverviewPage({ data }: { data: DashboardData }) {
             ))
           )}
         </div>
+      </section>
+
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {shortcuts.map((shortcut) => (
+          <Link
+            key={shortcut.to}
+            to={shortcut.to}
+            className="group flex items-center justify-between gap-4 rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <span className="flex items-center gap-3">
+              <span className="grid size-10 place-items-center rounded-xl bg-accent text-primary">
+                <shortcut.icon size={18} aria-hidden="true" />
+              </span>
+              <span>
+                <span className="block text-sm font-semibold">{shortcut.label}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {shortcut.value.toLocaleString()}
+                </span>
+              </span>
+            </span>
+            <ArrowRight
+              size={16}
+              aria-hidden="true"
+              className="text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
+            />
+          </Link>
+        ))}
       </section>
     </div>
   )

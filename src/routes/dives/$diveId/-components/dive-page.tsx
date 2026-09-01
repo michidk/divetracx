@@ -106,8 +106,8 @@ export function DivePage({ dive }: { dive: DiveData }) {
             ) : null}
           </div>
           <Link
-            to="/data/$entity/$recordId"
-            params={{ entity: 'dives', recordId: dive.id }}
+            to="/dives/$diveId/edit"
+            params={{ diveId: dive.id }}
             className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border px-4 text-sm font-semibold transition hover:bg-muted"
           >
             <Pencil size={15} aria-hidden="true" /> Edit dive
@@ -329,7 +329,19 @@ export function DivePage({ dive }: { dive: DiveData }) {
         <aside className="space-y-6">
           <section className="rounded-2xl border border-border bg-card p-6">
             <MapPin className="text-primary" size={21} aria-hidden="true" />
-            <h2 className="mt-4 text-lg font-semibold">Dive site</h2>
+            <h2 className="mt-4 text-lg font-semibold">
+              {dive.site ? (
+                <Link
+                  to="/sites/$siteId"
+                  params={{ siteId: dive.site.id }}
+                  className="hover:text-primary hover:underline"
+                >
+                  {dive.site.name}
+                </Link>
+              ) : (
+                'Dive site'
+              )}
+            </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {dive.site?.waterName || location || 'Location not recorded'}
             </p>
@@ -381,9 +393,22 @@ export function DivePage({ dive }: { dive: DiveData }) {
               <Value
                 label="Buddies"
                 value={
-                  dive.buddies.length > 0
-                    ? dive.buddies.map(formatPersonName).join(', ')
-                    : '—'
+                  dive.buddies.length > 0 ? (
+                    <span className="flex flex-wrap gap-x-2 gap-y-1">
+                      {dive.buddies.map((buddy) => (
+                        <Link
+                          key={buddy.id}
+                          to="/buddies/$buddyId"
+                          params={{ buddyId: buddy.id }}
+                          className="text-primary hover:underline"
+                        >
+                          {formatPersonName(buddy)}
+                        </Link>
+                      ))}
+                    </span>
+                  ) : (
+                    '—'
+                  )
                 }
               />
             </dl>
@@ -395,7 +420,13 @@ export function DivePage({ dive }: { dive: DiveData }) {
               <ul className="mt-4 divide-y divide-border">
                 {dive.equipment.map((item) => (
                   <li key={item.id} className="py-3 first:pt-0 last:pb-0">
-                    <p className="text-sm font-medium">{item.name}</p>
+                    <Link
+                      to="/gear/$gearId"
+                      params={{ gearId: item.id }}
+                      className="text-sm font-medium hover:text-primary hover:underline"
+                    >
+                      {item.name}
+                    </Link>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {[item.manufacturer, item.model, item.category]
                         .filter(Boolean)

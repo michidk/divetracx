@@ -69,11 +69,11 @@ export function SiteMapInspector({
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
         <Link
-          to="/data/$entity/$recordId"
-          params={{ entity: 'sites', recordId: site.id }}
+          to="/sites/$siteId"
+          params={{ siteId: site.id }}
           className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-primary px-3 text-primary-foreground transition hover:opacity-90"
         >
-          <Pencil size={14} aria-hidden="true" /> Edit site
+          <Pencil size={14} aria-hidden="true" /> Open site
         </Link>
         {site.latestDive ? (
           <Link
