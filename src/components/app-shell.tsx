@@ -1,6 +1,5 @@
 import { Link } from '@tanstack/react-router'
 import {
-  Anchor,
   Backpack,
   CircleUserRound,
   MapPinned,
@@ -18,6 +17,22 @@ const navigation = [
   { to: '/profile', label: 'Profile', icon: CircleUserRound, exact: false },
 ] as const
 
+function LogoMark({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+      <path
+        d="M8 16 22 46h15l10-17"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="50" cy="22" r="7" fill="currentColor" />
+    </svg>
+  )
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -25,7 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-4 md:px-8">
           <Link to="/" className="flex items-center gap-3 font-semibold tracking-tight">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-              <Anchor size={18} aria-hidden="true" />
+              <LogoMark size={20} />
             </span>
             <span className="hidden md:inline">Divetracx</span>
           </Link>

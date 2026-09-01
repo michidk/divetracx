@@ -17,7 +17,10 @@ export const Route = createRootRoute({
         content: 'A self-hosted canonical dive log with DiveMate and Garmin imports.',
       },
     ],
-    links: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
+    links: [
+      { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+      { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+    ],
   }),
   component: () => (
     <AppShell>
