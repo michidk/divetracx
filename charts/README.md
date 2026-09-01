@@ -56,8 +56,10 @@ garminAdapter:
 After the first deployment, connect the Garmin account once from the Divetracx
 UI under Settings → Integrations. The application forwards the credentials
 server-to-server to the adapter, which stores only the resulting OAuth tokens
-on the persistent volume and refreshes them automatically. Accounts with
-multi-factor authentication are not supported by this login flow.
+on the persistent volume and refreshes them automatically. If Garmin requests
+multi-factor authentication, the UI asks for the verification code and resumes
+the same short-lived login challenge; passwords and verification codes are not
+persisted.
 To use an external adapter instead, leave `garminAdapter.enabled` off and set
 `garmin.fullImportUrl`/`garmin.incrementalImportUrl`.
 

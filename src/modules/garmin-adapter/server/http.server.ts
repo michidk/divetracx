@@ -91,12 +91,41 @@ async function handleLogin(request: Request, loginManager: GarminAdapterLoginMan
   }
   try {
     const result = await loginManager.login(email, password)
+    if (result.status === 'mfa-required') {
+      return json(202, {
+        mfaRequired: true,
+        challengeId: result.challengeId,
+        expiresAt: result.expiresAt.toISOString(),
+      })
+    }
     return json(200, {
       ...accountStatus(loginManager),
       displayName: result.displayName,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Garmin login failed'
+    return json(502, { error: message })
+  }
+}
+
+async function handleMfa(request: Request, loginManager: GarminAdapterLoginManager) {
+  const body = await jsonBody(request)
+  const challengeId = stringField(body, 'challengeId')
+  const code = stringField(body, 'code')
+  if (!challengeId || !code) {
+    return json(400, { error: 'Request body must contain challengeId and code' })
+  }
+  try {
+    const result = await loginManager.completeMfa(challengeId, code)
+    if (result.status !== 'connected') {
+      return json(502, { error: 'Garmin returned another MFA challenge' })
+    }
+    return json(200, {
+      ...accountStatus(loginManager),
+      displayName: result.displayName,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Garmin MFA failed'
     return json(502, { error: message })
   }
 }
@@ -141,13 +170,17 @@ export function createGarminAdapterFetchHandler(
     if (request.method === 'POST' && path === '/account/login') {
       return handleLogin(request, loginManager)
     }
+    if (request.method === 'POST' && path === '/account/mfa') {
+      return handleMfa(request, loginManager)
+    }
     if (request.method === 'POST' && path === '/account/logout') {
       loginManager.logout()
       return json(200, accountStatus(loginManager))
     }
 
     return json(404, {
-      error: 'Use POST /import, GET /account, POST /account/login, POST /account/logout',
+      error:
+        'Use POST /import, GET /account, POST /account/login, POST /account/mfa, POST /account/logout',
     })
   }
 }

@@ -14,6 +14,12 @@ const schema = z.object({
     .int()
     .nonnegative()
     .default(3_600),
+  GARMIN_MFA_CHALLENGE_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(900)
+    .default(300),
 })
 
 export type GarminAdapterEnvironment = z.infer<typeof schema>

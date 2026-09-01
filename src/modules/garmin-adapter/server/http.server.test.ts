@@ -13,6 +13,7 @@ const environment: GarminAdapterEnvironment = {
   GARMIN_ACTIVITY_PAGE_SIZE: 50,
   GARMIN_FULL_IMPORT_MAX_ACTIVITIES: 2_000,
   GARMIN_INCREMENTAL_OVERLAP_SECONDS: 3_600,
+  GARMIN_MFA_CHALLENGE_TTL_SECONDS: 300,
 }
 
 const emptyBatch: GarminAdapterBatch = {
@@ -35,11 +36,19 @@ function stubSource(
 
 interface StubLoginOptions {
   connected?: boolean
+  mfaRequired?: boolean
   loginError?: Error
+  mfaError?: Error
 }
 
 function stubLoginManager(options: StubLoginOptions = {}) {
-  const calls: Array<{ action: string; email?: string; password?: string }> = []
+  const calls: Array<{
+    action: string
+    email?: string
+    password?: string
+    challengeId?: string
+    code?: string
+  }> = []
   const manager: GarminAdapterLoginManager = {
     status() {
       return {
@@ -50,7 +59,19 @@ function stubLoginManager(options: StubLoginOptions = {}) {
     login(email, password) {
       calls.push({ action: 'login', email, password })
       if (options.loginError) return Promise.reject(options.loginError)
-      return Promise.resolve({ displayName: 'Diver Dan' })
+      if (options.mfaRequired) {
+        return Promise.resolve({
+          status: 'mfa-required' as const,
+          challengeId: 'challenge-123',
+          expiresAt: new Date('2026-08-14T07:37:10Z'),
+        })
+      }
+      return Promise.resolve({ status: 'connected' as const, displayName: 'Diver Dan' })
+    },
+    completeMfa(challengeId, code) {
+      calls.push({ action: 'mfa', challengeId, code })
+      if (options.mfaError) return Promise.reject(options.mfaError)
+      return Promise.resolve({ status: 'connected' as const, displayName: 'Diver Dan' })
     },
     logout() {
       calls.push({ action: 'logout' })
@@ -212,6 +233,63 @@ describe('account endpoints', () => {
     )
     expect(response.status).toBe(400)
     expect(calls).toEqual([])
+  })
+
+  test('returns a resumable MFA challenge without credentials', async () => {
+    const { fetch, calls } = handler({}, { mfaRequired: true })
+    const response = await fetch(
+      jsonRequest(
+        '/account/login',
+        { email: 'diver@example.test', password: 'secret' },
+        'Bearer adapter-secret',
+      ),
+    )
+    expect(response.status).toBe(202)
+    const payload = await response.json()
+    expect(payload).toEqual({
+      mfaRequired: true,
+      challengeId: 'challenge-123',
+      expiresAt: '2026-08-14T07:37:10.000Z',
+    })
+    expect(JSON.stringify(payload)).not.toContain('secret')
+    expect(calls[0]).toEqual({
+      action: 'login',
+      email: 'diver@example.test',
+      password: 'secret',
+    })
+  })
+
+  test('completes an MFA challenge', async () => {
+    const { fetch, calls } = handler({}, { connected: true })
+    const response = await fetch(
+      jsonRequest(
+        '/account/mfa',
+        { challengeId: 'challenge-123', code: '654321' },
+        'Bearer adapter-secret',
+      ),
+    )
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      connected: true,
+      tokensSavedAt: '2026-08-14T07:32:10.000Z',
+      displayName: 'Diver Dan',
+    })
+    expect(calls).toEqual([
+      { action: 'mfa', challengeId: 'challenge-123', code: '654321' },
+    ])
+  })
+
+  test('surfaces invalid or expired MFA challenges', async () => {
+    const { fetch } = handler({}, { mfaError: new Error('Challenge expired') })
+    const response = await fetch(
+      jsonRequest(
+        '/account/mfa',
+        { challengeId: 'challenge-123', code: '000000' },
+        'Bearer adapter-secret',
+      ),
+    )
+    expect(response.status).toBe(502)
+    expect(await response.json()).toEqual({ error: 'Challenge expired' })
   })
 
   test('surfaces Garmin login failures as HTTP 502 with the message', async () => {

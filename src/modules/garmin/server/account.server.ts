@@ -21,7 +21,7 @@ interface AdapterAccountTarget {
  * endpoint, so their URLs are derived from the configured import URL origin.
  */
 function adapterAccountTarget(
-  path: '/account' | '/account/login' | '/account/logout',
+  path: '/account' | '/account/login' | '/account/mfa' | '/account/logout',
 ): AdapterAccountTarget | null {
   const environment = getServerEnv()
   const base =
@@ -110,6 +110,31 @@ export async function connectGarminAccount(email: string, password: string) {
     throw new Error('The Garmin adapter is not configured on this server')
   }
   const payload = await accountRequest(target, 'POST', { email, password })
+  if (payload.mfaRequired === true) {
+    if (
+      typeof payload.challengeId !== 'string' ||
+      typeof payload.expiresAt !== 'string'
+    ) {
+      throw new Error('Garmin adapter returned an invalid MFA challenge')
+    }
+    return {
+      mfaRequired: true as const,
+      challengeId: payload.challengeId,
+      expiresAt: payload.expiresAt,
+    }
+  }
+  return {
+    mfaRequired: false as const,
+    displayName: typeof payload.displayName === 'string' ? payload.displayName : null,
+  }
+}
+
+export async function completeGarminMfaAccount(challengeId: string, code: string) {
+  const target = adapterAccountTarget('/account/mfa')
+  if (!target) {
+    throw new Error('The Garmin adapter is not configured on this server')
+  }
+  const payload = await accountRequest(target, 'POST', { challengeId, code })
   return {
     displayName: typeof payload.displayName === 'string' ? payload.displayName : null,
   }

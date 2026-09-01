@@ -1,7 +1,7 @@
 import '@tanstack/react-start/server-only'
 
 import { unzipSync } from 'fflate'
-import { GarminConnect } from 'garmin-connect'
+import { GarminConnect } from 'garmin-connect-2fa'
 import {
   activityIdentity,
   activityStartEpochSeconds,
