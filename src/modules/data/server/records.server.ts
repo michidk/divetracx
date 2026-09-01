@@ -14,9 +14,9 @@ import {
   dives,
   diveTypes,
   equipment,
+  importRuns,
   pictures,
   shops,
-  syncRuns,
   tanks,
 } from '@/db/schema'
 import type { EditorValue, EditorValues, EntityKey } from '../entities'
@@ -39,7 +39,7 @@ function personName(person: { firstName: string | null; lastName: string | null 
 }
 
 function sourceListItem(
-  row: { id: string; sourceKey: string; updatedAt: Date },
+  row: { id: string; updatedAt: Date },
   title: string,
   subtitle: string | null = null,
   detail: string | null = null,
@@ -49,7 +49,7 @@ function sourceListItem(
     title,
     subtitle,
     detail,
-    sourceKey: row.sourceKey,
+    sourceKey: 'canonical',
     updatedAt: timestamp(row.updatedAt),
   }
 }
@@ -77,11 +77,6 @@ function editorRecord(
   entity: EntityKey,
   row: {
     id: string
-    sourceKey: string
-    externalId?: string | null
-    externalUuid?: string | null
-    sourceUpdatedAt?: string | null
-    sourcePayload?: Record<string, unknown> | null
     createdAt?: Date
     updatedAt: Date
   },
@@ -120,11 +115,11 @@ function editorRecord(
   return {
     id: row.id,
     values: fieldValues(entity, row),
-    sourceKey: row.sourceKey,
-    externalId: row.externalId ?? null,
-    externalUuid: row.externalUuid ?? null,
-    sourceUpdatedAt: row.sourceUpdatedAt ?? null,
-    sourcePayload: row.sourcePayload ? JSON.stringify(row.sourcePayload, null, 2) : null,
+    sourceKey: 'canonical',
+    externalId: null,
+    externalUuid: null,
+    sourceUpdatedAt: null,
+    sourcePayload: null,
     createdAt: row.createdAt ? timestamp(row.createdAt) : null,
     updatedAt: timestamp(row.updatedAt),
     media,
@@ -149,7 +144,7 @@ export async function loadDataOverview(): Promise<DataOverviewItem[]> {
     tableCount(tanks),
     tableCount(pictures),
     tableCount(diveProfileSamples),
-    tableCount(syncRuns),
+    tableCount(importRuns),
   ])
   const entities: EntityKey[] = [
     'dives',
@@ -349,13 +344,13 @@ async function loadDataListRecords(
       )
     }
     case 'sync-runs': {
-      const rows = await db.select().from(syncRuns).orderBy(desc(syncRuns.startedAt))
+      const rows = await db.select().from(importRuns).orderBy(desc(importRuns.startedAt))
       return rows.map((row) => ({
         id: row.id,
-        title: `${row.status} synchronization`,
-        subtitle: `${row.trigger} · ${row.sourceKey}`,
+        title: `${row.status} ${row.mode} import`,
+        subtitle: `${row.trigger} · ${row.integrationKey}`,
         detail: timestamp(row.startedAt),
-        sourceKey: row.sourceKey,
+        sourceKey: row.integrationKey,
         updatedAt: timestamp(row.finishedAt ?? row.startedAt),
       }))
     }
@@ -482,11 +477,15 @@ async function loadRecord(
       return row ? editorRecord(entity, row) : null
     }
     case 'sync-runs': {
-      const [row] = await db.select().from(syncRuns).where(eq(syncRuns.id, id)).limit(1)
+      const [row] = await db
+        .select()
+        .from(importRuns)
+        .where(eq(importRuns.id, id))
+        .limit(1)
       if (!row) return null
       return {
         id: row.id,
-        sourceKey: row.sourceKey,
+        sourceKey: row.integrationKey,
         externalId: null,
         externalUuid: null,
         sourceUpdatedAt: null,
@@ -495,17 +494,19 @@ async function loadRecord(
         updatedAt: timestamp(row.finishedAt ?? row.startedAt),
         media: [],
         values: {
-          sourceKey: row.sourceKey,
+          integrationKey: row.integrationKey,
+          mode: row.mode,
           trigger: row.trigger,
           status: row.status,
           startedAt: timestamp(row.startedAt),
           finishedAt: timestamp(row.finishedAt),
           sourceFingerprint: row.sourceFingerprint ?? '',
-          sourceDatabaseVersion: row.sourceDatabaseVersion ?? '',
-          sourceDatabaseProgram: row.sourceDatabaseProgram ?? '',
-          sourceDatabaseUuid: row.sourceDatabaseUuid ?? '',
-          sourceDatabaseUpdatedAt: row.sourceDatabaseUpdatedAt ?? '',
-          counts: row.counts ? JSON.stringify(row.counts, null, 2) : '',
+          recordsDiscovered: String(row.recordsDiscovered),
+          recordsCreated: String(row.recordsCreated),
+          recordsUpdated: String(row.recordsUpdated),
+          recordsSkipped: String(row.recordsSkipped),
+          recordsFailed: String(row.recordsFailed),
+          diagnostics: row.diagnostics ? JSON.stringify(row.diagnostics, null, 2) : '',
           error: row.error ?? '',
         },
       }

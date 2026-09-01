@@ -1,6 +1,6 @@
 import '@tanstack/react-start/server-only'
 
-import { asc, count, desc, eq, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, sql } from 'drizzle-orm'
 import { getDb } from '@/db'
 import {
   buddies,
@@ -12,9 +12,10 @@ import {
   dives,
   diveTypes,
   equipment,
+  externalRecordLinks,
+  externalRecords,
   pictures,
   shops,
-  syncRuns,
   tanks,
 } from '@/db/schema'
 
@@ -53,18 +54,6 @@ export async function loadDashboard() {
     .orderBy(desc(dives.diveDate), desc(dives.entryTime))
     .limit(6)
 
-  const [latestSync] = await db
-    .select({
-      status: syncRuns.status,
-      startedAt: syncRuns.startedAt,
-      finishedAt: syncRuns.finishedAt,
-      counts: syncRuns.counts,
-      error: syncRuns.error,
-    })
-    .from(syncRuns)
-    .orderBy(desc(syncRuns.startedAt))
-    .limit(1)
-
   return {
     summary: summary ?? {
       totalDives: 0,
@@ -73,7 +62,6 @@ export async function loadDashboard() {
       latestDiveDate: null,
     },
     recentDives,
-    latestSync: latestSync ?? null,
   }
 }
 
@@ -211,9 +199,6 @@ export async function loadDive(diveId: string) {
           divemaster: dives.divemaster,
           legacyBuddyText: dives.legacyBuddyText,
           notes: dives.notes,
-          sourceKey: dives.sourceKey,
-          externalId: dives.externalId,
-          sourceUpdatedAt: dives.sourceUpdatedAt,
           updatedAt: dives.updatedAt,
           diver: {
             id: divers.id,
@@ -280,7 +265,6 @@ export async function loadDive(diveId: string) {
           name: tanks.name,
           sortOrder: tanks.sortOrder,
           computerTankNumber: tanks.computerTankNumber,
-          tankType: tanks.tankType,
           volumeLiters: tanks.volumeLiters,
           startPressureBar: tanks.startPressureBar,
           endPressureBar: tanks.endPressureBar,
@@ -288,9 +272,7 @@ export async function loadDive(diveId: string) {
           oxygenPercent: tanks.oxygenPercent,
           heliumPercent: tanks.heliumPercent,
           breathingTimeSeconds: tanks.breathingTimeSeconds,
-          supplyTypeCode: tanks.supplyTypeCode,
           weightKg: tanks.weightKg,
-          divePhaseCode: tanks.divePhaseCode,
         })
         .from(tanks)
         .where(eq(tanks.diveId, diveId))
@@ -331,6 +313,26 @@ export async function loadDive(diveId: string) {
           asc(diveProfileSamples.sampleIndex),
         )
 
+      const sources = await transaction
+        .select({
+          integrationKey: externalRecords.integrationKey,
+          externalId: externalRecords.externalId,
+          identityKey: externalRecords.identityKey,
+          externalUpdatedAt: externalRecords.externalUpdatedAt,
+          lastSeenAt: externalRecords.lastSeenAt,
+        })
+        .from(externalRecordLinks)
+        .innerJoin(
+          externalRecords,
+          eq(externalRecordLinks.externalRecordId, externalRecords.id),
+        )
+        .where(
+          and(
+            eq(externalRecordLinks.canonicalEntityType, 'dive'),
+            eq(externalRecordLinks.canonicalEntityId, diveId),
+          ),
+        )
+
       return {
         ...dive,
         buddies: diveBuddiesData,
@@ -339,6 +341,7 @@ export async function loadDive(diveId: string) {
         photos: divePictures.filter((picture) => picture.kind === 'photo'),
         signatures: divePictures.filter((picture) => picture.kind === 'signature'),
         profileSamples,
+        sources,
       }
     },
     { isolationLevel: 'repeatable read', accessMode: 'read only' },

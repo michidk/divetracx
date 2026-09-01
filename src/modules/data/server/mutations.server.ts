@@ -173,15 +173,12 @@ async function saveDive(id: string, values: EditorValues) {
   return getDb().transaction(async (transaction) => {
     const [row] =
       id === 'new'
-        ? await transaction
-            .insert(dives)
-            .values({ ...fields, sourceKey: 'manual' })
-            .returning({ id: dives.id, sourceKey: dives.sourceKey })
+        ? await transaction.insert(dives).values(fields).returning({ id: dives.id })
         : await transaction
             .update(dives)
             .set(fields)
             .where(eq(dives.id, recordId(id)))
-            .returning({ id: dives.id, sourceKey: dives.sourceKey })
+            .returning({ id: dives.id })
     if (!row) throw new Error('Dive was not found')
 
     await transaction.delete(diveBuddies).where(eq(diveBuddies.diveId, row.id))
@@ -190,7 +187,6 @@ async function saveDive(id: string, values: EditorValues) {
         buddyIds.map((buddyId) => ({
           diveId: row.id,
           buddyId,
-          sourceKey: row.sourceKey,
         })),
       )
     }
@@ -201,7 +197,6 @@ async function saveDive(id: string, values: EditorValues) {
         equipmentIds.map((equipmentId) => ({
           diveId: row.id,
           equipmentId,
-          sourceKey: row.sourceKey,
         })),
       )
     }
@@ -227,10 +222,7 @@ async function saveSite(id: string, values: EditorValues) {
   }
   const [row] =
     id === 'new'
-      ? await getDb()
-          .insert(diveSites)
-          .values({ ...fields, sourceKey: 'manual' })
-          .returning({ id: diveSites.id })
+      ? await getDb().insert(diveSites).values(fields).returning({ id: diveSites.id })
       : await getDb()
           .update(diveSites)
           .set(fields)
@@ -262,10 +254,7 @@ async function saveDiver(id: string, values: EditorValues) {
   }
   const [row] =
     id === 'new'
-      ? await getDb()
-          .insert(divers)
-          .values({ ...fields, sourceKey: 'manual' })
-          .returning({ id: divers.id })
+      ? await getDb().insert(divers).values(fields).returning({ id: divers.id })
       : await getDb()
           .update(divers)
           .set(fields)
@@ -291,10 +280,7 @@ async function saveBuddy(id: string, values: EditorValues) {
   }
   const [row] =
     id === 'new'
-      ? await getDb()
-          .insert(buddies)
-          .values({ ...fields, sourceKey: 'manual' })
-          .returning({ id: buddies.id })
+      ? await getDb().insert(buddies).values(fields).returning({ id: buddies.id })
       : await getDb()
           .update(buddies)
           .set(fields)
@@ -320,19 +306,12 @@ async function saveEquipment(id: string, values: EditorValues) {
     serviceDueAt: optionalText(values, 'serviceDueAt'),
     inactive: booleanValue(values, 'inactive'),
     weightKg: optionalDecimal(values, 'weightKg', { min: 0 }),
-    equipmentTypeCode: optionalInteger(values, 'equipmentTypeCode'),
-    sourceValue1: optionalDecimal(values, 'sourceValue1'),
-    sourceValue2: optionalDecimal(values, 'sourceValue2'),
-    sourceValue3: optionalInteger(values, 'sourceValue3'),
     notes: optionalText(values, 'notes'),
     updatedAt: new Date(),
   }
   const [row] =
     id === 'new'
-      ? await getDb()
-          .insert(equipment)
-          .values({ ...fields, sourceKey: 'manual' })
-          .returning({ id: equipment.id })
+      ? await getDb().insert(equipment).values(fields).returning({ id: equipment.id })
       : await getDb()
           .update(equipment)
           .set(fields)
@@ -360,7 +339,7 @@ async function saveCertification(id: string, values: EditorValues) {
     id === 'new'
       ? await getDb()
           .insert(certifications)
-          .values({ ...fields, sourceKey: 'manual' })
+          .values(fields)
           .returning({ id: certifications.id })
       : await getDb()
           .update(certifications)
@@ -375,10 +354,7 @@ async function saveShop(id: string, values: EditorValues) {
   const fields = { name: requiredText(values, 'name'), updatedAt: new Date() }
   const [row] =
     id === 'new'
-      ? await getDb()
-          .insert(shops)
-          .values({ ...fields, sourceKey: 'manual' })
-          .returning({ id: shops.id })
+      ? await getDb().insert(shops).values(fields).returning({ id: shops.id })
       : await getDb()
           .update(shops)
           .set(fields)
@@ -396,10 +372,7 @@ async function saveDiveType(id: string, values: EditorValues) {
   }
   const [row] =
     id === 'new'
-      ? await getDb()
-          .insert(diveTypes)
-          .values({ ...fields, sourceKey: 'manual' })
-          .returning({ id: diveTypes.id })
+      ? await getDb().insert(diveTypes).values(fields).returning({ id: diveTypes.id })
       : await getDb()
           .update(diveTypes)
           .set(fields)
@@ -430,7 +403,6 @@ async function saveTank(id: string, values: EditorValues) {
     name: optionalText(values, 'name'),
     sortOrder: optionalInteger(values, 'sortOrder'),
     computerTankNumber: optionalInteger(values, 'computerTankNumber', { min: 1 }),
-    tankType: optionalInteger(values, 'tankType'),
     volumeLiters: optionalDecimal(values, 'volumeLiters', { min: 0 }),
     startPressureBar,
     endPressureBar,
@@ -438,17 +410,12 @@ async function saveTank(id: string, values: EditorValues) {
     oxygenPercent,
     heliumPercent,
     breathingTimeSeconds: optionalInteger(values, 'breathingTimeSeconds', { min: 0 }),
-    supplyTypeCode: optionalInteger(values, 'supplyTypeCode'),
     weightKg: optionalDecimal(values, 'weightKg', { min: 0 }),
-    divePhaseCode: optionalInteger(values, 'divePhaseCode'),
     updatedAt: new Date(),
   }
   const [row] =
     id === 'new'
-      ? await getDb()
-          .insert(tanks)
-          .values({ ...fields, sourceKey: 'manual' })
-          .returning({ id: tanks.id })
+      ? await getDb().insert(tanks).values(fields).returning({ id: tanks.id })
       : await getDb()
           .update(tanks)
           .set(fields)
@@ -473,10 +440,7 @@ async function savePicture(id: string, values: EditorValues) {
   }
   const [row] =
     id === 'new'
-      ? await getDb()
-          .insert(pictures)
-          .values({ ...fields, sourceKey: 'manual' })
-          .returning({ id: pictures.id })
+      ? await getDb().insert(pictures).values(fields).returning({ id: pictures.id })
       : await getDb()
           .update(pictures)
           .set(fields)
@@ -507,7 +471,7 @@ async function saveProfileSample(id: string, values: EditorValues) {
     id === 'new'
       ? await getDb()
           .insert(diveProfileSamples)
-          .values({ ...fields, sourceKey: 'manual' })
+          .values(fields)
           .returning({ id: diveProfileSamples.id })
       : await getDb()
           .update(diveProfileSamples)
@@ -547,6 +511,6 @@ export async function saveDataRecord(
     case 'profile-samples':
       return saveProfileSample(id, values)
     case 'sync-runs':
-      throw new Error('Synchronization history is read-only')
+      throw new Error('Import history is read-only')
   }
 }

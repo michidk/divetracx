@@ -1,8 +1,7 @@
 import { Link, useRouter } from '@tanstack/react-router'
-import { ArrowLeft, ExternalLink, Save, ShieldAlert } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Save } from 'lucide-react'
 import { useState } from 'react'
 import { PictureGallery } from '@/components/picture-gallery'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -237,60 +236,15 @@ export function RecordEditorPage({
         </div>
       </header>
 
-      {payload.record?.sourceKey === 'divemate' ? (
-        <Alert variant="warning">
-          <ShieldAlert
-            className="mt-0.5 shrink-0 text-amber-600"
-            size={21}
-            aria-hidden="true"
-          />
-          <div>
-            <AlertTitle>Imported from DiveMate</AlertTitle>
-            <AlertDescription>
-              You can edit this record, but a later synchronization may refresh fields
-              owned by the DiveMate source. The original source payload remains preserved.
-            </AlertDescription>
-          </div>
-        </Alert>
-      ) : null}
-
       {payload.record ? (
         <section className="rounded-2xl border border-border bg-card p-5">
           <h2 className="text-sm font-semibold">Record metadata</h2>
-          <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
             <div>
               <dt className="text-xs uppercase tracking-wide text-muted-foreground">
                 Record ID
               </dt>
               <dd className="mt-1 break-all font-mono text-xs">{payload.record.id}</dd>
-            </div>
-            <div>
-              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                Source
-              </dt>
-              <dd className="mt-1 font-medium">{payload.record.sourceKey}</dd>
-            </div>
-            <div>
-              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                Source ID
-              </dt>
-              <dd className="mt-1 font-medium">{payload.record.externalId || '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                Source UUID
-              </dt>
-              <dd className="mt-1 break-all font-mono text-xs">
-                {payload.record.externalUuid || '—'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                Source changed
-              </dt>
-              <dd className="mt-1 font-medium">
-                {payload.record.sourceUpdatedAt || '—'}
-              </dd>
             </div>
             <div>
               <dt className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -312,21 +266,6 @@ export function RecordEditorPage({
             </div>
           </dl>
         </section>
-      ) : null}
-
-      {payload.record?.sourcePayload ? (
-        <details className="rounded-2xl border border-border bg-card p-5">
-          <summary className="cursor-pointer text-sm font-semibold">
-            Raw source payload
-          </summary>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Read-only data retained from the source for fields that are not part of the
-            normalized model.
-          </p>
-          <pre className="mt-4 max-h-96 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-muted p-4 font-mono text-xs leading-5">
-            {payload.record.sourcePayload}
-          </pre>
-        </details>
       ) : null}
 
       {payload.record?.media.length ? (
@@ -381,7 +320,7 @@ export function RecordEditorPage({
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Synchronization history is immutable and cannot be edited.
+            Import history is immutable and cannot be edited.
           </p>
         )}
       </form>

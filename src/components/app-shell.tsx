@@ -15,8 +15,8 @@ const navigation = [
   { to: '/dives', label: 'Dives', icon: Database },
   { to: '/map', label: 'Map', icon: MapPinned },
   { to: '/data', label: 'Data', icon: TableProperties },
-  { to: '/settings/sync', label: 'Sync', icon: RefreshCw },
-  { to: '/settings/sync/logs', label: 'Sync logs', icon: ScrollText },
+  { to: '/settings/sync', label: 'Integrations', icon: RefreshCw },
+  { to: '/settings/sync/logs', label: 'Import history', icon: ScrollText },
   { to: '/settings/export', label: 'Export', icon: Download },
 ] as const
 

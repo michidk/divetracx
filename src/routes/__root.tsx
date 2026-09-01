@@ -14,7 +14,7 @@ export const Route = createRootRoute({
       { title: 'Divetracx' },
       {
         name: 'description',
-        content: 'A self-hosted dive log with DiveMate synchronization.',
+        content: 'A self-hosted canonical dive log with DiveMate and Garmin imports.',
       },
     ],
     links: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],

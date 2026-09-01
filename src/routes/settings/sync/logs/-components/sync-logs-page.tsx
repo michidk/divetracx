@@ -1,15 +1,15 @@
 import { Link } from '@tanstack/react-router'
 import { ArrowLeft, CheckCircle2, CircleAlert, Clock3, LoaderCircle } from 'lucide-react'
-import type { getDiveMateSyncLogs } from '@/modules/divemate/server/logs'
+import type { getImportLogs } from '@/modules/integrations/server/operations'
 
-type SyncLogs = Awaited<ReturnType<typeof getDiveMateSyncLogs>>
-type SyncLog = SyncLogs[number]
+type ImportLogs = Awaited<ReturnType<typeof getImportLogs>>
+type ImportLog = ImportLogs[number]
 
-function statusIcon(status: SyncLog['status']) {
+function statusIcon(status: ImportLog['status']) {
   if (status === 'succeeded') {
     return <CheckCircle2 size={18} className="text-emerald-600" aria-hidden="true" />
   }
-  if (status === 'failed') {
+  if (status === 'failed' || status === 'partially_failed') {
     return <CircleAlert size={18} className="text-red-600" aria-hidden="true" />
   }
   return (
@@ -17,32 +17,15 @@ function statusIcon(status: SyncLog['status']) {
   )
 }
 
-function duration(log: SyncLog) {
+function duration(log: ImportLog) {
   if (!log.finishedAt) return 'Running'
   const milliseconds = log.finishedAt.getTime() - log.startedAt.getTime()
-  if (milliseconds < 1000) return `${milliseconds} ms`
-  return `${(milliseconds / 1000).toFixed(1)} s`
+  return milliseconds < 1_000
+    ? `${milliseconds} ms`
+    : `${(milliseconds / 1_000).toFixed(1)} s`
 }
 
-function importedSummary(counts: Record<string, number> | null) {
-  if (!counts) return 'No import counts recorded'
-  const preferredKeys = [
-    'dives',
-    'profileSamples',
-    'sites',
-    'buddies',
-    'equipment',
-    'certifications',
-    'tanks',
-    'pictures',
-  ]
-  return preferredKeys
-    .filter((key) => counts[key] !== undefined)
-    .map((key) => `${counts[key]} ${key === 'profileSamples' ? 'profile samples' : key}`)
-    .join(' · ')
-}
-
-export function SyncLogsPage({ logs }: { logs: SyncLogs }) {
+export function SyncLogsPage({ logs }: { logs: ImportLogs }) {
   return (
     <div className="mx-auto max-w-4xl space-y-7">
       <header>
@@ -50,18 +33,18 @@ export function SyncLogsPage({ logs }: { logs: SyncLogs }) {
           to="/settings/sync"
           className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary"
         >
-          <ArrowLeft size={16} aria-hidden="true" /> Manual sync
+          <ArrowLeft size={16} aria-hidden="true" /> Integrations
         </Link>
         <p className="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-primary">
-          DiveMate
+          Provenance
         </p>
-        <h1 className="mt-2 text-4xl font-semibold tracking-tight">Sync logs</h1>
+        <h1 className="mt-2 text-4xl font-semibold tracking-tight">Import history</h1>
         <p className="mt-3 text-muted-foreground">
-          The latest 50 manual, scheduled, and command-line synchronization attempts.
+          The latest 50 full and incremental import attempts across all integrations.
         </p>
       </header>
 
-      <section className="space-y-3" aria-label="Synchronization history">
+      <section className="space-y-3" aria-label="Import history">
         {logs.map((log) => (
           <article
             key={log.id}
@@ -72,9 +55,11 @@ export function SyncLogsPage({ logs }: { logs: SyncLogs }) {
                 <span className="mt-0.5">{statusIcon(log.status)}</span>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-semibold capitalize">{log.status}</h2>
+                    <h2 className="font-semibold">
+                      {log.integrationName} {log.mode} import
+                    </h2>
                     <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      {log.trigger}
+                      {log.status} · {log.trigger}
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -88,14 +73,13 @@ export function SyncLogsPage({ logs }: { logs: SyncLogs }) {
             </div>
 
             <p className="mt-5 text-sm text-muted-foreground">
-              {importedSummary(log.counts)}
+              {log.recordsDiscovered} discovered · {log.recordsCreated} new ·{' '}
+              {log.recordsUpdated} changed · {log.recordsSkipped} unchanged ·{' '}
+              {log.recordsFailed} failed
             </p>
             {log.sourceFingerprint ? (
               <p className="mt-2 font-mono text-xs text-muted-foreground">
-                {log.sourceDatabaseVersion
-                  ? `DiveMate DB ${log.sourceDatabaseVersion} · `
-                  : ''}
-                backup {log.sourceFingerprint.slice(0, 16)}
+                source {log.sourceFingerprint.slice(0, 16)}
               </p>
             ) : null}
             {log.error ? (
@@ -107,7 +91,7 @@ export function SyncLogsPage({ logs }: { logs: SyncLogs }) {
         ))}
         {logs.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-            No synchronization attempts have been recorded.
+            No import attempts have been recorded.
           </div>
         ) : null}
       </section>

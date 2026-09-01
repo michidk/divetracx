@@ -1,99 +1,104 @@
 # Divetracx
 
-Divetracx is a self-hosted dive log and DiveMate migration target. It keeps a
-normalized PostgreSQL record of dives, sites, buddies, equipment, tanks, and
-certifications while retaining the original DiveMate payload for fields the UI
-does not understand yet.
+Divetracx is a self-hosted canonical dive log that imports from DiveMate and
+Garmin. Normalized PostgreSQL tables contain the diving domain—dives, sites,
+people, equipment, cylinders, gases, profiles, pictures, and certifications—
+while raw source records and provenance live in a separate generic integration
+layer.
 
 ## Stack
 
 - Bun 1.3 and TypeScript 6
-- TanStack Start and TanStack Router
-- React 19 and Tailwind CSS 4
+- TanStack Start, TanStack Router, React 19, and Tailwind CSS 4
 - PostgreSQL 17, Drizzle ORM, and committed migrations
-- Local or S3-compatible picture storage
-- Zod-validated server configuration
+- Garmin's official FIT JavaScript SDK
+- Local or S3-compatible attachment storage
 - Docker and Helm deployment with optional Hodor authentication
 
 ## Quick start
 
 ```bash
 cp .env.example .env
-# Configure the private Google Drive folder and service-account credential.
 docker compose up -d postgres
 bun install --frozen-lockfile
 bun run db:migrate
-bun run sync:divemate
 bun run dev
 ```
 
-Open <http://localhost:3000>. Synchronization can also be triggered from
-**Settings → DiveMate sync**. The **Sync logs** menu shows manual, scheduled,
-and command-line attempts with their imported counts and failures.
+Open <http://localhost:3000>. **Settings → Integrations** provides capability-
+driven DiveMate and Garmin controls. **Import history** reports discovered,
+new, changed, unchanged, and failed source records.
 
-## Data export
+Useful commands:
 
-The **Export** menu provides three direct downloads:
+```bash
+bun run sync:divemate
+bun run import:incremental --integration=garmin
+bun run export:divemate --output=backups/DiveMate.ddb
+bun run verify
+```
 
-- a complete, versioned Divetracx JSON backup;
-- a UTF-8 CSV with one joined row per dive; and
-- a UDDF 3.2.3 document for compatible dive-log applications.
+## Import model
 
-Export responses are private and never cached. They can contain personal and
-location data, so store downloaded files securely. Divetracx does not generate
-DiveMate's proprietary `.ddb` format; use UDDF for interoperability and JSON
-for a lossless Divetracx backup.
+Full and incremental imports are deliberately different:
 
-## Data management
+- A full import is manual and destructive. It validates the complete source
+  before transactionally replacing all integration-produced canonical records.
+  Unlinked records created in Divetracx survive. A failure preserves the valid
+  dataset.
+- An incremental import uses stable source IDs and content hashes, skips
+  unchanged records, and never deletes records merely because they disappear
+  from a later source feed. Connector state advances only with a successful
+  transaction.
 
-The **Data** menu lists dives, sites, divers, buddies, equipment,
-certifications, shops, dive types, tanks, and synchronization history. Each
-mutable collection supports creating manual records and editing existing ones.
-Dive editors also manage the buddy and equipment relationship tables.
+`external_records`, `external_record_links`, `import_runs`, and
+`integration_state` retain source identity, current raw data, hashes,
+provenance, diagnostics, and connector-owned opaque continuation state. The
+canonical domain contains no Garmin or DiveMate IDs/raw payloads.
 
-Synchronization history is intentionally read-only. Records imported from
-DiveMate can be edited, but their editor warns when source-owned fields may be
-refreshed by a later synchronization.
+## DiveMate
 
-## DiveMate synchronization
+Configure `DIVEMATE_GOOGLE_DRIVE_FOLDER_ID` and
+`GOOGLE_APPLICATION_CREDENTIALS`. The importer reads `DiveMate.ddb` plus
+referenced `Media` and `Cards` files, using SQLite row IDs and content/file
+hashes for idempotent incremental detection. Images are copied to configured
+storage with immutable originals and generated thumbnails.
 
-The importer downloads the configured `.ddb` backup, verifies that it is a
-SQLite database, parses it read-only, and transactionally upserts supported
-records. It currently maps DiveMate logbook entries, places, buddies,
-equipment, tanks, shops, certifications, and pictures. When a Google Drive
-folder is configured, the importer recursively reads `DiveMate.ddb` and resolves
-referenced originals from its `Media` and `Cards` folders. Embedded
-`Pictures.Graphic` bytes remain supported as a fallback. Images are copied into
-configured local or S3-compatible storage while the original DiveMate device
-path remains unchanged for future
-round-trip export. The stored original bytes are immutable; the dive gallery
-uses a separate generated WebP thumbnail and opens the original in a lightbox.
-Unmapped source fields are kept in
-JSONB so migration can become more complete without re-reading an old backup.
+DiveMate export is a separate one-off operation. The configured `.ddb` is used
+only as a proprietary schema template; supported tables and fixed-width profile
+fields are rebuilt from canonical data. Garmin-imported and locally created
+dives can therefore be exported to DiveMate. Unsupported source-only fields are
+omitted predictably. Import does not automatically write anything back.
 
-Enable the Google Drive API, share the backup folder with a service account,
-and configure `DIVEMATE_GOOGLE_DRIVE_FOLDER_ID` plus
-`GOOGLE_APPLICATION_CREDENTIALS`. Google Drive service-account access is the
-only supported DiveMate synchronization source.
+## Garmin
 
-Automatic and scheduled synchronization imports from Drive only. The settings
-page also provides an explicit **Push edits to Drive** action. It updates fields
-on records originally imported from DiveMate while preserving unknown columns,
-profile binaries, and original media paths. Google Drive retains the previous
-`DiveMate.ddb` revision. Divetracx-only records without a DiveMate external ID
-are skipped rather than assigned speculative IDs.
+Garmin supports full and incremental import and does not support export.
+Activity Details supply stable Activity IDs; the official FIT SDK maps diving
+sessions, profile depth/temperature, decompression ceiling, ppO₂, and gases into
+the canonical model.
 
-Sync never deletes a Divetracx record merely because it disappeared from a
-later backup. This protects manual edits and makes repeated imports safe.
+Production Activity API OAuth, feed URLs, cursors, pagination, and limits are
+available only after Garmin Developer Program approval. Divetracx does not guess
+that gated contract: it fails closed until approved full/incremental adapter
+URLs are configured. The server-side adapter returns Activity Details, optional
+FIT bytes, and opaque next state, and owns partner OAuth, backfill/pagination,
+rate limiting, and continuation semantics. See [.env.example](.env.example) and
+[the architecture guide](docs/import-export-architecture.md).
 
-## Helm and scheduled synchronization
+## Export and data management
 
-The chart in `charts/` deploys the application, database migrations, optional
-Hodor authentication, and external or bundled PostgreSQL. Set
-`sync.enabled=true` after configuring the DiveMate backup Secret to run the
-same idempotent importer every day at 03:00 UTC. See
-[the chart documentation](charts/README.md) for values and installation
-examples.
+The **Export** page offers a DiveMate `.ddb`, versioned Divetracx JSON, joined
+CSV, and UDDF 3.2.3. All are generated from canonical data and returned with
+private, non-cached download headers. Exports may contain personal, health, and
+location data.
 
-The DiveMate backup contains personal data. Keep the service-account credential
-out of source control and grant it access only to the required Drive folder.
+The **Data** area edits canonical dives, sites, divers, buddies, equipment,
+certifications, shops, dive types, cylinders, pictures, profiles, and their
+relationships. Import history and external provenance remain read-only.
+
+## Helm and scheduled imports
+
+The chart in `charts/` deploys the app, migrations, optional Hodor gate, and
+external or bundled PostgreSQL. The existing CronJob performs DiveMate
+incremental import only and calls the same generic service as the UI/CLI. Garmin
+adapter configuration is server-only. See [the chart guide](charts/README.md).

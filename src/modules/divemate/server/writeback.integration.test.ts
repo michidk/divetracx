@@ -60,9 +60,6 @@ describe.skipIf(!enabled)('DiveMate export integration', () => {
       parseDiveMateDatabase(exportPath),
       loadExportSnapshot(),
     ])
-    const imported = <T extends { sourceKey: string | null; externalId: string | null }>(
-      rows: T[],
-    ) => rows.filter((row) => row.sourceKey === 'divemate' && row.externalId)
     expect({
       divers: exported.divers.length,
       sites: exported.sites.length,
@@ -75,24 +72,26 @@ describe.skipIf(!enabled)('DiveMate export integration', () => {
       tanks: exported.tanks.length,
       pictures: exported.pictures.length,
     }).toEqual({
-      divers: imported(current.data.divers).length,
-      sites: imported(current.data.diveSites).length,
-      buddies: imported(current.data.buddies).length,
-      equipment: imported(current.data.equipment).length,
-      certifications: imported(current.data.certifications).length,
-      shops: imported(current.data.shops).length,
-      diveTypes: imported(current.data.diveTypes).length,
-      dives: imported(current.data.dives).length,
-      tanks: imported(current.data.tanks).length,
-      pictures: imported(current.data.pictures).length,
+      divers: current.data.divers.length,
+      sites: current.data.diveSites.length,
+      buddies: current.data.buddies.length,
+      equipment: current.data.equipment.length,
+      certifications: current.data.certifications.length,
+      shops: current.data.shops.length,
+      diveTypes: current.data.diveTypes.length,
+      dives: current.data.dives.length,
+      tanks: current.data.tanks.length,
+      pictures: current.data.pictures.length,
     })
 
     const sitesByExternalId = new Map(
       exported.sites.map((site) => [site.externalId, site]),
     )
-    for (const site of imported(current.data.diveSites)) {
-      const exportedSite = sitesByExternalId.get(site.externalId ?? '')
-      expect(exportedSite, `missing site ${site.externalId}`).toBeDefined()
+    for (const site of current.data.diveSites) {
+      const exportedSite = [...sitesByExternalId.values()].find(
+        (candidate) => candidate.externalUuid === site.id,
+      )
+      expect(exportedSite, `missing site ${site.id}`).toBeDefined()
       expect(Number(exportedSite?.latitude)).toBeCloseTo(Number(site.latitude), 5)
       expect(Number(exportedSite?.longitude)).toBeCloseTo(Number(site.longitude), 5)
     }

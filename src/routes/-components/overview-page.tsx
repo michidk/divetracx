@@ -77,7 +77,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           {data.recentDives.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
-              No dives yet. Configure DiveMate sync to import your logbook.
+              No dives yet. Open Integrations to import a logbook or create a dive.
             </div>
           ) : (
             data.recentDives.map((dive, index) => (

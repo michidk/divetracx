@@ -30,6 +30,14 @@ function readRows(database: SqliteDatabase, table: string): SourceRow[] {
   return database.prepare(`SELECT * FROM "${table}"`).all() as SourceRow[]
 }
 
+function sourceTables(database: SqliteDatabase): string[] {
+  return (
+    database
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+      .all() as Array<{ name: string }>
+  ).map((table) => table.name)
+}
+
 function text(value: unknown): string | null {
   if (typeof value !== 'string') return null
   const normalized = value.trim()
@@ -492,6 +500,7 @@ export async function parseDiveMateDatabase(
   try {
     const info = readRows(database, 'DBInfo')[0]
     return {
+      sourceTables: sourceTables(database),
       databaseVersion: text(info?.DBVersion),
       databaseProgram: text(info?.PrgName),
       databaseUuid: text(info?.UUID),

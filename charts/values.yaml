@@ -115,6 +115,16 @@ divemate:
   maxBackupBytes: 52428800
   maxImageBytes: 104857600
 
+garmin:
+  # Approved Garmin partner transport is exposed through a server-side adapter.
+  fullImportUrl: ""
+  incrementalImportUrl: ""
+  existingSecret: ""
+  authorizationSecretKey: "authorization"
+  timeoutMs: 30000
+  maxResponseBytes: 104857600
+  maxFitBytes: 26214400
+
 storage:
   provider: local
   local:

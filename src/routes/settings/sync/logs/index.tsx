@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getDiveMateSyncLogs } from '@/modules/divemate/server/logs'
+import { getImportLogs } from '@/modules/integrations/server/operations'
 import { SyncLogsPage } from './-components/sync-logs-page'
 
 export const Route = createFileRoute('/settings/sync/logs/')({
-  loader: () => getDiveMateSyncLogs(),
+  loader: () => getImportLogs(),
   component: SyncLogsRoute,
 })
 

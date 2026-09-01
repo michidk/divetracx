@@ -2,7 +2,7 @@
 
 This chart deploys Divetracx, an optional Hodor authentication sidecar, database
 migrations, and either external or bundled PostgreSQL. It can also create a
-daily CronJob that imports the configured DiveMate backup.
+daily CronJob that incrementally imports the configured DiveMate backup.
 
 ## DiveMate backup Secret
 
@@ -25,12 +25,30 @@ sync:
 ```
 
 The credential is mounted read-only and never stored in Helm values. Viewer
-access is sufficient for imports; Editor access is required for the explicit
-manual **Push edits to Drive** action.
+access is sufficient for imports and for using the database as a schema
+template for a manual canonical `.ddb` export.
 
 The CronJob uses `concurrencyPolicy: Forbid` by default and records its runs as
 `schedule`. The application receives the same Secret, so **Sync now** uses the
 same importer and records runs as `manual`.
+
+## Garmin Activity API adapter
+
+Garmin partner OAuth/feed details are available only after Garmin Developer
+Program approval. Configure an approved server-side adapter rather than putting
+Garmin credentials in the browser:
+
+```yaml
+garmin:
+  fullImportUrl: https://garmin-adapter.example.test/full
+  incrementalImportUrl: https://garmin-adapter.example.test/incremental
+  existingSecret: divetracx-garmin
+  authorizationSecretKey: authorization
+```
+
+The Secret value is used as the complete `Authorization` header sent to the
+adapter. The adapter returns Activity Details, optional base64 FIT data, and
+opaque next state. Garmin export is not supported.
 
 ## Install with external PostgreSQL
 

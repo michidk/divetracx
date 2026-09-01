@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "test:integration:divemate-export": "RUN_DIVEMATE_INTEGRATION_TESTS=true bun test src/modules/divemate/server/writeback.integration.test.ts",
+    "test:integration:imports": "RUN_IMPORT_INTEGRATION_TESTS=true bun test src/modules/integrations/server/import-service.integration.test.ts",
     "check:helm": "bash scripts/verify-helm.sh",
     "verify": "bun run check && bun run typecheck && bun run test && bun run build && bun run check:helm",
     "db:generate": "drizzle-kit generate",
@@ -23,11 +24,13 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "sync:divemate": "bun run scripts/sync-divemate.ts",
+    "import:incremental": "bun run scripts/import-integration.ts",
     "export:divemate": "bun run scripts/export-divemate.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1068.0",
     "@base-ui/react": "^1.7.0",
+    "@garmin/fitsdk": "21.214.0",
     "@t3-oss/env-core": "^0.13.11",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-router": "^1.170.16",

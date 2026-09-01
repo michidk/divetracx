@@ -12,9 +12,9 @@ import {
   dives,
   diveTypes,
   equipment,
+  importRuns,
   pictures,
   shops,
-  syncRuns,
   tanks,
 } from '@/db/schema'
 import type { ExportSnapshot } from '../types'
@@ -23,7 +23,7 @@ export async function loadExportSnapshot(): Promise<ExportSnapshot> {
   return getDb().transaction(
     async (transaction) => ({
       format: 'divetracx-backup',
-      version: 6,
+      version: 7,
       exportedAt: new Date().toISOString(),
       data: {
         divers: await transaction.select().from(divers),
@@ -39,7 +39,7 @@ export async function loadExportSnapshot(): Promise<ExportSnapshot> {
         diveProfileSamples: await transaction.select().from(diveProfileSamples),
         tanks: await transaction.select().from(tanks),
         pictures: await transaction.select().from(pictures),
-        syncRuns: await transaction.select().from(syncRuns),
+        importRuns: await transaction.select().from(importRuns),
       },
     }),
     { isolationLevel: 'repeatable read', accessMode: 'read only' },

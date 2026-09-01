@@ -143,6 +143,7 @@ describe('parseDiveMateDatabase', () => {
 
     const snapshot = await parseDiveMateDatabase(path)
 
+    expect(snapshot.sourceTables).toContain('Logbook')
     expect(snapshot.databaseVersion).toBe('4.0')
     expect(snapshot.databaseProgram).toBe('DiveMate')
     expect(snapshot.databaseUuid).toBe('database-uuid')
