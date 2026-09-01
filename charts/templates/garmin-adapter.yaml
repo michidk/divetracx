@@ -68,6 +68,8 @@ spec:
               value: /data/garmin-tokens
             - name: GARMIN_DOMAIN
               value: {{ .Values.garminAdapter.domain | quote }}
+            - name: GARMIN_MFA_CHALLENGE_TTL_SECONDS
+              value: {{ .Values.garminAdapter.mfaChallengeTtlSeconds | quote }}
             - name: GARMIN_ADAPTER_AUTHORIZATION
               valueFrom:
                 secretKeyRef:

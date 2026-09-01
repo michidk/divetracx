@@ -89,12 +89,13 @@ Integrations settings page has a Garmin account form that forwards the
 credentials server-to-server to the adapter, which logs in once and stores the
 resulting OAuth tokens in `GARMIN_TOKEN_DIRECTORY` (a persistent volume in
 Docker Compose and Helm) — credentials are never persisted anywhere. The
-adapter refreshes and re-persists tokens on use, sweeps dive activities
+login flow supports Garmin MFA with a short-lived, in-memory challenge; the
+password is cleared before the verification code is requested and neither
+secret is persisted. The adapter refreshes and re-persists tokens on use, sweeps dive activities
 newest-first, downloads the original FIT files, and returns one transactional
 batch with an opaque watermark as next state. Every adapter request, including
 account management, must carry the shared `GARMIN_ADAPTER_AUTHORIZATION`
-value. Accounts with multi-factor authentication are not supported by the
-login flow yet.
+value.
 
 A Garmin activity is reconciled against the existing logbook by start time: it
 attaches to the nearest existing log entry within 45 minutes (marking it

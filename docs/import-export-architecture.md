@@ -320,8 +320,11 @@ of the gated partner API it uses the Garmin Connect consumer API with
 garth-style persisted OAuth tokens. The Garmin account is connected from the
 Integrations settings page: Divetracx forwards the credentials
 server-to-server to the adapter's bearer-protected account endpoints
-(`GET /account`, `POST /account/login`, `POST /account/logout`), and the
-adapter stores only the resulting tokens in `GARMIN_TOKEN_DIRECTORY`;
+(`GET /account`, `POST /account/login`, `POST /account/mfa`,
+`POST /account/logout`). The adapter retains MFA cookies and CSRF context only
+in memory behind an opaque, expiring challenge ID, clears the password before
+the code is requested, and stores only the resulting tokens in
+`GARMIN_TOKEN_DIRECTORY`;
 credentials are never persisted. The adapter refreshes and re-persists tokens,
 sweeps activities newest-first, keeps diving sub-sports, downloads original FIT
 files, and returns one transactional batch whose next state is a start-time

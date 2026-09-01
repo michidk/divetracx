@@ -19,7 +19,11 @@ import {
   runDiveMateWriteBack,
 } from '@/modules/divemate/server/writeback'
 import type { getGarminAccountStatus } from '@/modules/garmin/server/account'
-import { connectGarmin, disconnectGarmin } from '@/modules/garmin/server/account'
+import {
+  completeGarminMfa,
+  connectGarmin,
+  disconnectGarmin,
+} from '@/modules/garmin/server/account'
 import type { getIntegrationStatus } from '@/modules/integrations/server/operations'
 import {
   runFullImport,
@@ -34,6 +38,11 @@ function GarminAccountSection({ account }: { account: GarminAccount }) {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [mfaCode, setMfaCode] = useState('')
+  const [mfaChallenge, setMfaChallenge] = useState<{
+    challengeId: string
+    expiresAt: string
+  } | null>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -45,6 +54,15 @@ function GarminAccountSection({ account }: { account: GarminAccount }) {
     setMessage('')
     try {
       const result = await connectGarmin({ data: { email, password } })
+      if (result.mfaRequired) {
+        setMfaChallenge({
+          challengeId: result.challengeId,
+          expiresAt: result.expiresAt,
+        })
+        setPassword('')
+        setMessage('Garmin accepted your credentials. Enter the verification code.')
+        return
+      }
       setMessage(
         `Connected${result.displayName ? ` as ${result.displayName}` : ''}. Tokens are stored on the adapter; your password was not saved.`,
       )
@@ -55,6 +73,32 @@ function GarminAccountSection({ account }: { account: GarminAccount }) {
       setMessage(
         error instanceof Error ? error.message : 'Garmin account connection failed',
       )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function verifyMfa(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!mfaChallenge) return
+    setBusy(true)
+    setMessage('')
+    try {
+      const result = await completeGarminMfa({
+        data: {
+          challengeId: mfaChallenge.challengeId,
+          code: mfaCode,
+        },
+      })
+      setMessage(
+        `Connected${result.displayName ? ` as ${result.displayName}` : ''}. Tokens are stored on the adapter; your password and verification code were not saved.`,
+      )
+      setEmail('')
+      setMfaCode('')
+      setMfaChallenge(null)
+      await router.invalidate()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Garmin verification failed')
     } finally {
       setBusy(false)
     }
@@ -105,12 +149,49 @@ function GarminAccountSection({ account }: { account: GarminAccount }) {
             {busy ? 'Disconnecting…' : 'Disconnect account'}
           </Button>
         </div>
+      ) : mfaChallenge ? (
+        <form className="mt-2 space-y-3" onSubmit={(event) => void verifyMfa(event)}>
+          <p className="text-sm leading-6 text-muted-foreground">
+            Enter the verification code Garmin sent you. This challenge expires at{' '}
+            {new Date(mfaChallenge.expiresAt).toLocaleTimeString()} and is discarded after
+            three failed attempts.
+          </p>
+          <Input
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="Verification code"
+            aria-label="Garmin verification code"
+            value={mfaCode}
+            onChange={(event) => setMfaCode(event.target.value)}
+            required
+            autoFocus
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={busy || !mfaCode.trim()}>
+              <Link2 size={16} aria-hidden="true" />
+              {busy ? 'Verifying…' : 'Verify and connect'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={() => {
+                setMfaChallenge(null)
+                setMfaCode('')
+                setMessage('')
+              }}
+            >
+              Start over
+            </Button>
+          </div>
+        </form>
       ) : (
         <form className="mt-2 space-y-3" onSubmit={(event) => void connect(event)}>
           <p className="text-sm leading-6 text-muted-foreground">
             Sign in once with your Garmin Connect account. Only the resulting tokens are
-            stored on the adapter; accounts with multi-factor authentication are not
-            supported yet.
+            stored on the adapter. If Garmin requests multi-factor authentication, you
+            will be prompted for the verification code next.
           </p>
           {account.error ? (
             <p className="text-sm text-amber-700">{account.error}</p>

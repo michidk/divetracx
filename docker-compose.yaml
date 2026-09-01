@@ -43,6 +43,7 @@ services:
     environment:
       GARMIN_ADAPTER_AUTHORIZATION: ${GARMIN_ADAPTER_AUTHORIZATION:-}
       GARMIN_TOKEN_DIRECTORY: /data/garmin-tokens
+      GARMIN_MFA_CHALLENGE_TTL_SECONDS: ${GARMIN_MFA_CHALLENGE_TTL_SECONDS:-300}
     expose:
       - "8787"
     volumes:

@@ -152,6 +152,8 @@ garminAdapter:
   enabled: false
   port: 8787
   domain: garmin.com
+  # Short-lived, in-memory continuation while the user enters a Garmin MFA code.
+  mfaChallengeTtlSeconds: 300
   tokens:
     size: 16Mi
     storageClass: ""

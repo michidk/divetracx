@@ -36,12 +36,13 @@
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-router": "^1.170.16",
     "@tanstack/react-start": "^1.168.26",
+    "axios-cookiejar-support": "5.0.5",
     "better-sqlite3": "13.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
     "fflate": "^0.8.3",
-    "garmin-connect": "^1.6.2",
+    "garmin-connect-2fa": "1.6.3",
     "google-auth-library": "^11.0.2",
     "lucide-react": "^0.545.0",
     "maplibre-gl": "^5.24.0",
@@ -50,6 +51,7 @@
     "react-dom": "^19.2.0",
     "sharp": "^0.35.2",
     "tailwind-merge": "^3.6.0",
+    "tough-cookie": "5.1.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {

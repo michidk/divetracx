@@ -147,11 +147,16 @@
     },
     "garminAdapter": {
       "type": "object",
-      "required": ["enabled", "port", "domain", "tokens"],
+      "required": ["enabled", "port", "domain", "mfaChallengeTtlSeconds", "tokens"],
       "properties": {
         "enabled": { "type": "boolean" },
         "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
         "domain": { "type": "string", "enum": ["garmin.com", "garmin.cn"] },
+        "mfaChallengeTtlSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 900
+        },
         "tokens": {
           "type": "object",
           "required": ["size"],
