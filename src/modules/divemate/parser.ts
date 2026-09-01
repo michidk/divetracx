@@ -244,11 +244,14 @@ function mapEquipment(row: SourceRow): DiveMateEquipment | null {
   if (!source) return null
   const name =
     text(row.Name) ?? text(row.Object) ?? `DiveMate equipment ${source.externalId}`
+  const category = text(row.Category)
+  const equipmentTypeCode = integer(row.TypeID)
+  const isSet = category === '---SET' || equipmentTypeCode === 9
   return {
     ...source,
     diverExternalId: externalId(row.DiverID),
     name,
-    category: text(row.Category),
+    category,
     manufacturer: text(row.Manufacturer),
     model: text(row.Object),
     serialNumber: text(row.Serial),
@@ -260,11 +263,13 @@ function mapEquipment(row: SourceRow): DiveMateEquipment | null {
     serviceDueAt: date(row.DateRN),
     inactive: integer(row.Inactive) === 1,
     weightKg: decimal(row.Weight),
-    equipmentTypeCode: integer(row.TypeID),
+    equipmentTypeCode,
     sourceValue1: decimal(row.Val1, true),
     sourceValue2: decimal(row.Val2, true),
     sourceValue3: integer(row.Val3),
     notes: text(row.Comments),
+    isSet,
+    memberExternalIds: isSet ? idList(row.Info) : [],
   }
 }
 

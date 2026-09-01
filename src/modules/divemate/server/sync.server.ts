@@ -17,12 +17,14 @@ import {
   dives,
   diveTypes,
   equipment,
+  equipmentSetItems,
+  equipmentSets,
   pictures,
   shops,
   tanks,
 } from '@/db/schema'
 import { getServerEnv } from '@/env'
-import { createThumbnail } from '@/lib/server/thumbnail.server'
+import { createThumbnail, thumbnailPathFor } from '@/lib/server/thumbnail.server'
 import { getStorage } from '@/lib/storage'
 import type { StorageProvider } from '@/lib/storage/types'
 import {
@@ -118,26 +120,20 @@ async function storeImage(
       storagePath,
     )
   }
-  const thumbnailStoragePath = `divemate/${category}/${externalId}/${fingerprint}.thumb.webp`
-  let storedThumbnailPath: string | null = thumbnailStoragePath
+  const thumbnailStoragePath = thumbnailPathFor(storagePath)
   if (!(await storage.exists(thumbnailStoragePath))) {
-    try {
-      const thumbnail = await createThumbnail(bytes)
-      await storage.upload(
-        new Blob([Uint8Array.from(thumbnail)], { type: 'image/webp' }),
-        thumbnailStoragePath,
-      )
-    } catch (error) {
-      console.warn(
-        `Could not generate thumbnail for DiveMate ${category} ${externalId}`,
-        error,
-      )
-      storedThumbnailPath = null
-    }
+    const thumbnail = await createThumbnail(
+      bytes,
+      category === 'certifications' ? 'certification' : 'photo',
+    )
+    await storage.upload(
+      new Blob([Uint8Array.from(thumbnail)], { type: 'image/webp' }),
+      thumbnailStoragePath,
+    )
   }
   return {
     storagePath,
-    thumbnailStoragePath: storedThumbnailPath,
+    thumbnailStoragePath,
     mimeType,
     byteSize: bytes.byteLength,
     checksum: fingerprint,
@@ -311,7 +307,7 @@ async function applySnapshot(
   }
 
   const equipmentIds = new Map<string, string>()
-  for (const item of snapshot.equipment) {
+  for (const item of snapshot.equipment.filter((candidate) => !candidate.isSet)) {
     const existingId = context.canonicalId('equipment', item.externalId, 'equipment')
     if (!context.shouldApply('equipment', item.externalId) && existingId) {
       equipmentIds.set(item.externalId, existingId)
@@ -345,6 +341,43 @@ async function applySnapshot(
     if (row) {
       equipmentIds.set(item.externalId, row.id)
       await context.link('equipment', item.externalId, 'equipment', row.id)
+    }
+  }
+
+  for (const item of snapshot.equipment.filter((candidate) => candidate.isSet)) {
+    const existingId = context.canonicalId(
+      'equipment_set',
+      item.externalId,
+      'equipment_set',
+    )
+    if (!context.shouldApply('equipment_set', item.externalId) && existingId) continue
+    const values = {
+      name: item.name,
+      notes: item.notes,
+      inactive: item.inactive,
+      updatedAt: new Date(),
+    }
+    const [row] = existingId
+      ? await tx
+          .update(equipmentSets)
+          .set(values)
+          .where(eq(equipmentSets.id, existingId))
+          .returning({ id: equipmentSets.id })
+      : await tx.insert(equipmentSets).values(values).returning({ id: equipmentSets.id })
+    if (!row) continue
+    await context.link('equipment_set', item.externalId, 'equipment_set', row.id)
+    await tx.delete(equipmentSetItems).where(eq(equipmentSetItems.equipmentSetId, row.id))
+    const memberIds = item.memberExternalIds
+      .map((externalId) => equipmentIds.get(externalId))
+      .filter((id): id is string => Boolean(id))
+    if (memberIds.length > 0) {
+      await tx.insert(equipmentSetItems).values(
+        [...new Set(memberIds)].map((equipmentId, sortOrder) => ({
+          equipmentSetId: row.id,
+          equipmentId,
+          sortOrder,
+        })),
+      )
     }
   }
 
@@ -534,6 +567,10 @@ async function applySnapshot(
       await tx.delete(diveEquipment).where(inArray(diveEquipment.id, oldEquipmentLinks))
     await context.unlink('dive', item.externalId, ['dive_equipment'])
     const importedEquipmentIds = item.equipmentExternalIds
+      .flatMap((id) => {
+        const source = snapshot.equipment.find((candidate) => candidate.externalId === id)
+        return source?.isSet ? source.memberExternalIds : [id]
+      })
       .map((id) => equipmentIds.get(id))
       .filter((id): id is string => Boolean(id))
     if (importedEquipmentIds.length > 0) {
@@ -616,8 +653,14 @@ async function applySnapshot(
   }
 
   for (const item of snapshot.pictures) {
-    if (!context.shouldApply('picture', item.externalId)) continue
     const stored = storedPictures.get(item.externalId)
+    const existingId = context.canonicalId('picture', item.externalId, 'picture')
+    if (!stored) {
+      if (existingId) await tx.delete(pictures).where(eq(pictures.id, existingId))
+      await context.unlink('picture', item.externalId, ['picture'])
+      continue
+    }
+    if (!context.shouldApply('picture', item.externalId)) continue
     const referenceValues = {
       diveId: item.diveExternalId ? (diveIds.get(item.diveExternalId) ?? null) : null,
       siteId: item.siteExternalId ? (siteIds.get(item.siteExternalId) ?? null) : null,
@@ -633,17 +676,16 @@ async function applySnapshot(
     }
     const values = {
       ...referenceValues,
-      storagePath: stored?.storagePath ?? null,
-      thumbnailStoragePath: stored?.thumbnailStoragePath ?? null,
-      mimeType: stored?.mimeType ?? null,
-      byteSize: stored?.byteSize ?? null,
+      storagePath: stored.storagePath,
+      thumbnailStoragePath: stored.thumbnailStoragePath,
+      mimeType: stored.mimeType,
+      byteSize: stored.byteSize,
       updatedAt: new Date(),
     }
-    const existingId = context.canonicalId('picture', item.externalId, 'picture')
     const [row] = existingId
       ? await tx
           .update(pictures)
-          .set(stored ? values : { ...referenceValues, updatedAt: new Date() })
+          .set(values)
           .where(eq(pictures.id, existingId))
           .returning({ id: pictures.id })
       : await tx.insert(pictures).values(values).returning({ id: pictures.id })
@@ -654,7 +696,8 @@ async function applySnapshot(
     divers: snapshot.divers.length,
     sites: snapshot.sites.length,
     buddies: snapshot.buddies.length,
-    equipment: snapshot.equipment.length,
+    equipment: snapshot.equipment.filter((item) => !item.isSet).length,
+    equipmentSets: snapshot.equipment.filter((item) => item.isSet).length,
     certifications: snapshot.certifications.length,
     certificationScans: [...storedCertificationScans.values()].reduce(
       (count, scans) =>
@@ -748,7 +791,9 @@ function diveMateExternalRecords(
     ...snapshot.divers.map((item) => record('diver', item)),
     ...snapshot.sites.map((item) => record('dive_site', item)),
     ...snapshot.buddies.map((item) => record('buddy', item)),
-    ...snapshot.equipment.map((item) => record('equipment', item)),
+    ...snapshot.equipment.map((item) =>
+      record(item.isSet ? 'equipment_set' : 'equipment', item),
+    ),
     ...snapshot.certifications.map((item) => {
       const scans = storedMedia.certificationScans.get(item.externalId)
       return record(
@@ -783,6 +828,7 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
       'dive_sites',
       'buddies',
       'equipment',
+      'equipment_sets',
       'certifications',
       'shops',
       'dive_types',

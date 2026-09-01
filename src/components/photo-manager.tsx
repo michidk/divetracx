@@ -10,7 +10,7 @@ export function PhotoManager({
   targetId,
   pictures,
 }: {
-  target: 'dive' | 'site'
+  target: 'dive' | 'site' | 'gear'
   targetId: string
   pictures: GalleryPicture[]
 }) {

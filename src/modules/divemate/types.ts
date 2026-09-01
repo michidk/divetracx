@@ -74,6 +74,8 @@ export interface DiveMateEquipment extends DiveMateSourceRecord {
   sourceValue2: string | null
   sourceValue3: number | null
   notes: string | null
+  isSet: boolean
+  memberExternalIds: string[]
 }
 
 export interface DiveMateCertification extends DiveMateSourceRecord {

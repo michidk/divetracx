@@ -774,6 +774,43 @@ export function DiveEditor({
       </EditorSection>
 
       <EditorSection title="Gear">
+        {data.options.equipmentSets.length > 0 ? (
+          <fieldset className="mb-5">
+            <legend className="text-sm font-semibold">Quick-select a gear set</legend>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {data.options.equipmentSets.map((set) => {
+                const selected =
+                  set.equipmentIds.length > 0 &&
+                  set.equipmentIds.every((id) => equipmentIds.has(id))
+                return (
+                  <button
+                    key={set.id}
+                    type="button"
+                    disabled={set.equipmentIds.length === 0 || selected}
+                    aria-pressed={selected}
+                    onClick={() =>
+                      setEquipmentIds((current) => {
+                        const next = new Set(current)
+                        for (const id of set.equipmentIds) next.add(id)
+                        return next
+                      })
+                    }
+                    className={`min-h-10 rounded-xl border px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                      selected
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border bg-background hover:bg-muted'
+                    } ${set.inactive ? 'opacity-60' : ''}`}
+                  >
+                    {set.name} · {set.equipmentIds.length}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Sets select their individual items; the dive keeps its own gear history.
+            </p>
+          </fieldset>
+        ) : null}
         <fieldset>
           <legend className="text-sm font-semibold">Gear used</legend>
           {data.options.equipment.length === 0 ? (

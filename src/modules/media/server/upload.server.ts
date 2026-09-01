@@ -4,8 +4,8 @@ import { createHash } from 'node:crypto'
 import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { getDb } from '@/db'
-import { diveSites, dives, pictures } from '@/db/schema'
-import { createThumbnail } from '@/lib/server/thumbnail.server'
+import { diveSites, dives, equipment, pictures } from '@/db/schema'
+import { createThumbnail, thumbnailPathFor } from '@/lib/server/thumbnail.server'
 import { getStorage } from '@/lib/storage'
 
 const ALLOWED_IMAGE_TYPES: Record<string, string> = {
@@ -17,7 +17,7 @@ const ALLOWED_IMAGE_TYPES: Record<string, string> = {
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 
 const uploadTargetSchema = z.object({
-  target: z.enum(['dive', 'site']),
+  target: z.enum(['dive', 'site', 'gear']),
   id: z.string().uuid(),
 })
 
@@ -25,7 +25,7 @@ function errorResponse(status: number, message: string) {
   return Response.json({ error: message }, { status })
 }
 
-async function targetExists(target: 'dive' | 'site', id: string) {
+async function targetExists(target: 'dive' | 'site' | 'gear', id: string) {
   const db = getDb()
   if (target === 'dive') {
     const [row] = await db
@@ -35,10 +35,11 @@ async function targetExists(target: 'dive' | 'site', id: string) {
       .limit(1)
     return Boolean(row)
   }
+  const table = target === 'site' ? diveSites : equipment
   const [row] = await db
-    .select({ id: diveSites.id })
-    .from(diveSites)
-    .where(eq(diveSites.id, id))
+    .select({ id: table.id })
+    .from(table)
+    .where(eq(table.id, id))
     .limit(1)
   return Boolean(row)
 }
@@ -75,7 +76,12 @@ export async function handlePhotoUpload(request: Request): Promise<Response> {
 
   const db = getDb()
   const storage = getStorage()
-  const targetColumn = target === 'dive' ? pictures.diveId : pictures.siteId
+  const targetColumn =
+    target === 'dive'
+      ? pictures.diveId
+      : target === 'site'
+        ? pictures.siteId
+        : pictures.equipmentId
   const [sort] = await db
     .select({ next: sql<number>`coalesce(max(${pictures.sortOrder}), 0) + 1` })
     .from(pictures)
@@ -90,9 +96,9 @@ export async function handlePhotoUpload(request: Request): Promise<Response> {
     const extension = ALLOWED_IMAGE_TYPES[file.type]
     const basePath = `uploads/${target}s/${id}/${hash}`
     const storagePath = `${basePath}.${extension}`
-    const thumbnailStoragePath = `${basePath}.thumb.webp`
+    const thumbnailStoragePath = thumbnailPathFor(storagePath)
 
-    const thumbnail = await createThumbnail(bytes)
+    const thumbnail = await createThumbnail(bytes, 'photo')
     await storage.upload(new Blob([arrayBuffer], { type: file.type }), storagePath)
     await storage.upload(
       new Blob([new Uint8Array(thumbnail).buffer], { type: 'image/webp' }),
@@ -103,6 +109,7 @@ export async function handlePhotoUpload(request: Request): Promise<Response> {
       kind: 'photo',
       diveId: target === 'dive' ? id : null,
       siteId: target === 'site' ? id : null,
+      equipmentId: target === 'gear' ? id : null,
       path: file.name || storagePath,
       storagePath,
       thumbnailStoragePath,
