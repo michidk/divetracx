@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <title>Divetracx</title>
   <defs>
-    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="depth" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#0d9aa8"/>
       <stop offset="1" stop-color="#065059"/>
     </linearGradient>
   </defs>
-  <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#sea)"/>
-  <path d="M12 20 24 45h13l9-15" fill="none" stroke="#f5ffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="49" cy="25" r="6" fill="#f5ffff"/>
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#depth)"/>
+  <path d="M28 35H36L35 46L32 56L28 59L30 47Z" fill="#f5ffff"/>
+  <path d="M32 21L27 14L21 20L7 17L12 30L23 42L29 39L32 34L35 39L41 42L52 30L57 17L43 20L37 14Z" fill="#f5ffff"/>
 </svg>

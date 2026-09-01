@@ -20,15 +20,10 @@ const navigation = [
 function LogoMark({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <path
-        d="M8 16 22 46h15l10-17"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="50" cy="22" r="7" fill="currentColor" />
+      <g transform="translate(32 32) scale(1.15) translate(-32 -36.5)" fill="currentColor">
+        <path d="M28 35H36L35 46L32 56L28 59L30 47Z" />
+        <path d="M32 21L27 14L21 20L7 17L12 30L23 42L29 39L32 34L35 39L41 42L52 30L57 17L43 20L37 14Z" />
+      </g>
     </svg>
   )
 }
