@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
 import { EntityForm } from '@/components/entity-form'
+import { renderSiteCoordinatesExtra } from '../-components/site-coordinates-extra'
 
 export const Route = createFileRoute('/sites/new/')({
   head: () => ({ meta: [{ title: 'New dive site · Divetracx' }] }),
@@ -24,6 +25,7 @@ function NewSiteRoute() {
         entity="sites"
         recordId="new"
         record={null}
+        renderSectionExtra={renderSiteCoordinatesExtra}
         onSaved={(id) =>
           router.navigate({ to: '/sites/$siteId', params: { siteId: id } })
         }

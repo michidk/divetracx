@@ -22,6 +22,7 @@ import { Route as ApiExportCsvRouteImport } from './routes/api/export/csv'
 import { Route as ApiExportDivemateRouteImport } from './routes/api/export/divemate'
 import { Route as ApiExportJsonRouteImport } from './routes/api/export/json'
 import { Route as ApiExportUddfRouteImport } from './routes/api/export/uddf'
+import { Route as ApiMediaUploadRouteImport } from './routes/api/media/upload'
 import { Route as BuddiesBuddyIdIndexRouteImport } from './routes/buddies/$buddyId/index'
 import { Route as BuddiesNewIndexRouteImport } from './routes/buddies/new/index'
 import { Route as DivesDiveIdIndexRouteImport } from './routes/dives/$diveId/index'
@@ -99,6 +100,11 @@ const ApiExportJsonRoute = ApiExportJsonRouteImport.update({
 const ApiExportUddfRoute = ApiExportUddfRouteImport.update({
   id: '/api/export/uddf',
   path: '/api/export/uddf',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMediaUploadRoute = ApiMediaUploadRouteImport.update({
+  id: '/api/media/upload',
+  path: '/api/media/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BuddiesBuddyIdIndexRoute = BuddiesBuddyIdIndexRouteImport.update({
@@ -182,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/api/export/divemate': typeof ApiExportDivemateRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
+  '/api/media/upload': typeof ApiMediaUploadRoute
   '/buddies/$buddyId/': typeof BuddiesBuddyIdIndexRoute
   '/buddies/new/': typeof BuddiesNewIndexRoute
   '/dives/$diveId/': typeof DivesDiveIdIndexRoute
@@ -210,6 +217,7 @@ export interface FileRoutesByTo {
   '/api/export/divemate': typeof ApiExportDivemateRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
+  '/api/media/upload': typeof ApiMediaUploadRoute
   '/buddies/$buddyId': typeof BuddiesBuddyIdIndexRoute
   '/buddies/new': typeof BuddiesNewIndexRoute
   '/dives/$diveId': typeof DivesDiveIdIndexRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/api/export/divemate': typeof ApiExportDivemateRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
+  '/api/media/upload': typeof ApiMediaUploadRoute
   '/buddies/$buddyId/': typeof BuddiesBuddyIdIndexRoute
   '/buddies/new/': typeof BuddiesNewIndexRoute
   '/dives/$diveId/': typeof DivesDiveIdIndexRoute
@@ -269,6 +278,7 @@ export interface FileRouteTypes {
     | '/api/export/divemate'
     | '/api/export/json'
     | '/api/export/uddf'
+    | '/api/media/upload'
     | '/buddies/$buddyId/'
     | '/buddies/new/'
     | '/dives/$diveId/'
@@ -297,6 +307,7 @@ export interface FileRouteTypes {
     | '/api/export/divemate'
     | '/api/export/json'
     | '/api/export/uddf'
+    | '/api/media/upload'
     | '/buddies/$buddyId'
     | '/buddies/new'
     | '/dives/$diveId'
@@ -325,6 +336,7 @@ export interface FileRouteTypes {
     | '/api/export/divemate'
     | '/api/export/json'
     | '/api/export/uddf'
+    | '/api/media/upload'
     | '/buddies/$buddyId/'
     | '/buddies/new/'
     | '/dives/$diveId/'
@@ -354,6 +366,7 @@ export interface RootRouteChildren {
   ApiExportDivemateRoute: typeof ApiExportDivemateRoute
   ApiExportJsonRoute: typeof ApiExportJsonRoute
   ApiExportUddfRoute: typeof ApiExportUddfRoute
+  ApiMediaUploadRoute: typeof ApiMediaUploadRoute
   BuddiesBuddyIdIndexRoute: typeof BuddiesBuddyIdIndexRoute
   BuddiesNewIndexRoute: typeof BuddiesNewIndexRoute
   DivesDiveIdIndexRoute: typeof DivesDiveIdIndexRoute
@@ -460,6 +473,13 @@ declare module '@tanstack/react-router' {
       path: '/api/export/uddf'
       fullPath: '/api/export/uddf'
       preLoaderRoute: typeof ApiExportUddfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/media/upload': {
+      id: '/api/media/upload'
+      path: '/api/media/upload'
+      fullPath: '/api/media/upload'
+      preLoaderRoute: typeof ApiMediaUploadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/buddies/$buddyId/': {
@@ -570,6 +590,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExportDivemateRoute: ApiExportDivemateRoute,
   ApiExportJsonRoute: ApiExportJsonRoute,
   ApiExportUddfRoute: ApiExportUddfRoute,
+  ApiMediaUploadRoute: ApiMediaUploadRoute,
   BuddiesBuddyIdIndexRoute: BuddiesBuddyIdIndexRoute,
   BuddiesNewIndexRoute: BuddiesNewIndexRoute,
   DivesDiveIdIndexRoute: DivesDiveIdIndexRoute,

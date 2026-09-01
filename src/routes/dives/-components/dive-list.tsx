@@ -1,6 +1,6 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { ChevronRight, Plus, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import {
   formatDiveDate,
@@ -16,24 +16,22 @@ function mediaUrl(path: string) {
   return `/media/${path.split('/').map(encodeURIComponent).join('/')}`
 }
 
-function matchesSearch(dive: DiveListData[number], search: string) {
-  const query = search.trim().toLowerCase()
-  if (!query) return true
-  return [
-    dive.siteName,
-    dive.country,
-    dive.diveDate,
-    dive.number === null ? null : `#${dive.number}`,
-    dive.number === null ? null : String(dive.number),
-  ].some((value) => value?.toLowerCase().includes(query))
-}
+export function DiveList({ list, search }: { list: DiveListData; search: string }) {
+  const navigate = useNavigate()
+  const [query, setQuery] = useState(search)
 
-export function DiveList({ dives }: { dives: DiveListData }) {
-  const [search, setSearch] = useState('')
-  const filteredDives = useMemo(
-    () => dives.filter((dive) => matchesSearch(dive, search)),
-    [dives, search],
-  )
+  // Debounce typing into the URL so the server search runs per pause, not per key.
+  useEffect(() => {
+    if (query === search) return
+    const handle = setTimeout(() => {
+      void navigate({
+        to: '/dives',
+        search: { q: query || undefined },
+        replace: true,
+      })
+    }, 350)
+    return () => clearTimeout(handle)
+  }, [query, search, navigate])
 
   return (
     <div className="space-y-7">
@@ -44,7 +42,9 @@ export function DiveList({ dives }: { dives: DiveListData }) {
           </p>
           <h1 className="mt-2 text-4xl font-semibold tracking-tight">Dives</h1>
           <p className="mt-3 text-muted-foreground">
-            Your latest {dives.length} recorded dives.
+            {search
+              ? `${list.total.toLocaleString()} ${list.total === 1 ? 'dive matches' : 'dives match'} “${search}”.`
+              : `${list.total.toLocaleString()} recorded dives.`}
           </p>
         </div>
         <Link
@@ -65,8 +65,8 @@ export function DiveList({ dives }: { dives: DiveListData }) {
         <Input
           id="dive-search"
           type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
           placeholder="Search by site, country, dive number, or date…"
           className="min-h-12 bg-card pl-11 pr-4 shadow-sm"
         />
@@ -83,7 +83,7 @@ export function DiveList({ dives }: { dives: DiveListData }) {
           <span className="text-right">Water</span>
           <span />
         </div>
-        {filteredDives.map((dive) => (
+        {list.records.map((dive) => (
           <Link
             key={dive.id}
             to="/dives/$diveId"
@@ -138,14 +138,44 @@ export function DiveList({ dives }: { dives: DiveListData }) {
             />
           </Link>
         ))}
-        {filteredDives.length === 0 ? (
+        {list.records.length === 0 ? (
           <p className="p-10 text-center text-sm text-muted-foreground">
-            {dives.length === 0
-              ? 'No dives yet. Log your first dive or import a logbook in Settings.'
-              : 'No dives match this search.'}
+            {search
+              ? 'No dives match this search.'
+              : 'No dives yet. Log your first dive or import a logbook in Settings.'}
           </p>
         ) : null}
       </div>
+
+      {list.pageCount > 1 ? (
+        <nav aria-label="Dive pages" className="flex items-center justify-between gap-4">
+          {list.page > 1 ? (
+            <Link
+              to="/dives"
+              search={{ q: search || undefined, page: list.page - 1 }}
+              className="inline-flex min-h-11 items-center rounded-xl border border-border px-4 text-sm font-semibold transition hover:bg-muted"
+            >
+              Previous
+            </Link>
+          ) : (
+            <span />
+          )}
+          <p className="text-sm text-muted-foreground">
+            Page {list.page.toLocaleString()} of {list.pageCount.toLocaleString()}
+          </p>
+          {list.page < list.pageCount ? (
+            <Link
+              to="/dives"
+              search={{ q: search || undefined, page: list.page + 1 }}
+              className="inline-flex min-h-11 items-center rounded-xl border border-border px-4 text-sm font-semibold transition hover:bg-muted"
+            >
+              Next
+            </Link>
+          ) : (
+            <span />
+          )}
+        </nav>
+      ) : null}
     </div>
   )
 }

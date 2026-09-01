@@ -75,9 +75,30 @@ export async function loadDashboard() {
   }
 }
 
-export async function loadDives() {
+const DIVES_PAGE_SIZE = 50
+
+export async function loadDives(search: string, requestedPage: number) {
   const db = getDb()
-  return db
+  const query = search.trim()
+  const filter = query
+    ? sql`(
+        ${diveSites.name} ilike ${`%${query}%`}
+        or ${diveSites.country} ilike ${`%${query}%`}
+        or ${dives.diveDate}::text ilike ${`%${query}%`}
+        or ${dives.number}::text = ${query.replace(/^#/, '')}
+      )`
+    : sql`true`
+
+  const [totals] = await db
+    .select({ total: count() })
+    .from(dives)
+    .leftJoin(diveSites, sql`${dives.siteId} = ${diveSites.id}`)
+    .where(filter)
+  const total = totals?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / DIVES_PAGE_SIZE))
+  const page = Math.min(Math.max(1, requestedPage), pageCount)
+
+  const records = await db
     .select({
       id: dives.id,
       number: dives.number,
@@ -101,8 +122,12 @@ export async function loadDives() {
     })
     .from(dives)
     .leftJoin(diveSites, sql`${dives.siteId} = ${diveSites.id}`)
+    .where(filter)
     .orderBy(desc(dives.diveDate), desc(dives.entryTime))
-    .limit(250)
+    .limit(DIVES_PAGE_SIZE)
+    .offset((page - 1) * DIVES_PAGE_SIZE)
+
+  return { records, total, page, pageCount, pageSize: DIVES_PAGE_SIZE }
 }
 
 export async function loadDiveSiteMap() {

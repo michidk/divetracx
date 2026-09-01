@@ -95,11 +95,13 @@ CSV, and UDDF 3.2.3. All are generated from canonical data and returned with
 private, non-cached download headers. Exports may contain personal, health, and
 location data.
 
-The app is organized around the diver's workflow: **Dives** (the logbook, with
-an editor that manages tanks, buddies, gear, dive type, and shop inline),
-**Sites** and **Map**, **Buddies**, **Gear**, and **Profile** (personal details,
-emergency contacts, and certifications). Dive types and shops are created
-directly from the dive editor; recorded dive profiles are view-only. Import
+The app is organized around the diver's workflow: **Dives** (the searchable
+logbook, with an editor that manages tanks, buddies, gear, dive type, and shop
+inline), **Sites** and **Map** (with a click-to-pin coordinate picker),
+**Buddies**, **Gear**, and **Profile** (personal details, emergency contacts,
+and certifications). Dive types and shops are created directly from the dive
+editor, photos can be uploaded to dives and sites, and Settings offers a
+chronological renumbering action. Recorded dive profiles are view-only. Import
 history and external provenance remain read-only.
 
 ## Helm and scheduled imports

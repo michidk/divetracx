@@ -5,7 +5,14 @@ import { loadDashboard, loadDive, loadDiveSiteMap, loadDives } from './queries.s
 
 export const getDashboard = createServerFn({ method: 'GET' }).handler(loadDashboard)
 
-export const getDives = createServerFn({ method: 'GET' }).handler(loadDives)
+export const getDives = createServerFn({ method: 'GET' })
+  .validator(
+    z.object({
+      search: z.string().max(200).default(''),
+      page: z.number().int().min(1).default(1),
+    }),
+  )
+  .handler(({ data }) => loadDives(data.search, data.page))
 
 export const getDiveSiteMap = createServerFn({ method: 'GET' }).handler(loadDiveSiteMap)
 

@@ -1,9 +1,17 @@
 import '@tanstack/react-start/server-only'
 
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { getDb } from '@/db'
-import { buddies, certifications, divers, diveSites, equipment } from '@/db/schema'
+import {
+  buddies,
+  certifications,
+  divers,
+  diveSites,
+  equipment,
+  externalRecordLinks,
+} from '@/db/schema'
+import { getStorage } from '@/lib/storage'
 import type { EditorValues, EntityKey } from '../entities'
 
 const uuidSchema = z.string().uuid()
@@ -92,6 +100,7 @@ async function saveSite(id: string, values: EditorValues) {
     altitudeMeters: optionalInteger(values, 'altitudeMeters'),
     difficulty: optionalText(values, 'difficulty'),
     rating: optionalInteger(values, 'rating', { min: 1, max: 5 }),
+    waterType: optionalInteger(values, 'waterType', { min: 0 }),
     notes: optionalText(values, 'notes'),
     updatedAt: new Date(),
   }
@@ -221,6 +230,63 @@ async function saveCertification(id: string, values: EditorValues) {
           .returning({ id: certifications.id })
   if (!row) throw new Error('Certification was not found')
   return row.id
+}
+
+export type DeletableEntityKey = Exclude<EntityKey, 'divers'>
+
+const deletableEntities: Record<
+  DeletableEntityKey,
+  {
+    table: typeof diveSites | typeof buddies | typeof equipment | typeof certifications
+    canonicalType: string
+  }
+> = {
+  sites: { table: diveSites, canonicalType: 'dive_site' },
+  buddies: { table: buddies, canonicalType: 'buddy' },
+  equipment: { table: equipment, canonicalType: 'equipment' },
+  certifications: { table: certifications, canonicalType: 'certification' },
+}
+
+export async function deleteDataRecord(entity: DeletableEntityKey, id: string) {
+  const { table, canonicalType } = deletableEntities[entity]
+  const targetId = recordId(id)
+
+  // Certification card scans live in object storage; clean them up best-effort.
+  let scanPaths: string[] = []
+  if (entity === 'certifications') {
+    const [row] = await getDb()
+      .select({
+        scan1: certifications.scan1StoragePath,
+        scan1Thumbnail: certifications.scan1ThumbnailStoragePath,
+        scan2: certifications.scan2StoragePath,
+        scan2Thumbnail: certifications.scan2ThumbnailStoragePath,
+      })
+      .from(certifications)
+      .where(eq(certifications.id, targetId))
+      .limit(1)
+    scanPaths = [row?.scan1, row?.scan1Thumbnail, row?.scan2, row?.scan2Thumbnail].filter(
+      (path): path is string => Boolean(path),
+    )
+  }
+
+  await getDb().transaction(async (transaction) => {
+    await transaction
+      .delete(externalRecordLinks)
+      .where(
+        and(
+          eq(externalRecordLinks.canonicalEntityType, canonicalType),
+          eq(externalRecordLinks.canonicalEntityId, targetId),
+        ),
+      )
+    const [row] = await transaction
+      .delete(table)
+      .where(eq(table.id, targetId))
+      .returning({ id: table.id })
+    if (!row) throw new Error('The record was not found')
+  })
+
+  const storage = getStorage()
+  await Promise.allSettled(scanPaths.map((path) => storage.delete(path)))
 }
 
 export async function saveDataRecord(

@@ -1,5 +1,6 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Waves } from 'lucide-react'
+import { DeleteRecordButton } from '@/components/delete-record-button'
 import { DiveLinkList } from '@/components/dive-link-list'
 import { EntityForm } from '@/components/entity-form'
 import { Badge } from '@/components/ui/badge'
@@ -9,6 +10,7 @@ import { formatDiveDate, formatPersonName } from '@/modules/dives/format'
 type BuddyDetail = NonNullable<Awaited<ReturnType<typeof getBuddy>>>
 
 export function BuddyPage({ detail }: { detail: BuddyDetail }) {
+  const navigate = useNavigate()
   const { buddy, dives } = detail
   const lastDive = dives[0]
 
@@ -55,6 +57,15 @@ export function BuddyPage({ detail }: { detail: BuddyDetail }) {
             Buddy details
           </h2>
           <EntityForm entity="buddies" recordId={buddy.id} record={buddy} />
+          <div className="mt-4">
+            <DeleteRecordButton
+              entity="buddies"
+              recordId={buddy.id}
+              label="Delete buddy"
+              confirmText={`Delete ${formatPersonName(buddy)}? They will be removed from ${dives.length} dives. A future full import may restore them.`}
+              onDeleted={() => navigate({ to: '/buddies' })}
+            />
+          </div>
         </div>
       </div>
     </div>

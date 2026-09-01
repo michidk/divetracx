@@ -1,15 +1,18 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Navigation, Star, Waves } from 'lucide-react'
+import { DeleteRecordButton } from '@/components/delete-record-button'
 import { DiveLinkList } from '@/components/dive-link-list'
 import { EntityForm } from '@/components/entity-form'
-import { PictureGallery } from '@/components/picture-gallery'
+import { PhotoManager } from '@/components/photo-manager'
 import { Badge } from '@/components/ui/badge'
 import { formatDiveDate, formatMeters } from '@/modules/dives/format'
 import type { getSite } from '@/modules/sites/server/queries'
+import { renderSiteCoordinatesExtra } from '../../-components/site-coordinates-extra'
 
 type SiteDetail = NonNullable<Awaited<ReturnType<typeof getSite>>>
 
 export function SitePage({ detail }: { detail: SiteDetail }) {
+  const navigate = useNavigate()
   const { site, dives, pictures } = detail
   const location = [site.waterName, site.region, site.country].filter(Boolean).join(' · ')
   const deepest = dives.reduce<string | null>((max, dive) => {
@@ -76,19 +79,31 @@ export function SitePage({ detail }: { detail: SiteDetail }) {
             <DiveLinkList dives={dives} emptyText="No dives logged here yet." />
           </section>
 
-          {pictures.length > 0 ? (
-            <section className="rounded-2xl border border-border bg-card p-6">
-              <h2 className="font-semibold">Photos</h2>
-              <PictureGallery pictures={pictures} />
-            </section>
-          ) : null}
+          <section className="rounded-2xl border border-border bg-card p-6">
+            <h2 className="font-semibold">Photos</h2>
+            <PhotoManager target="site" targetId={site.id} pictures={pictures} />
+          </section>
         </div>
 
         <div>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Site details
           </h2>
-          <EntityForm entity="sites" recordId={site.id} record={site} />
+          <EntityForm
+            entity="sites"
+            recordId={site.id}
+            record={site}
+            renderSectionExtra={renderSiteCoordinatesExtra}
+          />
+          <div className="mt-4">
+            <DeleteRecordButton
+              entity="sites"
+              recordId={site.id}
+              label="Delete site"
+              confirmText={`Delete “${site.name}”? Its ${dives.length} logged dives stay in the logbook without a site. A future full import may restore it.`}
+              onDeleted={() => navigate({ to: '/sites' })}
+            />
+          </div>
         </div>
       </div>
     </div>
