@@ -1,6 +1,6 @@
 import '@tanstack/react-start/server-only'
 
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { getServerEnv } from '@/env'
@@ -278,7 +278,7 @@ export async function writeBackDiveMate(): Promise<DiveMateWriteBackResult> {
     })()
     database.exec('PRAGMA wal_checkpoint(TRUNCATE)')
     database.close()
-    const bytes = new Uint8Array(await Bun.file(path).arrayBuffer())
+    const bytes = new Uint8Array(await readFile(path))
     await drive.replaceDatabase(bytes)
     return { updatedRecords, skippedLocalRecords, driveFileId: drive.databaseFile.id }
   } finally {
