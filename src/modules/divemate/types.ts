@@ -103,6 +103,7 @@ export interface DiveMateDiveType extends DiveMateSourceRecord {
 }
 
 export interface DiveMateDive extends DiveMateSourceRecord {
+  captureSource: 'manual' | 'computer'
   diverExternalId: string | null
   siteExternalId: string | null
   shopExternalId: string | null

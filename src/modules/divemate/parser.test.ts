@@ -101,7 +101,8 @@ describe('parseDiveMateDatabase', () => {
         Divesuit TEXT, Boat TEXT, Divemaster TEXT, Comments TEXT,
         UUID TEXT, Updated TEXT, ProfileInt INTEGER, Profile TEXT,
         Profile2 TEXT, Profile3 TEXT, Profile4 TEXT, MaxPPO2 REAL,
-        EquipWeight REAL, Deco INTEGER, Buddy TEXT, Profile10 TEXT
+        EquipWeight REAL, Deco INTEGER, Buddy TEXT, Profile10 TEXT,
+        Status INTEGER
       );
       INSERT INTO Logbook VALUES (
         11, 1, 7, 2, 5, '4', '9', 42, '2026-07-26', '14:29:00',
@@ -112,7 +113,7 @@ describe('parseDiveMateDatabase', () => {
         '220200000002151500100020000001000',
         '199520000000001950150000000019001450000000',
         '000099000010002003005001006', 1.31, 12.4, 1, 'Legacy Buddy',
-        'must not be stored'
+        'must not be stored', 1
       );
       CREATE TABLE Tank (
         ID INTEGER, LogID INTEGER, TankID INTEGER, Name TEXT, SortOrd INTEGER, Tanktype INTEGER,
@@ -155,6 +156,7 @@ describe('parseDiveMateDatabase', () => {
       siteExternalId: '7',
       buddyExternalIds: ['4'],
       equipmentExternalIds: ['9'],
+      captureSource: 'computer',
       diveDate: '2026-07-26',
       entryTime: '14:29:00',
       durationSeconds: 2910,
@@ -314,5 +316,31 @@ describe('parseDiveMateDatabase', () => {
 
     expect(snapshot.dives).toHaveLength(2)
     expect(snapshot.profileSamples).toEqual([])
+  })
+
+  test('ignores discarded status 2 dives and their profiles', async () => {
+    const { database, path } = fixtureDatabase()
+    database.exec(`
+      CREATE TABLE Logbook (
+        ID INTEGER, Divedate TEXT, Status INTEGER, ProfileInt INTEGER, Profile TEXT
+      );
+      INSERT INTO Logbook VALUES (1, '2026-01-01', 2, 10, '001000000000');
+      INSERT INTO Logbook VALUES (2, '2026-01-02', 0, 10, NULL);
+      INSERT INTO Logbook VALUES (3, '2026-01-03', 1, 10, '001000000000');
+    `)
+    database.close()
+
+    const snapshot = await parseDiveMateDatabase(path)
+
+    expect(
+      snapshot.dives.map(({ externalId, captureSource }) => ({
+        externalId,
+        captureSource,
+      })),
+    ).toEqual([
+      { externalId: '2', captureSource: 'manual' },
+      { externalId: '3', captureSource: 'computer' },
+    ])
+    expect(snapshot.profileSamples.map((sample) => sample.diveExternalId)).toEqual(['3'])
   })
 })

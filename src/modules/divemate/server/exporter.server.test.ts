@@ -77,6 +77,7 @@ describe('canonical DiveMate export', () => {
         dives: [
           {
             id: '22222222-2222-2222-2222-222222222222',
+            captureSource: 'computer' as const,
             diverId: null,
             siteId: '11111111-1111-1111-1111-111111111111',
             shopId: null,

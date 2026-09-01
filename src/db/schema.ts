@@ -20,6 +20,8 @@ const auditColumns = {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }
 
+export const diveCaptureSource = pgEnum('dive_capture_source', ['manual', 'computer'])
+
 export const divers = pgTable('divers', {
   id: uuid('id').primaryKey().defaultRandom(),
   firstName: text('first_name'),
@@ -156,6 +158,7 @@ export const dives = pgTable(
     diveTypeId: uuid('dive_type_id').references(() => diveTypes.id, {
       onDelete: 'set null',
     }),
+    captureSource: diveCaptureSource('capture_source').notNull().default('manual'),
     number: integer('number'),
     diveDate: date('dive_date').notNull(),
     entryTime: time('entry_time'),

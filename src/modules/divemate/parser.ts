@@ -308,9 +308,11 @@ function mapDiveType(row: SourceRow): DiveMateDiveType | null {
 function mapDive(row: SourceRow): DiveMateDive | null {
   const source = sourceRecord(row)
   const diveDate = date(row.Divedate)
-  if (!source || !diveDate) return null
+  const status = integer(row.Status)
+  if (!source || !diveDate || status === 2) return null
   return {
     ...source,
+    captureSource: status === 1 ? 'computer' : 'manual',
     diverExternalId: externalId(row.DiverID),
     siteExternalId: externalId(row.PlaceID),
     shopExternalId: externalId(row.ShopID),
@@ -425,6 +427,7 @@ function fixedWidthSamples(value: unknown, width: number): string[] {
 }
 
 function mapProfileSamples(row: SourceRow): DiveMateProfileSample[] {
+  if (integer(row.Status) === 2) return []
   const diveExternalId = externalId(row.ID)
   const profileIntervalSeconds = integer(row.ProfileInt)
   const profileSamples = fixedWidthSamples(row.Profile, PROFILE_SAMPLE_WIDTH)
