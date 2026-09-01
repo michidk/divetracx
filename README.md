@@ -68,7 +68,10 @@ DiveMate export is a separate one-off operation. The configured `.ddb` is used
 only as a proprietary schema template; supported tables and fixed-width profile
 fields are rebuilt from canonical data. Garmin-imported and locally created
 dives can therefore be exported to DiveMate. Unsupported source-only fields are
-omitted predictably. Import does not automatically write anything back.
+omitted predictably. The generated backup can be downloaded or explicitly
+published to the configured Google Drive file from the Integrations page. Drive
+publishing requires confirmation, retains the previous file revision, and is
+never triggered automatically by an import or schedule.
 
 ## Garmin
 

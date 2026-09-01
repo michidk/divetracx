@@ -7,9 +7,14 @@ import {
   RefreshCw,
   ScrollText,
   ShieldAlert,
+  UploadCloud,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import {
+  loadDiveMateWriteBackStatus,
+  runDiveMateWriteBack,
+} from '@/modules/divemate/server/writeback'
 import type { getIntegrationStatus } from '@/modules/integrations/server/operations'
 import {
   runFullImport,
@@ -83,6 +88,56 @@ export function SyncPage({ integrations }: { integrations: Integrations }) {
     }
   }
 
+  async function exportDiveMateToDrive() {
+    if (
+      !window.confirm(
+        'Replace DiveMate.ddb in the configured Google Drive folder with a fresh export of the current canonical Divetracx logbook? This is a one-off manual action. Google Drive will retain the previous file revision.',
+      )
+    ) {
+      return
+    }
+
+    const key = 'divemate'
+    setRunning(`${key}:drive-export`)
+    setMessages((current) => ({ ...current, [key]: '' }))
+    try {
+      let status = await runDiveMateWriteBack()
+      const labels = {
+        'reading-drive': 'Reading the DiveMate schema from Google Drive…',
+        'reading-divetracx': 'Reading canonical Divetracx records…',
+        'updating-database': 'Building the canonical DiveMate database…',
+        'uploading-drive': 'Uploading DiveMate.ddb to Google Drive…',
+      }
+      while (status.state === 'running') {
+        setMessages((current) => ({ ...current, [key]: labels[status.stage] }))
+        await new Promise((resolve) => window.setTimeout(resolve, 1_000))
+        const latest = await loadDiveMateWriteBackStatus()
+        if (!latest || latest.id !== status.id) {
+          throw new Error('DiveMate Drive export status was lost')
+        }
+        status = latest
+      }
+      if (status.state === 'failed') {
+        throw new Error(status.error ?? 'DiveMate Drive export failed')
+      }
+      const result = status.result
+      if (!result) {
+        throw new Error('DiveMate Drive export finished without a result')
+      }
+      setMessages((current) => ({
+        ...current,
+        [key]: `Exported ${result.updatedRecords} canonical records to DiveMate.ddb. Google Drive retained the previous file revision.`,
+      }))
+    } catch (error) {
+      setMessages((current) => ({
+        ...current,
+        [key]: error instanceof Error ? error.message : 'DiveMate Drive export failed',
+      }))
+    } finally {
+      setRunning(null)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-5xl space-y-7">
       <header>
@@ -92,7 +147,7 @@ export function SyncPage({ integrations }: { integrations: Integrations }) {
         <h1 className="mt-2 text-4xl font-semibold tracking-tight">Integrations</h1>
         <p className="mt-3 max-w-3xl leading-7 text-muted-foreground">
           External applications feed your canonical Divetracx logbook. Incremental imports
-          are one-way and idempotent; exports are separate manual downloads.
+          are one-way and idempotent; exports are separate, explicit manual actions.
         </p>
         <Link
           to="/settings/sync/logs"
@@ -121,6 +176,7 @@ export function SyncPage({ integrations }: { integrations: Integrations }) {
           const key = integration.descriptor.key
           const incrementalRunning = running === `${key}:incremental`
           const fullRunning = running === `${key}:full`
+          const driveExportRunning = running === `${key}:drive-export`
           return (
             <article key={key} className="rounded-2xl border border-border bg-card p-6">
               <div className="flex items-start justify-between gap-4">
@@ -180,6 +236,21 @@ export function SyncPage({ integrations }: { integrations: Integrations }) {
                   >
                     <Download size={16} aria-hidden="true" /> Export
                   </a>
+                ) : null}
+                {key === 'divemate' && integration.descriptor.capabilities.export ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!integration.configured.export || running !== null}
+                    onClick={() => void exportDiveMateToDrive()}
+                  >
+                    <UploadCloud
+                      className={driveExportRunning ? 'animate-pulse' : ''}
+                      size={16}
+                      aria-hidden="true"
+                    />
+                    {driveExportRunning ? 'Exporting to Drive…' : 'Export to Drive'}
+                  </Button>
                 ) : null}
               </div>
 
