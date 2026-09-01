@@ -7,3 +7,7 @@ node_modules
 *.local
 /logs/
 .artifacts/
+.secrets/
+/backups/
+/recovered-images/
+/uploads/

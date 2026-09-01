@@ -13,6 +13,7 @@ import {
   UserRound,
   Waves,
 } from 'lucide-react'
+import { PictureGallery } from '@/components/picture-gallery'
 import {
   formatDiveDate,
   formatDuration,
@@ -298,27 +299,29 @@ export function DivePage({ dive }: { dive: DiveData }) {
             </section>
           ) : null}
 
-          {dive.pictures.length > 0 ? (
+          {dive.photos.length > 0 ? (
             <section className="rounded-2xl border border-border bg-card p-6 md:p-8">
               <div className="flex items-center gap-3">
                 <ImageIcon className="text-primary" size={21} aria-hidden="true" />
-                <h2 className="text-xl font-semibold">Picture references</h2>
+                <h2 className="text-xl font-semibold">Photos</h2>
               </div>
               <p className="mt-3 text-sm text-muted-foreground">
-                The DiveMate backup contains device paths but no image bytes.
+                Imported from DiveMate. Original device paths are retained for export.
               </p>
-              <ul className="mt-5 divide-y divide-border">
-                {dive.pictures.map((picture) => (
-                  <li key={picture.id} className="py-3 first:pt-0 last:pb-0">
-                    <p className="text-sm font-medium">
-                      {picture.description || picture.path.split('/').at(-1)}
-                    </p>
-                    <code className="mt-1 block break-all text-xs text-muted-foreground">
-                      {picture.path}
-                    </code>
-                  </li>
-                ))}
-              </ul>
+              <PictureGallery pictures={dive.photos} />
+            </section>
+          ) : null}
+
+          {dive.signatures.length > 0 ? (
+            <section className="rounded-2xl border border-border bg-card p-6 md:p-8">
+              <div className="flex items-center gap-3">
+                <ImageIcon className="text-primary" size={21} aria-hidden="true" />
+                <h2 className="text-xl font-semibold">Signatures</h2>
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Dive verification signatures imported from DiveMate.
+              </p>
+              <PictureGallery pictures={dive.signatures} />
             </section>
           ) : null}
 

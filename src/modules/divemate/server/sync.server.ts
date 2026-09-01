@@ -23,8 +23,12 @@ import {
   tanks,
 } from '@/db/schema'
 import { getServerEnv } from '@/env'
+import { createThumbnail } from '@/lib/server/thumbnail.server'
+import { getStorage } from '@/lib/storage'
+import type { StorageProvider } from '@/lib/storage/types'
 import { parseDiveMateDatabase } from '../parser'
 import type { DiveMateSnapshot, DiveMateSourceRecord } from '../types'
+import { findDriveFile, openGoogleDriveBackup } from './google-drive.server'
 
 const SOURCE_KEY = 'divemate'
 
@@ -41,53 +45,15 @@ export interface DiveMateSyncOptions {
   trigger?: DiveMateSyncTrigger
 }
 
-function directDownloadUrl(configuredUrl: string): string {
-  const match = configuredUrl.match(/\/file\/d\/([A-Za-z0-9_-]+)/)
-  if (match?.[1]) {
-    return `https://drive.google.com/uc?export=download&id=${match[1]}`
-  }
-  return configuredUrl
-}
-
-async function downloadBackup(url: string, maximumBytes: number) {
-  const response = await fetch(directDownloadUrl(url), {
-    redirect: 'follow',
-    signal: AbortSignal.timeout(60_000),
-  })
-  if (!response.ok) {
-    throw new Error(`DiveMate backup download failed with HTTP ${response.status}`)
-  }
-
-  const declaredLength = Number(response.headers.get('content-length'))
-  if (Number.isFinite(declaredLength) && declaredLength > maximumBytes) {
-    throw new Error(`DiveMate backup exceeds the ${maximumBytes} byte limit`)
-  }
-  if (!response.body) throw new Error('DiveMate backup response had no body')
-
-  const reader = response.body.getReader()
-  const chunks: Uint8Array[] = []
-  let totalBytes = 0
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    totalBytes += value.byteLength
-    if (totalBytes > maximumBytes) {
-      await reader.cancel()
-      throw new Error(`DiveMate backup exceeds the ${maximumBytes} byte limit`)
+interface ExternalImages {
+  pictures: Map<string, { bytes: Uint8Array; mimeType: string }>
+  certificationScans: Map<
+    string,
+    {
+      scan1?: { bytes: Uint8Array; mimeType: string }
+      scan2?: { bytes: Uint8Array; mimeType: string }
     }
-    chunks.push(value)
-  }
-
-  const backup = new Uint8Array(totalBytes)
-  let offset = 0
-  for (const chunk of chunks) {
-    backup.set(chunk, offset)
-    offset += chunk.byteLength
-  }
-  if (new TextDecoder().decode(backup.slice(0, 16)) !== 'SQLite format 3\0') {
-    throw new Error('The downloaded file is not a SQLite 3 database')
-  }
-  return backup
+  >
 }
 
 function sourceValues(record: DiveMateSourceRecord) {
@@ -101,8 +67,103 @@ function sourceValues(record: DiveMateSourceRecord) {
   }
 }
 
-async function importSnapshot(snapshot: DiveMateSnapshot) {
+interface StoredImage {
+  storagePath: string
+  thumbnailStoragePath: string | null
+  mimeType: string
+  byteSize: number
+}
+
+async function storeImage(
+  storage: StorageProvider,
+  category: 'certifications' | 'pictures',
+  externalId: string,
+  bytes: Uint8Array,
+  mimeType: string,
+): Promise<StoredImage> {
+  const fingerprint = createHash('sha256').update(bytes).digest('hex')
+  const extension = mimeType.split('/')[1] === 'jpeg' ? 'jpg' : mimeType.split('/')[1]
+  const storagePath = `divemate/${category}/${externalId}/${fingerprint}.${extension}`
+  if (!(await storage.exists(storagePath))) {
+    await storage.upload(
+      new Blob([Uint8Array.from(bytes)], { type: mimeType }),
+      storagePath,
+    )
+  }
+  const thumbnailStoragePath = `divemate/${category}/${externalId}/${fingerprint}.thumb.webp`
+  let storedThumbnailPath: string | null = thumbnailStoragePath
+  if (!(await storage.exists(thumbnailStoragePath))) {
+    try {
+      const thumbnail = await createThumbnail(bytes)
+      await storage.upload(
+        new Blob([Uint8Array.from(thumbnail)], { type: 'image/webp' }),
+        thumbnailStoragePath,
+      )
+    } catch (error) {
+      console.warn(
+        `Could not generate thumbnail for DiveMate ${category} ${externalId}`,
+        error,
+      )
+      storedThumbnailPath = null
+    }
+  }
+  return {
+    storagePath,
+    thumbnailStoragePath: storedThumbnailPath,
+    mimeType,
+    byteSize: bytes.byteLength,
+  }
+}
+
+async function importSnapshot(
+  snapshot: DiveMateSnapshot,
+  externalImages?: ExternalImages,
+) {
   const db = getDb()
+  const storage = getStorage()
+  const storedPictures = new Map<string, StoredImage>()
+  for (const picture of snapshot.pictures) {
+    const external = externalImages?.pictures.get(picture.externalId)
+    const bytes = picture.imageBytes ?? external?.bytes
+    const mimeType = picture.mimeType ?? external?.mimeType
+    if (!bytes || !mimeType) continue
+    storedPictures.set(
+      picture.externalId,
+      await storeImage(storage, 'pictures', picture.externalId, bytes, mimeType),
+    )
+  }
+  const storedCertificationScans = new Map<
+    string,
+    { scan1?: StoredImage; scan2?: StoredImage }
+  >()
+  for (const certification of snapshot.certifications) {
+    const scans: { scan1?: StoredImage; scan2?: StoredImage } = {}
+    const external = externalImages?.certificationScans.get(certification.externalId)
+    const scan1Bytes = certification.scan1Bytes ?? external?.scan1?.bytes
+    const scan1MimeType = certification.scan1MimeType ?? external?.scan1?.mimeType
+    const scan2Bytes = certification.scan2Bytes ?? external?.scan2?.bytes
+    const scan2MimeType = certification.scan2MimeType ?? external?.scan2?.mimeType
+    if (scan1Bytes && scan1MimeType) {
+      scans.scan1 = await storeImage(
+        storage,
+        'certifications',
+        `${certification.externalId}/front`,
+        scan1Bytes,
+        scan1MimeType,
+      )
+    }
+    if (scan2Bytes && scan2MimeType) {
+      scans.scan2 = await storeImage(
+        storage,
+        'certifications',
+        `${certification.externalId}/back`,
+        scan2Bytes,
+        scan2MimeType,
+      )
+    }
+    if (scans.scan1 || scans.scan2)
+      storedCertificationScans.set(certification.externalId, scans)
+  }
   return db.transaction(async (tx) => {
     const diverIds = new Map<string, string>()
     for (const item of snapshot.divers) {
@@ -282,7 +343,8 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
     }
 
     for (const item of snapshot.certifications) {
-      const values = {
+      const scans = storedCertificationScans.get(item.externalId)
+      const referenceValues = {
         ...sourceValues(item),
         diverId: item.diverExternalId
           ? (diverIds.get(item.diverExternalId) ?? null)
@@ -297,12 +359,23 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
         scan1Path: item.scan1Path,
         scan2Path: item.scan2Path,
       }
+      const values = {
+        ...referenceValues,
+        scan1StoragePath: scans?.scan1?.storagePath ?? null,
+        scan1ThumbnailStoragePath: scans?.scan1?.thumbnailStoragePath ?? null,
+        scan1MimeType: scans?.scan1?.mimeType ?? null,
+        scan1ByteSize: scans?.scan1?.byteSize ?? null,
+        scan2StoragePath: scans?.scan2?.storagePath ?? null,
+        scan2ThumbnailStoragePath: scans?.scan2?.thumbnailStoragePath ?? null,
+        scan2MimeType: scans?.scan2?.mimeType ?? null,
+        scan2ByteSize: scans?.scan2?.byteSize ?? null,
+      }
       await tx
         .insert(certifications)
         .values(values)
         .onConflictDoUpdate({
           target: [certifications.sourceKey, certifications.externalId],
-          set: values,
+          set: scans ? values : referenceValues,
         })
     }
 
@@ -457,7 +530,8 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
     }
 
     for (const item of snapshot.pictures) {
-      const values = {
+      const stored = storedPictures.get(item.externalId)
+      const referenceValues = {
         ...sourceValues(item),
         diveId: item.diveExternalId ? (diveIds.get(item.diveExternalId) ?? null) : null,
         siteId: item.siteExternalId ? (siteIds.get(item.siteExternalId) ?? null) : null,
@@ -470,16 +544,24 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
         diverId: item.diverExternalId
           ? (diverIds.get(item.diverExternalId) ?? null)
           : null,
+        kind: item.kind,
         path: item.path,
         description: item.description,
         sortOrder: item.sortOrder,
+      }
+      const values = {
+        ...referenceValues,
+        storagePath: stored?.storagePath ?? null,
+        thumbnailStoragePath: stored?.thumbnailStoragePath ?? null,
+        mimeType: stored?.mimeType ?? null,
+        byteSize: stored?.byteSize ?? null,
       }
       await tx
         .insert(pictures)
         .values(values)
         .onConflictDoUpdate({
           target: [pictures.sourceKey, pictures.externalId],
-          set: values,
+          set: stored ? values : referenceValues,
         })
     }
 
@@ -489,22 +571,80 @@ async function importSnapshot(snapshot: DiveMateSnapshot) {
       buddies: snapshot.buddies.length,
       equipment: snapshot.equipment.length,
       certifications: snapshot.certifications.length,
+      certificationScans: [...storedCertificationScans.values()].reduce(
+        (count, scans) =>
+          count + Number(Boolean(scans.scan1)) + Number(Boolean(scans.scan2)),
+        0,
+      ),
       shops: snapshot.shops.length,
       diveTypes: snapshot.diveTypes.length,
       dives: snapshot.dives.length,
       tanks: snapshot.tanks.length,
       pictures: snapshot.pictures.length,
+      pictureFiles: storedPictures.size,
       profileSamples: snapshot.profileSamples.length,
     }
   })
+}
+
+async function loadGoogleDriveImages(
+  snapshot: DiveMateSnapshot,
+  drive: Awaited<ReturnType<typeof openGoogleDriveBackup>>,
+  maximumImageBytes: number,
+): Promise<ExternalImages> {
+  const downloaded = new Map<string, Promise<Uint8Array>>()
+  const download = (file: (typeof drive.files)[number]) => {
+    const existing = downloaded.get(file.id)
+    if (existing) return existing
+    const pending = drive.download(file, maximumImageBytes)
+    downloaded.set(file.id, pending)
+    return pending
+  }
+  const pictures = new Map<string, { bytes: Uint8Array; mimeType: string }>()
+  for (const picture of snapshot.pictures) {
+    if (picture.imageBytes) continue
+    const file = findDriveFile(drive.files, picture.path, 'Media')
+    if (!file?.mimeType.startsWith('image/')) continue
+    pictures.set(picture.externalId, {
+      bytes: await download(file),
+      mimeType: file.mimeType,
+    })
+  }
+
+  const certificationScans: ExternalImages['certificationScans'] = new Map()
+  for (const certification of snapshot.certifications) {
+    const scans: NonNullable<ReturnType<ExternalImages['certificationScans']['get']>> = {}
+    const scan1File = certification.scan1Bytes
+      ? null
+      : findDriveFile(drive.files, certification.scan1Path)
+    const scan2File = certification.scan2Bytes
+      ? null
+      : findDriveFile(drive.files, certification.scan2Path)
+    if (scan1File?.mimeType.startsWith('image/')) {
+      scans.scan1 = {
+        bytes: await download(scan1File),
+        mimeType: scan1File.mimeType,
+      }
+    }
+    if (scan2File?.mimeType.startsWith('image/')) {
+      scans.scan2 = {
+        bytes: await download(scan2File),
+        mimeType: scan2File.mimeType,
+      }
+    }
+    if (scans.scan1 || scans.scan2) {
+      certificationScans.set(certification.externalId, scans)
+    }
+  }
+  return { pictures, certificationScans }
 }
 
 export async function syncDiveMate(
   options: DiveMateSyncOptions = {},
 ): Promise<DiveMateSyncResult> {
   const environment = getServerEnv()
-  if (!environment.DIVEMATE_BACKUP_URL) {
-    throw new Error('DIVEMATE_BACKUP_URL is not configured')
+  if (!environment.DIVEMATE_GOOGLE_DRIVE_FOLDER_ID) {
+    throw new Error('DIVEMATE_GOOGLE_DRIVE_FOLDER_ID is not configured')
   }
 
   const db = getDb()
@@ -517,14 +657,20 @@ export async function syncDiveMate(
   const temporaryDirectory = await mkdtemp(join(tmpdir(), 'divetracx-divemate-'))
   const databasePath = join(temporaryDirectory, 'DiveMate.ddb')
   try {
-    const backup = await downloadBackup(
-      environment.DIVEMATE_BACKUP_URL,
+    const drive = await openGoogleDriveBackup(
+      environment.DIVEMATE_GOOGLE_DRIVE_FOLDER_ID,
       environment.DIVEMATE_MAX_BACKUP_BYTES,
     )
+    const backup = drive.database
     const fingerprint = createHash('sha256').update(backup).digest('hex')
     await writeFile(databasePath, backup)
     const snapshot = parseDiveMateDatabase(databasePath)
-    const counts = await importSnapshot(snapshot)
+    const externalImages = await loadGoogleDriveImages(
+      snapshot,
+      drive,
+      environment.DIVEMATE_MAX_IMAGE_BYTES,
+    )
+    const counts = await importSnapshot(snapshot, externalImages)
 
     await db
       .update(syncRuns)

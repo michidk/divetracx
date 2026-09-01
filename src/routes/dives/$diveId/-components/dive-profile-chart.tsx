@@ -1,6 +1,8 @@
 import { useId, useMemo, useState } from 'react'
+import type { PositionedDiveProfilePoint } from '../-lib/profile-chart'
 import {
   createProfileGeometry,
+  createProfileMagnifierViewBox,
   findNearestProfilePoint,
   PROFILE_CHART_VIEWBOX,
 } from '../-lib/profile-chart'
@@ -46,6 +48,28 @@ function gasName(tank: ProfileTank) {
   return 'Air'
 }
 
+function tankGasLines(tankNumber: number, tanks: ProfileTank[]) {
+  const tank = tanks.find((item) => item.computerTankNumber === tankNumber)
+  if (!tank) return []
+  const gas = gasName(tank)
+  const enrichedAir = /^EAN(\d+)$/.exec(gas)
+  return enrichedAir ? ['EAN', enrichedAir[1] ?? ''] : [gas.toUpperCase()]
+}
+
+function tankSwitchColors(tankNumber: number, tanks: ProfileTank[]) {
+  const tank = tanks.find((item) => item.computerTankNumber === tankNumber)
+  const oxygen = Number(tank?.oxygenPercent ?? 21)
+  const helium = Number(tank?.heliumPercent ?? 0)
+
+  if (helium > 0) {
+    return { fill: '#4c1d95', accent: '#ddd6fe', connector: '#ddd6fe' }
+  }
+  if (oxygen > 21) {
+    return { fill: '#166534', accent: '#f5ee00', connector: '#f5ee00' }
+  }
+  return { fill: '#0ea5e9', accent: '#ffffff', connector: '#0ea5e9' }
+}
+
 function tankLabel(tankNumber: number, tanks: ProfileTank[]) {
   const tank = tanks.find((item) => item.computerTankNumber === tankNumber)
   if (!tank) return `Tank ${tankNumber}`
@@ -55,6 +79,120 @@ function tankLabel(tankNumber: number, tanks: ProfileTank[]) {
 function tankName(tankNumber: number, tanks: ProfileTank[]) {
   const tank = tanks.find((item) => item.computerTankNumber === tankNumber)
   return tank?.name || `Tank ${tankNumber}`
+}
+
+function TankSwitchMarker({
+  point,
+  tanks,
+}: {
+  point: PositionedDiveProfilePoint
+  tanks: ProfileTank[]
+}) {
+  if (point.tankNumber === null) return null
+
+  const tankNumber = point.tankNumber
+  const gasLines = tankGasLines(tankNumber, tanks)
+  const colors = tankSwitchColors(tankNumber, tanks)
+  const textLines = [`T${tankNumber}`, ...gasLines]
+  const lineHeight = textLines.length === 3 ? 7.5 : 9
+  const markerRadius = 14
+  const markerY = point.depthY + 56
+  const firstLineY = markerY - ((textLines.length - 1) * lineHeight) / 2 + 3
+
+  return (
+    <g
+      aria-label={`Tank switch to ${tankLabel(tankNumber, tanks)} at ${formatElapsedTime(point.elapsedSeconds)}`}
+    >
+      <line
+        x1={point.x}
+        x2={point.x}
+        y1={point.depthY}
+        y2={markerY - markerRadius}
+        stroke={colors.connector}
+        strokeWidth="1.5"
+        strokeDasharray="2 3"
+        opacity="0.85"
+        vectorEffect="non-scaling-stroke"
+      />
+      <circle
+        cx={point.x}
+        cy={markerY}
+        r={markerRadius}
+        fill={colors.fill}
+        stroke={colors.accent}
+        strokeWidth="2.5"
+        vectorEffect="non-scaling-stroke"
+      />
+      {textLines.map((line, index) => (
+        <text
+          key={line}
+          x={point.x}
+          y={firstLineY + index * lineHeight}
+          textAnchor="middle"
+          className="pointer-events-none text-[8px] font-bold"
+          fill={colors.accent}
+          stroke={colors.fill}
+          strokeWidth="1"
+          paintOrder="stroke"
+        >
+          {line}
+        </text>
+      ))}
+    </g>
+  )
+}
+
+function ChartValueMarker({
+  x,
+  pointY,
+  label,
+  ariaLabel,
+  color,
+}: {
+  x: number
+  pointY: number
+  label: string
+  ariaLabel: string
+  color: string
+}) {
+  const markerY = pointY - 30
+  const markerHeight = 18
+  const markerWidth = Math.max(42, label.length * 5.8 + 12)
+
+  return (
+    <g aria-label={ariaLabel}>
+      <line
+        x1={x}
+        x2={x}
+        y1={pointY}
+        y2={markerY + markerHeight / 2}
+        stroke={color}
+        strokeWidth="1.5"
+        strokeDasharray="2 3"
+        opacity="0.85"
+        vectorEffect="non-scaling-stroke"
+      />
+      <rect
+        x={x - markerWidth / 2}
+        y={markerY - markerHeight / 2}
+        width={markerWidth}
+        height={markerHeight}
+        rx={markerHeight / 2}
+        fill={color}
+        className="stroke-background"
+        strokeWidth="2"
+        vectorEffect="non-scaling-stroke"
+      />
+      <text
+        x={x}
+        y={markerY + 3.5}
+        textAnchor="middle"
+        className="pointer-events-none fill-white text-[9px] font-bold"
+      >
+        {label}
+      </text>
+    </g>
+  )
 }
 
 function TrackBounds({
@@ -113,6 +251,200 @@ function TrackBounds({
   )
 }
 
+function CursorDot({
+  x,
+  y,
+  radius = 4.5,
+  className,
+  fill,
+}: {
+  x: number
+  y: number
+  radius?: number
+  className?: string
+  fill?: string
+}) {
+  return (
+    <circle
+      cx={x}
+      cy={y}
+      r={radius}
+      className={`${className ?? ''} stroke-background`}
+      fill={fill}
+      strokeWidth="2"
+      vectorEffect="non-scaling-stroke"
+    />
+  )
+}
+
+function CursorValue({
+  x,
+  y,
+  children,
+  fontSize = 11,
+}: {
+  x: number
+  y: number
+  children: string
+  fontSize?: number
+}) {
+  const showBelow = x > PROFILE_CHART_VIEWBOX.width - PROFILE_CHART_VIEWBOX.right - 72
+  return (
+    <text
+      x={showBelow ? x : x + 9}
+      y={showBelow ? y + 17 : y + 4}
+      textAnchor={showBelow ? 'middle' : 'start'}
+      className="fill-foreground font-bold"
+      fontSize={fontSize}
+      stroke="var(--background)"
+      strokeWidth="4"
+      paintOrder="stroke"
+      strokeLinejoin="round"
+    >
+      {children}
+    </text>
+  )
+}
+
+function CursorTime({ point }: { point: PositionedDiveProfilePoint }) {
+  const width = 52
+  const x =
+    point.x + width + 8 > PROFILE_CHART_VIEWBOX.width - PROFILE_CHART_VIEWBOX.right
+      ? point.x - width - 8
+      : point.x + 8
+  const y = PROFILE_CHART_VIEWBOX.top - 24
+
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <rect width={width} height="20" rx="5" className="fill-foreground" />
+      <text
+        x={width / 2}
+        y="14"
+        textAnchor="middle"
+        className="fill-background text-[11px] font-bold"
+      >
+        {formatElapsedTime(point.elapsedSeconds)}
+      </text>
+    </g>
+  )
+}
+
+function ProfileMagnifier({
+  geometry,
+  selectedPoint,
+}: {
+  geometry: ReturnType<typeof createProfileGeometry>
+  selectedPoint: PositionedDiveProfilePoint
+}) {
+  const viewBox = createProfileMagnifierViewBox(selectedPoint, geometry.plotWidth)
+  const showOnLeft = selectedPoint.x > PROFILE_CHART_VIEWBOX.width / 2
+  const viewBoxScaleCompensation = viewBox.width / 360
+  const cursorRadius = 4 * viewBoxScaleCompensation
+  const cursorFontSize = 11 * viewBoxScaleCompensation
+
+  return (
+    <aside
+      aria-label="Magnified dive profile"
+      className={`pointer-events-none absolute top-3 z-10 w-[22.5rem] overflow-hidden rounded-xl border-2 border-border bg-background shadow-lg ${showOnLeft ? 'left-3' : 'right-3'}`}
+    >
+      <p className="border-b border-border bg-background/95 px-3 py-2 text-xs font-bold">
+        Magnified · {formatElapsedTime(selectedPoint.elapsedSeconds)}
+      </p>
+      <svg
+        viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
+        preserveAspectRatio="xMidYMid meet"
+        className="block w-full bg-background"
+        style={{ aspectRatio: `${viewBox.width} / ${viewBox.height}` }}
+        role="img"
+        aria-label={`Magnified profile at ${formatElapsedTime(selectedPoint.elapsedSeconds)}`}
+      >
+        <title>Magnified dive profile around the selected time</title>
+        {geometry.depthTicks.map((tick) => (
+          <line
+            key={tick.depthMeters}
+            x1={PROFILE_CHART_VIEWBOX.left}
+            x2={PROFILE_CHART_VIEWBOX.width - PROFILE_CHART_VIEWBOX.right}
+            y1={tick.y}
+            y2={tick.y}
+            className="stroke-border"
+            strokeDasharray={tick.depthMeters === 0 ? undefined : '4 7'}
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+        <path
+          d={geometry.depthPath}
+          fill="none"
+          className="stroke-primary"
+          strokeWidth="3"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+        {geometry.ceilingViolationPath ? (
+          <path
+            d={geometry.ceilingViolationPath}
+            fill="none"
+            className="stroke-red-500"
+            strokeWidth="3"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        ) : null}
+        {geometry.ceilingPath ? (
+          <path
+            d={geometry.ceilingPath}
+            fill="none"
+            className="stroke-red-500"
+            strokeWidth="2.5"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        ) : null}
+        <line
+          x1={selectedPoint.x}
+          x2={selectedPoint.x}
+          y1={viewBox.y}
+          y2={viewBox.y + viewBox.height}
+          className="stroke-foreground/50"
+          strokeWidth="1.5"
+          vectorEffect="non-scaling-stroke"
+        />
+        {selectedPoint.ceilingY === null ? null : (
+          <>
+            <CursorDot
+              x={selectedPoint.x}
+              y={selectedPoint.ceilingY}
+              radius={cursorRadius}
+              className="fill-red-500"
+            />
+            <CursorValue
+              x={selectedPoint.x}
+              y={selectedPoint.ceilingY}
+              fontSize={cursorFontSize}
+            >
+              {`${selectedPoint.decoCeilingMeters?.toFixed(0)} m`}
+            </CursorValue>
+          </>
+        )}
+        <CursorDot
+          x={selectedPoint.x}
+          y={selectedPoint.depthY}
+          radius={cursorRadius}
+          className="fill-primary"
+        />
+        <CursorValue
+          x={selectedPoint.x}
+          y={selectedPoint.depthY}
+          fontSize={cursorFontSize}
+        >
+          {`${selectedPoint.depthMeters.toFixed(1)} m`}
+        </CursorValue>
+      </svg>
+    </aside>
+  )
+}
+
 export function DiveProfileChart({
   samples,
   tanks,
@@ -148,9 +480,6 @@ export function DiveProfileChart({
   const hasTankPressureProfiles = Boolean(
     geometry.tank1PressurePath || geometry.tank2PressurePath,
   )
-  const tankNumbers = Array.from(
-    new Set(geometry.points.flatMap((point) => point.tankNumber ?? [])),
-  ).sort((left, right) => left - right)
 
   function selectFromPointer(event: React.PointerEvent<SVGSVGElement>) {
     const bounds = event.currentTarget.getBoundingClientRect()
@@ -242,6 +571,12 @@ export function DiveProfileChart({
                 Deco ceiling
               </span>
             ) : null}
+            {geometry.ceilingViolationPath ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="h-1 w-5 bg-red-500" />
+                Depth above ceiling
+              </span>
+            ) : null}
             {geometry.temperaturePath ? (
               <span className="inline-flex items-center gap-2">
                 <span className="h-0.5 w-5 bg-orange-500" /> Temperature
@@ -279,7 +614,7 @@ export function DiveProfileChart({
             aria-valuetext={selectedDescription}
             onFocus={() => setSelectedIndex((current) => current ?? 0)}
             onKeyDown={selectFromKeyboard}
-            className="mt-4 overflow-x-auto rounded-xl border border-border bg-background outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="relative mt-4 overflow-x-auto rounded-xl border border-border bg-background outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <svg
               viewBox={`0 0 ${PROFILE_CHART_VIEWBOX.width} ${PROFILE_CHART_VIEWBOX.height}`}
@@ -293,8 +628,8 @@ export function DiveProfileChart({
               <desc>
                 Depth increases downward. Temperature and the differently colored tank
                 pressures use aligned tracks. A red gradient and solid boundary show the
-                recorded decompression ceiling. Colored vertical markers indicate tank
-                switches.
+                recorded decompression ceiling. Labeled circular markers on the depth
+                trace indicate the active tank and each tank switch.
               </desc>
               <defs>
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -372,6 +707,17 @@ export function DiveProfileChart({
                 strokeLinecap="round"
                 vectorEffect="non-scaling-stroke"
               />
+              {geometry.ceilingViolationPath ? (
+                <path
+                  d={geometry.ceilingViolationPath}
+                  fill="none"
+                  className="stroke-red-500"
+                  strokeWidth="3"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              ) : null}
               {geometry.ceilingPath ? (
                 <path
                   d={geometry.ceilingPath}
@@ -381,6 +727,15 @@ export function DiveProfileChart({
                   strokeLinejoin="round"
                   strokeLinecap="round"
                   vectorEffect="non-scaling-stroke"
+                />
+              ) : null}
+              {geometry.deepestPoint ? (
+                <ChartValueMarker
+                  x={geometry.deepestPoint.x}
+                  pointY={geometry.deepestPoint.depthY}
+                  label={`${geometry.maximumDepthMeters.toFixed(1)} m`}
+                  ariaLabel={`Maximum depth ${geometry.maximumDepthMeters.toFixed(1)} metres`}
+                  color="var(--primary)"
                 />
               ) : null}
 
@@ -403,6 +758,16 @@ export function DiveProfileChart({
                   vectorEffect="non-scaling-stroke"
                 />
               ) : null}
+              {geometry.minimumTemperaturePoint?.temperatureY === null ||
+              !geometry.minimumTemperaturePoint ? null : (
+                <ChartValueMarker
+                  x={geometry.minimumTemperaturePoint.x}
+                  pointY={geometry.minimumTemperaturePoint.temperatureY}
+                  label={`${geometry.minimumTemperaturePoint.temperatureCelsius?.toFixed(1)} °C`}
+                  ariaLabel={`Minimum temperature ${geometry.minimumTemperaturePoint.temperatureCelsius?.toFixed(1)} degrees Celsius`}
+                  color="#f97316"
+                />
+              )}
 
               {geometry.pressureRange ? (
                 <TrackBounds
@@ -454,32 +819,13 @@ export function DiveProfileChart({
                 />
               ) : null}
 
-              {geometry.tankSwitches.slice(1).map((point) =>
-                point.tankNumber === null ? null : (
-                  <g key={`${point.elapsedSeconds}-${point.tankNumber}`}>
-                    <line
-                      x1={point.x}
-                      x2={point.x}
-                      y1={PROFILE_CHART_VIEWBOX.top}
-                      y2={
-                        PROFILE_CHART_VIEWBOX.pressureTop +
-                        PROFILE_CHART_VIEWBOX.pressureHeight
-                      }
-                      stroke={tankColor(point.tankNumber)}
-                      strokeWidth="1.5"
-                      strokeDasharray="3 5"
-                      opacity="0.7"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                    <circle
-                      cx={point.x}
-                      cy={PROFILE_CHART_VIEWBOX.top - 8}
-                      r="5"
-                      fill={tankColor(point.tankNumber)}
-                    />
-                  </g>
-                ),
-              )}
+              {geometry.tankSwitches.map((point) => (
+                <TankSwitchMarker
+                  key={`${point.elapsedSeconds}-${point.tankNumber}`}
+                  point={point}
+                  tanks={tanks}
+                />
+              ))}
 
               {selectedPoint ? (
                 <g>
@@ -495,72 +841,84 @@ export function DiveProfileChart({
                     strokeWidth="1.5"
                     vectorEffect="non-scaling-stroke"
                   />
-                  <circle
-                    cx={selectedPoint.x}
-                    cy={selectedPoint.depthY}
-                    r="6"
-                    className="fill-background stroke-primary"
-                    strokeWidth="3"
-                    vectorEffect="non-scaling-stroke"
+                  <CursorTime point={selectedPoint} />
+                  {selectedPoint.ceilingY === null ? null : (
+                    <>
+                      <CursorDot
+                        x={selectedPoint.x}
+                        y={selectedPoint.ceilingY}
+                        className="fill-red-500"
+                      />
+                      <CursorValue x={selectedPoint.x} y={selectedPoint.ceilingY}>
+                        {`${selectedPoint.decoCeilingMeters?.toFixed(0)} m`}
+                      </CursorValue>
+                    </>
+                  )}
+                  <CursorDot
+                    x={selectedPoint.x}
+                    y={selectedPoint.depthY}
+                    className="fill-primary"
                   />
+                  <CursorValue x={selectedPoint.x} y={selectedPoint.depthY}>
+                    {`${selectedPoint.depthMeters.toFixed(1)} m`}
+                  </CursorValue>
                   {selectedPoint.temperatureY === null ? null : (
-                    <circle
-                      cx={selectedPoint.x}
-                      cy={selectedPoint.temperatureY}
-                      r="4.5"
-                      className="fill-orange-500 stroke-background"
-                      strokeWidth="2"
-                      vectorEffect="non-scaling-stroke"
-                    />
+                    <>
+                      <CursorDot
+                        x={selectedPoint.x}
+                        y={selectedPoint.temperatureY}
+                        className="fill-orange-500"
+                      />
+                      <CursorValue x={selectedPoint.x} y={selectedPoint.temperatureY}>
+                        {`${selectedPoint.temperatureCelsius?.toFixed(1)} °C`}
+                      </CursorValue>
+                    </>
                   )}
                   {selectedPoint.tank1PressureY === null ? null : (
-                    <circle
-                      cx={selectedPoint.x}
-                      cy={selectedPoint.tank1PressureY}
-                      r="4.5"
-                      fill={tankColor(1)}
-                      className="stroke-background"
-                      strokeWidth="2"
-                      vectorEffect="non-scaling-stroke"
-                    />
+                    <>
+                      <CursorDot
+                        x={selectedPoint.x}
+                        y={selectedPoint.tank1PressureY}
+                        fill={tankColor(1)}
+                      />
+                      <CursorValue x={selectedPoint.x} y={selectedPoint.tank1PressureY}>
+                        {`${selectedPoint.tank1PressureBar?.toFixed(0)} bar`}
+                      </CursorValue>
+                    </>
                   )}
                   {selectedPoint.tank2PressureY === null ? null : (
-                    <circle
-                      cx={selectedPoint.x}
-                      cy={selectedPoint.tank2PressureY}
-                      r="4.5"
-                      fill={tankColor(2)}
-                      className="stroke-background"
-                      strokeWidth="2"
-                      vectorEffect="non-scaling-stroke"
-                    />
+                    <>
+                      <CursorDot
+                        x={selectedPoint.x}
+                        y={selectedPoint.tank2PressureY}
+                        fill={tankColor(2)}
+                      />
+                      <CursorValue x={selectedPoint.x} y={selectedPoint.tank2PressureY}>
+                        {`${selectedPoint.tank2PressureBar?.toFixed(0)} bar`}
+                      </CursorValue>
+                    </>
+                  )}
+                  {selectedPoint.pressureY === null ||
+                  selectedPoint.tank1PressureY !== null ||
+                  selectedPoint.tank2PressureY !== null ? null : (
+                    <>
+                      <CursorDot
+                        x={selectedPoint.x}
+                        y={selectedPoint.pressureY}
+                        className="fill-violet-500"
+                      />
+                      <CursorValue x={selectedPoint.x} y={selectedPoint.pressureY}>
+                        {`${selectedPoint.pressureBar?.toFixed(0)} bar`}
+                      </CursorValue>
+                    </>
                   )}
                 </g>
               ) : null}
             </svg>
+            {selectedPoint ? (
+              <ProfileMagnifier geometry={geometry} selectedPoint={selectedPoint} />
+            ) : null}
           </div>
-
-          {tankNumbers.length > 0 ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {tankNumbers.map((tankNumber) => (
-                <span
-                  key={tankNumber}
-                  className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs"
-                >
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: tankColor(tankNumber) }}
-                  />
-                  {tankLabel(tankNumber, tanks)}
-                </span>
-              ))}
-              {geometry.tankSwitches.length > 1 ? (
-                <span className="px-2 py-1.5 text-xs text-muted-foreground">
-                  {geometry.tankSwitches.length - 1} recorded switches
-                </span>
-              ) : null}
-            </div>
-          ) : null}
 
           <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-6">
             <p className="rounded-lg bg-muted/60 px-3 py-2">

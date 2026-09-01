@@ -40,6 +40,18 @@ const recordMetadataColumns = new Set([
   'sourcePayload',
   'createdAt',
   'updatedAt',
+  'storagePath',
+  'thumbnailStoragePath',
+  'mimeType',
+  'byteSize',
+  'scan1StoragePath',
+  'scan1ThumbnailStoragePath',
+  'scan1MimeType',
+  'scan1ByteSize',
+  'scan2StoragePath',
+  'scan2ThumbnailStoragePath',
+  'scan2MimeType',
+  'scan2ByteSize',
 ])
 
 describe('data entity definitions', () => {

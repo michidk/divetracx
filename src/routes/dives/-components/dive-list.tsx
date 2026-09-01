@@ -10,6 +10,10 @@ import type { getDives } from '@/modules/dives/server/queries'
 
 type DiveListData = Awaited<ReturnType<typeof getDives>>
 
+function mediaUrl(path: string) {
+  return `/media/${path.split('/').map(encodeURIComponent).join('/')}`
+}
+
 export function DiveList({ dives }: { dives: DiveListData }) {
   return (
     <div className="space-y-7">
@@ -23,7 +27,8 @@ export function DiveList({ dives }: { dives: DiveListData }) {
         </p>
       </header>
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="hidden grid-cols-[5rem_minmax(12rem,1fr)_10rem_7rem_7rem_7rem_2rem] border-b border-border bg-muted/50 px-5 py-4 text-xs uppercase tracking-wider text-muted-foreground md:grid">
+        <div className="hidden grid-cols-[4rem_5rem_minmax(12rem,1fr)_10rem_7rem_7rem_7rem_2rem] border-b border-border bg-muted/50 px-5 py-4 text-xs uppercase tracking-wider text-muted-foreground md:grid">
+          <span>Picture</span>
           <span>Dive</span>
           <span>Site</span>
           <span>Date</span>
@@ -37,8 +42,20 @@ export function DiveList({ dives }: { dives: DiveListData }) {
             key={dive.id}
             to="/dives/$diveId"
             params={{ diveId: dive.id }}
-            className="group grid min-h-20 grid-cols-[minmax(0,1fr)_auto_1.25rem] items-center gap-4 border-b border-border px-5 py-4 transition-colors last:border-0 hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary md:grid-cols-[5rem_minmax(12rem,1fr)_10rem_7rem_7rem_7rem_2rem]"
+            className="group grid min-h-20 grid-cols-[3.5rem_minmax(0,1fr)_auto_1.25rem] items-center gap-4 border-b border-border px-5 py-4 transition-colors last:border-0 hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary md:grid-cols-[4rem_5rem_minmax(12rem,1fr)_10rem_7rem_7rem_7rem_2rem]"
           >
+            <span className="flex size-14 items-center justify-center overflow-hidden rounded-lg bg-muted">
+              {dive.picturePath ? (
+                <img
+                  src={mediaUrl(dive.picturePath)}
+                  alt=""
+                  className="size-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <span className="text-xs text-muted-foreground">—</span>
+              )}
+            </span>
             <span className="hidden font-mono text-sm text-muted-foreground md:block">
               #{dive.number ?? '—'}
             </span>

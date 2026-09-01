@@ -1,0 +1,1 @@
+ALTER TABLE "pictures" ADD COLUMN "thumbnail_storage_path" text;

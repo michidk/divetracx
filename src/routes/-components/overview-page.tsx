@@ -17,6 +17,10 @@ function formatDate(value: string | null) {
   )
 }
 
+function mediaUrl(path: string) {
+  return `/media/${path.split('/').map(encodeURIComponent).join('/')}`
+}
+
 export function OverviewPage({ data }: { data: DashboardData }) {
   const metrics = [
     {
@@ -41,22 +45,6 @@ export function OverviewPage({ data }: { data: DashboardData }) {
 
   return (
     <div className="space-y-10">
-      <section className="relative overflow-hidden rounded-[2rem] border border-border bg-card p-7 shadow-2xl shadow-slate-950/5 md:p-10">
-        <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-primary/15 blur-3xl" />
-        <div className="relative max-w-2xl">
-          <p className="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-primary">
-            Dive log, under your control
-          </p>
-          <h1 className="text-balance text-4xl font-semibold tracking-[-0.04em] md:text-6xl">
-            Your underwater history, surfaced.
-          </h1>
-          <p className="mt-5 max-w-xl text-pretty text-base leading-7 text-muted-foreground md:text-lg">
-            Divetracx keeps a PostgreSQL dive log and can continuously import your
-            existing DiveMate backup without locking your data into it.
-          </p>
-        </div>
-      </section>
-
       <section className="grid gap-4 md:grid-cols-3">
         {metrics.map((metric) => (
           <article
@@ -99,11 +87,27 @@ export function OverviewPage({ data }: { data: DashboardData }) {
                 params={{ diveId: dive.id }}
                 className={`flex min-h-20 items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary md:px-6 ${index > 0 ? 'border-t border-border' : ''}`}
               >
-                <div>
-                  <p className="font-semibold">{dive.siteName ?? 'Unknown dive site'}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatDate(dive.diveDate)} · {dive.country ?? 'Country not set'}
-                  </p>
+                <div className="flex min-w-0 items-center gap-4">
+                  <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
+                    {dive.picturePath ? (
+                      <img
+                        src={mediaUrl(dive.picturePath)}
+                        alt=""
+                        className="size-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-semibold">
+                      {dive.siteName ?? 'Unknown dive site'}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatDate(dive.diveDate)} · {dive.country ?? 'Country not set'}
+                    </p>
+                  </div>
                 </div>
                 <div className="text-right">
                   <p className="font-mono text-sm font-semibold">

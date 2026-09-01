@@ -15,5 +15,21 @@ services:
     volumes:
       - divetracx-postgres:/var/lib/postgresql/data
 
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://divetracx:divetracx@postgres:5432/divetracx
+      STORAGE_PROVIDER: local
+      STORAGE_PATH: /uploads
+      STORAGE_URL: /media
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - divetracx-uploads:/uploads
+
 volumes:
   divetracx-postgres:
+  divetracx-uploads:

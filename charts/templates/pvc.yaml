@@ -1,0 +1,17 @@
+{{- if eq .Values.storage.provider "local" }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "divetracx.fullname" . }}-uploads
+  labels:
+    {{- include "divetracx.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.storage.local.accessMode }}
+  {{- if .Values.storage.local.storageClass }}
+  storageClassName: {{ .Values.storage.local.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.local.size }}
+{{- end }}

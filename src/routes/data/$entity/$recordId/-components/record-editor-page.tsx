@@ -1,6 +1,19 @@
 import { Link, useRouter } from '@tanstack/react-router'
 import { ArrowLeft, ExternalLink, Save, ShieldAlert } from 'lucide-react'
 import { useState } from 'react'
+import { PictureGallery } from '@/components/picture-gallery'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import type {
   EditorValue,
   EditorValues,
@@ -40,18 +53,18 @@ function FieldControl({
   options: EditorOption[]
   onChange: (value: EditorValue) => void
 }) {
-  const inputClass =
-    'mt-2 min-h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground'
-
   if (field.kind === 'checkbox') {
+    const checkboxId = `field-${field.key}`
     return (
-      <label className="flex min-h-11 items-center gap-3 rounded-xl border border-border bg-background px-4 text-sm font-medium">
-        <input
-          type="checkbox"
+      <label
+        htmlFor={checkboxId}
+        className="flex min-h-11 items-center gap-3 rounded-xl border border-border bg-background px-4 text-sm font-medium"
+      >
+        <Checkbox
+          id={checkboxId}
           checked={value === true}
           disabled={field.readOnly}
-          onChange={(event) => onChange(event.target.checked)}
-          className="h-4 w-4 accent-primary"
+          onCheckedChange={(checked) => onChange(checked === true)}
         />
         {field.label}
       </label>
@@ -70,19 +83,19 @@ function FieldControl({
             {options.map((option) => (
               <label
                 key={option.value}
+                htmlFor={`field-${field.key}-${option.value}`}
                 className="flex min-h-10 items-center gap-3 rounded-lg px-2 text-sm hover:bg-muted"
               >
-                <input
-                  type="checkbox"
+                <Checkbox
+                  id={`field-${field.key}-${option.value}`}
                   checked={selected.includes(option.value)}
-                  onChange={(event) =>
+                  onCheckedChange={(checked) =>
                     onChange(
-                      event.target.checked
+                      checked === true
                         ? [...selected, option.value]
                         : selected.filter((item) => item !== option.value),
                     )
                   }
-                  className="h-4 w-4 shrink-0 accent-primary"
                 />
                 <span className="truncate">{option.label}</span>
               </label>
@@ -100,33 +113,36 @@ function FieldControl({
       {field.label}
       {field.required ? <span className="text-red-600"> *</span> : null}
       {field.kind === 'textarea' ? (
-        <textarea
+        <Textarea
           id={inputId}
           value={stringValue}
           readOnly={field.readOnly}
           required={field.required}
           rows={5}
           onChange={(event) => onChange(event.target.value)}
-          className={`${inputClass} py-3`}
+          className="mt-2"
         />
       ) : field.kind === 'select' ? (
-        <select
-          id={inputId}
+        <Select
           value={stringValue}
           disabled={field.readOnly}
-          required={field.required}
-          onChange={(event) => onChange(event.target.value)}
-          className={inputClass}
+          onValueChange={(value) => {
+            if (value !== null) onChange(value)
+          }}
         >
-          <option value="">Not set</option>
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id={inputId} className="mt-2">
+            <SelectValue placeholder="Not set" />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       ) : (
-        <input
+        <Input
           id={inputId}
           type={field.kind}
           value={stringValue}
@@ -136,7 +152,7 @@ function FieldControl({
           max={field.max}
           step={field.step}
           onChange={(event) => onChange(event.target.value)}
-          className={inputClass}
+          className="mt-2"
         />
       )}
       {field.help ? (
@@ -222,20 +238,20 @@ export function RecordEditorPage({
       </header>
 
       {payload.record?.sourceKey === 'divemate' ? (
-        <aside className="flex gap-4 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-5">
+        <Alert variant="warning">
           <ShieldAlert
             className="mt-0.5 shrink-0 text-amber-600"
             size={21}
             aria-hidden="true"
           />
           <div>
-            <h2 className="font-semibold">Imported from DiveMate</h2>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            <AlertTitle>Imported from DiveMate</AlertTitle>
+            <AlertDescription>
               You can edit this record, but a later synchronization may refresh fields
               owned by the DiveMate source. The original source payload remains preserved.
-            </p>
+            </AlertDescription>
           </div>
-        </aside>
+        </Alert>
       ) : null}
 
       {payload.record ? (
@@ -313,6 +329,13 @@ export function RecordEditorPage({
         </details>
       ) : null}
 
+      {payload.record?.media.length ? (
+        <section className="rounded-2xl border border-border bg-card p-6 md:p-8">
+          <h2 className="text-lg font-semibold">Pictures</h2>
+          <PictureGallery pictures={payload.record.media} />
+        </section>
+      ) : null}
+
       <form onSubmit={(event) => void submit(event)} className="space-y-6">
         {sections.map((section) => (
           <section
@@ -352,13 +375,9 @@ export function RecordEditorPage({
                   ? 'This record will be stored as manual data.'
                   : 'Unsaved changes stay in this browser.')}
             </p>
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+            <Button type="submit" disabled={saving} className="px-6">
               <Save size={16} aria-hidden="true" /> {saving ? 'Saving…' : 'Save'}
-            </button>
+            </Button>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">

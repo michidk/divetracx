@@ -36,6 +36,7 @@ export interface EntityField {
   section: string
   required?: boolean
   reference?: EntityKey
+  options?: Array<{ value: string; label: string }>
   min?: number
   max?: number
   step?: string
@@ -671,11 +672,22 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
   },
   pictures: {
     key: 'pictures',
-    singular: 'Picture reference',
-    plural: 'Picture references',
-    description: 'DiveMate media paths and their linked dives, sites, people, or gear.',
+    singular: 'Picture',
+    plural: 'Pictures',
+    description: 'Pictures and their linked dives, sites, people, or gear.',
     mutable: true,
     fields: [
+      {
+        key: 'kind',
+        label: 'Type',
+        kind: 'select',
+        section: 'Media',
+        required: true,
+        options: [
+          { value: 'photo', label: 'Photo' },
+          { value: 'signature', label: 'Signature' },
+        ],
+      },
       {
         key: 'diveId',
         label: 'Dive',
@@ -717,7 +729,7 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
         kind: 'text',
         section: 'Media',
         required: true,
-        help: 'DiveMate stores a device-local path; this backup does not contain image bytes.',
+        help: 'The original DiveMate device-local path is retained for round-trip export.',
       },
       {
         key: 'description',

@@ -1,5 +1,6 @@
 import { LoaderCircle } from 'lucide-react'
 import type { RefObject } from 'react'
+import { Button } from '@/components/ui/button'
 
 export type SiteMapStatusValue = 'loading' | 'ready' | 'error'
 
@@ -43,14 +44,9 @@ export function SiteMapStatus({
           Retry when the map service is reachable. Every dive spot remains available in
           the list.
         </p>
-        <button
-          ref={retryButtonRef}
-          type="button"
-          className="min-h-11 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground transition hover:border-primary/50 hover:bg-accent"
-          onClick={onRetry}
-        >
+        <Button ref={retryButtonRef} type="button" variant="outline" onClick={onRetry}>
           Retry map
-        </button>
+        </Button>
       </div>
     </div>
   )

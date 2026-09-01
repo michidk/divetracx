@@ -21,6 +21,7 @@ import {
 import type { EditorValues, EntityKey } from '../entities'
 
 const uuidSchema = z.string().uuid()
+const pictureKindSchema = z.enum(['photo', 'signature'])
 
 function fieldValue(values: EditorValues, key: string) {
   return values[key]
@@ -459,6 +460,7 @@ async function saveTank(id: string, values: EditorValues) {
 
 async function savePicture(id: string, values: EditorValues) {
   const fields = {
+    kind: pictureKindSchema.parse(requiredText(values, 'kind')),
     diveId: optionalUuid(values, 'diveId'),
     siteId: optionalUuid(values, 'siteId'),
     buddyId: optionalUuid(values, 'buddyId'),
@@ -480,7 +482,7 @@ async function savePicture(id: string, values: EditorValues) {
           .set(fields)
           .where(eq(pictures.id, recordId(id)))
           .returning({ id: pictures.id })
-  if (!row) throw new Error('Picture reference was not found')
+  if (!row) throw new Error('Picture was not found')
   return row.id
 }
 

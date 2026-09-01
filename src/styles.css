@@ -5,12 +5,18 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "DM Mono", ui-monospace, monospace;
 }
@@ -20,12 +26,18 @@
     --background: #f4f8f8;
     --foreground: #102c31;
     --card: #ffffff;
+    --card-foreground: #102c31;
     --primary: #087f8c;
     --primary-foreground: #f5ffff;
     --muted: #e9f1f1;
     --muted-foreground: #597176;
     --accent: #d9eeef;
+    --accent-foreground: #102c31;
     --border: #d3e1e2;
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+    --warning: #d97706;
+    --warning-foreground: #92400e;
   }
 
   * {

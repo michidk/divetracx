@@ -57,6 +57,34 @@
       "when": 1788112619355,
       "tag": "0007_sharp_franklin_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788163617461,
+      "tag": "0008_military_deathbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788164726668,
+      "tag": "0009_sudden_hedge_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788165563723,
+      "tag": "0010_confused_robin_chapel",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788197595952,
+      "tag": "0011_left_sage",
+      "breakpoints": true
     }
   ]
 }
