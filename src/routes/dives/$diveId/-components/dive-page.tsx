@@ -68,6 +68,11 @@ function displayTankGas(tank: DiveData['tanks'][number]) {
   return 'Air'
 }
 
+function heroMediaUrl(photo: { storagePath: string | null }) {
+  const path = photo.storagePath ?? ''
+  return `/media/${path.split('/').map(encodeURIComponent).join('/')}`
+}
+
 function formatRecordTime(value: Date | string | null) {
   if (!value) return '—'
   const date = value instanceof Date ? value : new Date(value)
@@ -77,6 +82,7 @@ function formatRecordTime(value: Date | string | null) {
 export function DivePage({ dive }: { dive: DiveData }) {
   const location = [dive.site?.region, dive.site?.country].filter(Boolean).join(', ')
   const diverName = dive.diver ? formatPersonName(dive.diver) : null
+  const heroPhoto = dive.photos.find((photo) => photo.storagePath)
 
   return (
     <div className="space-y-7">
@@ -87,44 +93,75 @@ export function DivePage({ dive }: { dive: DiveData }) {
         >
           <ArrowLeft size={16} aria-hidden="true" /> Back to dives
         </Link>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-primary/10 px-3 py-1 font-mono text-sm font-semibold text-primary">
-              Dive #{dive.number ?? '—'}
-            </span>
-            {dive.diveTypeName ? (
-              <span className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
-                {dive.diveTypeName}
-              </span>
-            ) : null}
-            {dive.decompressionDive ? (
-              <span className="rounded-full bg-red-500/10 px-3 py-1 text-sm font-bold tracking-wide text-red-600 ring-1 ring-inset ring-red-500/25 dark:text-red-400">
-                DECO
-              </span>
-            ) : null}
-          </div>
-          <Link
-            to="/dives/$diveId/edit"
-            params={{ diveId: dive.id }}
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border px-4 text-sm font-semibold transition hover:bg-muted"
-          >
-            <Pencil size={15} aria-hidden="true" /> Edit dive
-          </Link>
-        </div>
-        <h1 className="mt-3 text-balance text-4xl font-semibold tracking-tight md:text-5xl">
-          {dive.site?.name ?? 'Unknown dive site'}
-        </h1>
-        <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
-          <span>{formatDiveDate(dive.diveDate)}</span>
-          <span aria-hidden="true">·</span>
-          <span>{formatEntryTime(dive.entryTime, dive.utcOffsetMinutes)}</span>
-          {location ? (
+        <div
+          className={
+            heroPhoto
+              ? 'relative isolate mt-4 flex min-h-72 flex-col justify-end overflow-hidden rounded-2xl border border-border p-6 md:min-h-80 md:p-8'
+              : 'mt-4'
+          }
+        >
+          {heroPhoto?.storagePath ? (
             <>
-              <span aria-hidden="true">·</span>
-              <span>{location}</span>
+              <img
+                src={heroMediaUrl(heroPhoto)}
+                alt={heroPhoto.description ?? 'Dive photo'}
+                className="absolute inset-0 -z-20 size-full object-cover"
+              />
+              <span
+                aria-hidden="true"
+                className="absolute inset-0 -z-10 bg-gradient-to-t from-slate-950/85 via-slate-950/40 to-slate-950/25"
+              />
             </>
           ) : null}
-        </p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <span
+                className={`rounded-full px-3 py-1 font-mono text-sm font-semibold ${heroPhoto ? 'bg-white/15 text-white backdrop-blur-sm' : 'bg-primary/10 text-primary'}`}
+              >
+                Dive #{dive.number ?? '—'}
+              </span>
+              {dive.diveTypeName ? (
+                <span
+                  className={`rounded-full px-3 py-1 text-sm ${heroPhoto ? 'bg-white/15 text-white/90 backdrop-blur-sm' : 'bg-muted text-muted-foreground'}`}
+                >
+                  {dive.diveTypeName}
+                </span>
+              ) : null}
+              {dive.decompressionDive ? (
+                <span
+                  className={`rounded-full px-3 py-1 text-sm font-bold tracking-wide ring-1 ring-inset ${heroPhoto ? 'bg-red-500/30 text-red-100 ring-red-300/40 backdrop-blur-sm' : 'bg-red-500/10 text-red-600 ring-red-500/25 dark:text-red-400'}`}
+                >
+                  DECO
+                </span>
+              ) : null}
+            </div>
+            <Link
+              to="/dives/$diveId/edit"
+              params={{ diveId: dive.id }}
+              className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${heroPhoto ? 'border-white/30 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20' : 'border-border hover:bg-muted'}`}
+            >
+              <Pencil size={15} aria-hidden="true" /> Edit dive
+            </Link>
+          </div>
+          <h1
+            className={`mt-3 text-balance text-4xl font-semibold tracking-tight md:text-5xl ${heroPhoto ? 'text-white drop-shadow-sm' : ''}`}
+          >
+            {dive.site?.name ?? 'Unknown dive site'}
+          </h1>
+          <p
+            className={`mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 ${heroPhoto ? 'text-white/85' : 'text-muted-foreground'}`}
+          >
+            <span>{formatDiveDate(dive.diveDate)}</span>
+            <span aria-hidden="true">·</span>
+            <span>{formatEntryTime(dive.entryTime, dive.utcOffsetMinutes)}</span>
+            {location ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{location}</span>
+              </>
+            ) : null}
+          </p>
+        </div>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
