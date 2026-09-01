@@ -664,7 +664,7 @@ export async function syncDiveMate(
     const backup = drive.database
     const fingerprint = createHash('sha256').update(backup).digest('hex')
     await writeFile(databasePath, backup)
-    const snapshot = parseDiveMateDatabase(databasePath)
+    const snapshot = await parseDiveMateDatabase(databasePath)
     const externalImages = await loadGoogleDriveImages(
       snapshot,
       drive,

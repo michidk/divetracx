@@ -1,12 +1,12 @@
 import '@tanstack/react-start/server-only'
 
-import { Database, type SQLQueryBindings } from 'bun:sqlite'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { getServerEnv } from '@/env'
 import { loadExportSnapshot } from '@/modules/export/server/snapshot.server'
 import { openGoogleDriveBackup } from './google-drive.server'
+import { openSqlite, type SqliteBinding, type SqliteDatabase } from './sqlite.server'
 
 const SOURCE_KEY = 'divemate'
 
@@ -22,7 +22,7 @@ function interval(seconds: number | null) {
 }
 
 function updateExisting(
-  database: Database,
+  database: SqliteDatabase,
   table: string,
   externalId: string | null,
   values: Record<string, unknown>,
@@ -36,15 +36,16 @@ function updateExisting(
   const entries = Object.entries(values).filter(([name]) => columns.has(name))
   if (entries.length === 0) return 0
   const assignments = entries.map(([name]) => `"${name}" = ?`).join(', ')
-  const bindings = entries.map(([, value]): SQLQueryBindings => {
+  const bindings = entries.map(([, value]): SqliteBinding => {
     if (value === undefined) return null
     if (value instanceof Date) return value.toISOString()
-    return value as SQLQueryBindings
+    if (typeof value === 'boolean') return value ? 1 : 0
+    return value as SqliteBinding
   })
   const result = database
     .prepare(`UPDATE "${table}" SET ${assignments} WHERE "ID" = ?`)
     .run(...bindings, externalId)
-  return result.changes
+  return Number(result.changes)
 }
 
 export interface DiveMateWriteBackResult {
@@ -69,7 +70,7 @@ export async function writeBackDiveMate(): Promise<DiveMateWriteBackResult> {
   const path = join(directory, 'DiveMate.ddb')
   try {
     await writeFile(path, drive.database)
-    const database = new Database(path)
+    const database = await openSqlite(path)
     let updatedRecords = 0
     let skippedLocalRecords = 0
     const imported = <T extends { sourceKey: string | null; externalId: string | null }>(
