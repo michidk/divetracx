@@ -278,6 +278,7 @@ export function rewriteDiveMateDatabase(
             TypeOfDive: row.diveTypeId ? diveTypeIds.get(row.diveTypeId) : null,
             BuddyIDs: (buddyIdsByDive.get(row.id) ?? []).join(','),
             UsedEquip: (equipmentIdsByDive.get(row.id) ?? []).join(','),
+            Status: row.captureSource === 'computer' ? 1 : 0,
             Number: row.number,
             Divedate: row.diveDate,
             Entrytime: row.entryTime,

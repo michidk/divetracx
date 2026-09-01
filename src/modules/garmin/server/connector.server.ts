@@ -178,6 +178,7 @@ export function createGarminConnector(
         }
 
         const diveValues = {
+          captureSource: 'computer' as const,
           siteId,
           number: mapped.number,
           diveDate: mapped.diveDate,

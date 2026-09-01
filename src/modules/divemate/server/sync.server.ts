@@ -456,6 +456,7 @@ async function applySnapshot(
       continue
     }
     const values = {
+      captureSource: item.captureSource,
       diverId: item.diverExternalId ? (diverIds.get(item.diverExternalId) ?? null) : null,
       siteId: item.siteExternalId ? (siteIds.get(item.siteExternalId) ?? null) : null,
       shopId: item.shopExternalId ? (shopIds.get(item.shopExternalId) ?? null) : null,

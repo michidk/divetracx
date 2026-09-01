@@ -59,6 +59,7 @@ function fixture(): ExportSnapshot {
       dives: [
         {
           id: 'dive-1',
+          captureSource: 'computer' as const,
           diverId: 'diver-1',
           siteId: 'site-1',
           shopId: null,
