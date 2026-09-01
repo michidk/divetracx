@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":enableVulnerabilityAlertsWithLabel('security')",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "baseBranchPatterns": ["main"],
+  "labels": ["no-stale", "bot"],
+  "packageRules": [
+    {
+      "description": "Group non-major Bun dependencies",
+      "matchManagers": ["bun"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "all non-major Bun dependencies",
+      "groupSlug": "all-minor-patch-bun"
+    },
+    {
+      "description": "Group container image updates",
+      "matchManagers": ["dockerfile", "docker-compose", "helm-values"],
+      "groupName": "container images"
+    }
+  ]
+}
