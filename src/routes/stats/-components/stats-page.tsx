@@ -22,6 +22,7 @@ import {
   formatTemperature,
 } from '@/modules/dives/format'
 import type { getStatistics } from '@/modules/dives/server/stats'
+import { DiveHeatmap } from './dive-heatmap'
 
 type StatisticsData = Awaited<ReturnType<typeof getStatistics>>
 
@@ -77,7 +78,6 @@ export function StatsPage({ data }: { data: StatisticsData }) {
   const organizations = [
     ...new Set(certifications.map((c) => c.organization).filter(Boolean)),
   ]
-  const maxYearCount = Math.max(1, ...data.divesPerYear.map((row) => row.diveCount))
 
   return (
     <div className="space-y-10">
@@ -280,31 +280,10 @@ export function StatsPage({ data }: { data: StatisticsData }) {
       {data.divesPerYear.length > 0 ? (
         <section>
           <SectionHeading>Dives per year</SectionHeading>
-          <div className="rounded-2xl border border-border bg-card p-5">
-            <div className="space-y-2.5">
-              {data.divesPerYear.map((row) => (
-                <div
-                  key={row.year}
-                  className="grid grid-cols-[3.5rem_minmax(0,1fr)_3rem] items-center gap-3"
-                >
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {row.year}
-                  </span>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{
-                        width: `${Math.max((row.diveCount / maxYearCount) * 100, 2)}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="text-right font-mono text-xs font-semibold">
-                    {row.diveCount.toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <DiveHeatmap
+            years={[...data.divesPerYear].reverse()}
+            divesPerDay={data.divesPerDay}
+          />
         </section>
       ) : null}
     </div>
