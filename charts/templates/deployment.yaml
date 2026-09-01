@@ -65,13 +65,13 @@ spec:
             - name: DIVEMATE_MAX_BACKUP_BYTES
               value: {{ .Values.divemate.maxBackupBytes | quote }}
             {{- end }}
-            {{- if .Values.garmin.fullImportUrl }}
+            {{- if or .Values.garmin.fullImportUrl .Values.garminAdapter.enabled }}
             - name: GARMIN_ADAPTER_FULL_IMPORT_URL
-              value: {{ .Values.garmin.fullImportUrl | quote }}
+              value: {{ include "divetracx.garminAdapterFullImportUrl" . | quote }}
             {{- end }}
-            {{- if .Values.garmin.incrementalImportUrl }}
+            {{- if or .Values.garmin.incrementalImportUrl .Values.garminAdapter.enabled }}
             - name: GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL
-              value: {{ .Values.garmin.incrementalImportUrl | quote }}
+              value: {{ include "divetracx.garminAdapterIncrementalImportUrl" . | quote }}
             {{- end }}
             {{- if .Values.garmin.existingSecret }}
             - name: GARMIN_ADAPTER_AUTHORIZATION

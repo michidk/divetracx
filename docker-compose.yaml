@@ -22,6 +22,11 @@ services:
       STORAGE_PROVIDER: local
       STORAGE_PATH: /uploads
       STORAGE_URL: /media
+      # Set these in .env to enable Garmin imports through the bundled adapter
+      # (see the garmin-adapter service and .env.example).
+      GARMIN_ADAPTER_FULL_IMPORT_URL: ${GARMIN_ADAPTER_FULL_IMPORT_URL:-}
+      GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL: ${GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL:-}
+      GARMIN_ADAPTER_AUTHORIZATION: ${GARMIN_ADAPTER_AUTHORIZATION:-}
     expose:
       - "3000"
     depends_on:
@@ -29,6 +34,19 @@ services:
         condition: service_healthy
     volumes:
       - divetracx-uploads:/uploads
+
+  garmin-adapter:
+    build: .
+    profiles: ["garmin"]
+    command: ["bun", "run", "scripts/garmin-adapter.ts"]
+    restart: unless-stopped
+    environment:
+      GARMIN_ADAPTER_AUTHORIZATION: ${GARMIN_ADAPTER_AUTHORIZATION:-}
+      GARMIN_TOKEN_DIRECTORY: /data/garmin-tokens
+    expose:
+      - "8787"
+    volumes:
+      - divetracx-garmin-tokens:/data/garmin-tokens
 
   hodor:
     image: ${HODOR_IMAGE:-ghcr.io/michidk/hodor@sha256:7cdb5de7ee2c776ee6c2ae049e1b2050caa60288d7b3148e26117a5d6bba18b2}
@@ -49,3 +67,4 @@ services:
 volumes:
   divetracx-postgres:
   divetracx-uploads:
+  divetracx-garmin-tokens:

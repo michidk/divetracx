@@ -80,12 +80,25 @@ Activity Details supply stable Activity IDs; the official FIT SDK maps diving
 sessions, profile depth/temperature, decompression ceiling, ppO₂, and gases into
 the canonical model.
 
-Production Activity API OAuth, feed URLs, cursors, pagination, and limits are
-available only after Garmin Developer Program approval. Divetracx does not guess
-that gated contract: it fails closed until approved full/incremental adapter
-URLs are configured. The server-side adapter returns Activity Details, optional
-FIT bytes, and opaque next state, and owns partner OAuth, backfill/pagination,
-rate limiting, and continuation semantics. See [.env.example](.env.example) and
+Transport stays behind the fail-closed adapter boundary: the app only ever talks
+to the configured adapter URLs. Divetracx bundles such an adapter
+(`bun run garmin:adapter`), a small server-side service that signs in to the
+Garmin Connect consumer API the same way garth-based tools such as
+liftosaur2garmin do. A one-time interactive login
+(`bun run garmin:login`) stores OAuth tokens in `GARMIN_TOKEN_DIRECTORY` (a
+persistent volume in Docker Compose and Helm); the adapter refreshes and
+re-persists them on use, sweeps dive activities newest-first, downloads the
+original FIT files, and returns one transactional batch with an opaque
+watermark as next state. Requests must carry the shared
+`GARMIN_ADAPTER_AUTHORIZATION` value. Accounts with multi-factor authentication
+are not supported by the login flow yet.
+
+A Garmin activity is reconciled against the existing logbook by start time: it
+attaches to the nearest existing log entry within 45 minutes (marking it
+computer-captured, filling missing fields, and adding the recorded profile and
+gases only when the entry has none of its own) and only creates a new dive when
+no entry matches. Matched log entries are never deleted by a Garmin full
+import. See [.env.example](.env.example) and
 [the architecture guide](docs/import-export-architecture.md).
 
 ## Export and data management
@@ -107,6 +120,12 @@ history and external provenance remain read-only.
 ## Helm and scheduled imports
 
 The chart in `charts/` deploys the app, migrations, optional Hodor gate, and
-external or bundled PostgreSQL. The existing CronJob performs DiveMate
-incremental import only and calls the same generic service as the UI/CLI. Garmin
-adapter configuration is server-only. See [the chart guide](charts/README.md).
+external or bundled PostgreSQL. The DiveMate CronJob performs incremental import
+only and calls the same generic service as the UI/CLI. Enabling
+`garminAdapter.enabled` deploys the bundled Garmin adapter with a persistent
+token volume, and `garmin.sync.enabled` adds a Garmin incremental-import
+CronJob; both require `garmin.existingSecret` with the shared authorization
+value. Log the adapter in once with
+`kubectl exec -it deploy/<release>-garmin-adapter -- bun run garmin:login`.
+Garmin adapter configuration is server-only. See
+[the chart guide](charts/README.md).

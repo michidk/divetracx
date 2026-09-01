@@ -311,3 +311,25 @@ Users can download a one-off DiveMate export or explicitly publish it over the
 configured `DiveMate.ddb` in Google Drive. Publishing requires confirmation,
 retains the previous Drive revision, and is never invoked by an import or
 schedule; it is an export destination, not bidirectional synchronization.
+
+## Bundled Garmin adapter and log-entry matching
+
+Divetracx now ships an implementation of the adapter contract in
+`src/modules/garmin-adapter` (entry points `scripts/garmin-adapter.ts` and
+`scripts/garmin-adapter-login.ts`). Instead of the gated partner API it uses the
+Garmin Connect consumer API with garth-style persisted OAuth tokens: a one-time
+interactive login stores tokens in `GARMIN_TOKEN_DIRECTORY`, the adapter
+refreshes and re-persists them, sweeps activities newest-first, keeps diving
+sub-sports, downloads original FIT files, and returns one transactional batch
+whose next state is a start-time watermark. The Divetracx application still
+fails closed and only talks to the configured adapter URLs with the shared
+authorization value.
+
+The Garmin connector reconciles activities against the existing logbook instead
+of duplicating dives: an activity attaches to the nearest existing dive whose
+start instant is within 45 minutes (link role `matched`), marks it
+computer-captured, fills only missing summary fields, and adds profile samples
+and gases only when the dive has none of its own. Unmatched activities create
+new computer-captured dives (link role `produced`) without inventing dive
+sites. Full imports delete only produced provenance; records whose only link
+role is `matched` are left in place.

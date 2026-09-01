@@ -43,6 +43,13 @@ export interface ObservedExternalRecord {
   canonicalLinks: CanonicalRecordLink[]
 }
 
+/**
+ * Link role for canonical records that existed before an import observed them
+ * and were only enriched, never produced, by the integration. A full import
+ * must not delete records whose only provenance is a matched link.
+ */
+export const MATCHED_LINK_ROLE = 'matched'
+
 export interface CanonicalRecordLink {
   canonicalEntityType: string
   canonicalEntityId: string

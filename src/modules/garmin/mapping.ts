@@ -64,6 +64,7 @@ export function mapGarminActivity(source: GarminSourceActivity): GarminMappedDiv
 
   return {
     externalId: details.activityId,
+    startEpochSeconds: Math.round(startSeconds),
     diveDate: local.date,
     entryTime: local.time,
     utcOffsetMinutes:
