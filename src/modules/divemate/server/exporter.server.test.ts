@@ -29,6 +29,12 @@ describe('canonical DiveMate export', () => {
         Lat TEXT, Lon TEXT, MaxDepth REAL, Altitude INTEGER, Difficulty TEXT,
         Rating INTEGER, Water INTEGER, Comments TEXT, UUID TEXT, Updated TEXT
       );
+      CREATE TABLE Equipment (
+        ID INTEGER, Name TEXT, Object TEXT, Category TEXT, Manufacturer TEXT,
+        Serial TEXT, DateP TEXT, DateR TEXT, DateRN TEXT, Inactive INTEGER,
+        Weight REAL, Comments TEXT, UUID TEXT, Updated TEXT, DiverID INTEGER,
+        Info TEXT, Price REAL, Shop TEXT, TypeID INTEGER
+      );
       CREATE TABLE Logbook (
         ID INTEGER, DiverID INTEGER, PlaceID INTEGER, ShopID INTEGER,
         TypeOfDive INTEGER, BuddyIDs TEXT, UsedEquip TEXT, Number INTEGER,
@@ -46,7 +52,7 @@ describe('canonical DiveMate export', () => {
     const now = new Date('2026-09-01T12:00:00Z')
     const snapshot = {
       format: 'divetracx-backup',
-      version: 7,
+      version: 8,
       exportedAt: now.toISOString(),
       data: {
         divers: [],
@@ -70,7 +76,45 @@ describe('canonical DiveMate export', () => {
           },
         ],
         buddies: [],
-        equipment: [],
+        equipment: [
+          {
+            id: '55555555-5555-5555-5555-555555555555',
+            diverId: null,
+            name: 'Primary mask',
+            category: 'Mask',
+            manufacturer: null,
+            model: null,
+            serialNumber: null,
+            information: null,
+            purchasedAt: null,
+            purchasePrice: null,
+            purchaseShop: null,
+            retiredAt: null,
+            serviceDueAt: null,
+            inactive: false,
+            weightKg: null,
+            notes: null,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ],
+        equipmentSets: [
+          {
+            id: '66666666-6666-6666-6666-666666666666',
+            name: 'Travel set',
+            notes: 'Lightweight setup',
+            inactive: false,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ],
+        equipmentSetItems: [
+          {
+            equipmentSetId: '66666666-6666-6666-6666-666666666666',
+            equipmentId: '55555555-5555-5555-5555-555555555555',
+            sortOrder: 0,
+          },
+        ],
         certifications: [],
         shops: [],
         diveTypes: [],
@@ -114,7 +158,13 @@ describe('canonical DiveMate export', () => {
           },
         ],
         diveBuddies: [],
-        diveEquipment: [],
+        diveEquipment: [
+          {
+            id: '77777777-7777-7777-7777-777777777777',
+            diveId: '22222222-2222-2222-2222-222222222222',
+            equipmentId: '55555555-5555-5555-5555-555555555555',
+          },
+        ],
         diveProfileSamples: [
           {
             id: '33333333-3333-3333-3333-333333333333',
@@ -166,6 +216,17 @@ describe('canonical DiveMate export', () => {
       computer: 'Garmin Descent',
     })
     expect(exported.sites[0]?.name).toBe('Garmin site')
+    const exportedItem = exported.equipment.find((item) => !item.isSet)
+    const exportedSet = exported.equipment.find((item) => item.isSet)
+    if (!exportedItem) throw new Error('Exported equipment item is missing')
+    expect(exportedItem?.name).toBe('Primary mask')
+    expect(exportedSet).toMatchObject({
+      name: 'Travel set',
+      category: '---SET',
+      equipmentTypeCode: 9,
+      memberExternalIds: [exportedItem.externalId],
+    })
+    expect(exported.dives[0]?.equipmentExternalIds).toEqual([exportedItem.externalId])
     expect(exported.profileSamples).toHaveLength(2)
     expect(exported.profileSamples[1]).toMatchObject({
       elapsedSeconds: 30,

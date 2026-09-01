@@ -73,6 +73,12 @@ describe('parseDiveMateDatabase', () => {
         'equipment-uuid', '2026-01-01', 1, 'Bluetooth device', 500,
         'Dive Center', 11, 12, 0, 2
       );
+      INSERT INTO Equipment VALUES (
+        10, 'Basic set', NULL, '---SET', NULL, NULL,
+        NULL, NULL, NULL, 0, NULL, 'Reusable set', NULL,
+        'set-uuid', '2026-01-02', 1, '9', NULL,
+        NULL, 9, 0, 0, 0
+      );
       CREATE TABLE Brevets (
         ID INTEGER, DiverID INTEGER, Brevet TEXT, Org TEXT, Number TEXT,
         CertDate TEXT, Instructor TEXT, InstructorNo TEXT, UUID TEXT,
@@ -202,6 +208,15 @@ describe('parseDiveMateDatabase', () => {
       sourceValue1: '12',
       sourceValue2: '0',
       sourceValue3: 2,
+      isSet: false,
+      memberExternalIds: [],
+    })
+    expect(snapshot.equipment[1]).toMatchObject({
+      name: 'Basic set',
+      category: '---SET',
+      equipmentTypeCode: 9,
+      isSet: true,
+      memberExternalIds: ['9'],
     })
     expect(snapshot.certifications[0]).toMatchObject({
       scan1Path: '/media/front.jpg',

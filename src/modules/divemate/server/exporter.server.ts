@@ -96,7 +96,7 @@ export function rewriteDiveMateDatabase(
   const diverIds = assignDiveMateIds(data.divers)
   const siteIds = assignDiveMateIds(data.diveSites)
   const buddyIds = assignDiveMateIds(data.buddies)
-  const equipmentIds = assignDiveMateIds(data.equipment)
+  const equipmentIds = assignDiveMateIds([...data.equipment, ...data.equipmentSets])
   const certificationIds = assignDiveMateIds(data.certifications)
   const shopIds = assignDiveMateIds(data.shops)
   const diveTypeIds = assignDiveMateIds(data.diveTypes)
@@ -119,6 +119,18 @@ export function rewriteDiveMateDatabase(
     if (id) {
       equipmentIdsByDive.set(relation.diveId, [
         ...(equipmentIdsByDive.get(relation.diveId) ?? []),
+        id,
+      ])
+    }
+  }
+  const equipmentIdsBySet = new Map<string, number[]>()
+  for (const relation of [...data.equipmentSetItems].sort(
+    (left, right) => left.sortOrder - right.sortOrder,
+  )) {
+    const id = equipmentIds.get(relation.equipmentId)
+    if (id) {
+      equipmentIdsBySet.set(relation.equipmentSetId, [
+        ...(equipmentIdsBySet.get(relation.equipmentSetId) ?? []),
         id,
       ])
     }
@@ -220,10 +232,8 @@ export function rewriteDiveMateDatabase(
           SortOrd: row.sortOrder,
         })),
       )
-      replaceTable(
-        database,
-        'Equipment',
-        data.equipment.map((row) => ({
+      replaceTable(database, 'Equipment', [
+        ...data.equipment.map((row) => ({
           ID: equipmentIds.get(row.id),
           UUID: row.id,
           Updated: row.updatedAt,
@@ -243,7 +253,18 @@ export function rewriteDiveMateDatabase(
           Weight: row.weightKg,
           Comments: row.notes,
         })),
-      )
+        ...data.equipmentSets.map((row) => ({
+          ID: equipmentIds.get(row.id),
+          UUID: row.id,
+          Updated: row.updatedAt,
+          Name: row.name,
+          Category: '---SET',
+          TypeID: 9,
+          Info: (equipmentIdsBySet.get(row.id) ?? []).join(','),
+          Inactive: row.inactive,
+          Comments: row.notes,
+        })),
+      ])
       replaceTable(
         database,
         'Brevets',

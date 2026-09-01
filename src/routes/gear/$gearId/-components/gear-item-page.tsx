@@ -3,6 +3,7 @@ import { ArrowLeft, Waves, Wrench } from 'lucide-react'
 import { DeleteRecordButton } from '@/components/delete-record-button'
 import { DiveLinkList } from '@/components/dive-link-list'
 import { EntityForm } from '@/components/entity-form'
+import { PhotoManager } from '@/components/photo-manager'
 import { Badge } from '@/components/ui/badge'
 import { formatDiveDate } from '@/modules/dives/format'
 import type { getGearItem } from '@/modules/gear/server/queries'
@@ -11,7 +12,7 @@ type GearDetail = NonNullable<Awaited<ReturnType<typeof getGearItem>>>
 
 export function GearItemPage({ detail }: { detail: GearDetail }) {
   const navigate = useNavigate()
-  const { item, dives } = detail
+  const { item, dives, pictures } = detail
   const today = new Date().toISOString().slice(0, 10)
   const serviceDue =
     Boolean(item.serviceDueAt) &&
@@ -55,12 +56,18 @@ export function GearItemPage({ detail }: { detail: GearDetail }) {
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.9fr)]">
-        <section className="overflow-hidden rounded-2xl border border-border bg-card">
-          <h2 className="border-b border-border px-5 py-4 font-semibold">
-            Dives with this item
-          </h2>
-          <DiveLinkList dives={dives} emptyText="Not used on any dive yet." />
-        </section>
+        <div className="space-y-6">
+          <section className="overflow-hidden rounded-2xl border border-border bg-card">
+            <h2 className="border-b border-border px-5 py-4 font-semibold">
+              Dives with this item
+            </h2>
+            <DiveLinkList dives={dives} emptyText="Not used on any dive yet." />
+          </section>
+          <section className="rounded-2xl border border-border bg-card p-6">
+            <h2 className="font-semibold">Photos</h2>
+            <PhotoManager target="gear" targetId={item.id} pictures={pictures} />
+          </section>
+        </div>
 
         <div>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">

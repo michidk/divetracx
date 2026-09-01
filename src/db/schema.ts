@@ -110,6 +110,31 @@ export const equipment = pgTable('equipment', {
   ...auditColumns,
 })
 
+export const equipmentSets = pgTable('equipment_sets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  notes: text('notes'),
+  inactive: boolean('inactive').notNull().default(false),
+  ...auditColumns,
+})
+
+export const equipmentSetItems = pgTable(
+  'equipment_set_items',
+  {
+    equipmentSetId: uuid('equipment_set_id')
+      .notNull()
+      .references(() => equipmentSets.id, { onDelete: 'cascade' }),
+    equipmentId: uuid('equipment_id')
+      .notNull()
+      .references(() => equipment.id, { onDelete: 'cascade' }),
+    sortOrder: integer('sort_order').notNull().default(0),
+  },
+  (table) => [
+    primaryKey({ columns: [table.equipmentSetId, table.equipmentId] }),
+    index('equipment_set_items_equipment_index').on(table.equipmentId),
+  ],
+)
+
 export const certifications = pgTable('certifications', {
   id: uuid('id').primaryKey().defaultRandom(),
   diverId: uuid('diver_id').references(() => divers.id, {

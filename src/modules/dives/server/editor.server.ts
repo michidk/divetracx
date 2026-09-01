@@ -10,46 +10,82 @@ import {
   dives,
   diveTypes,
   equipment,
+  equipmentSetItems,
+  equipmentSets,
   shops,
   tanks,
 } from '@/db/schema'
 
 async function loadEditorOptions() {
   const db = getDb()
-  const [siteRows, shopRows, typeRows, buddyRows, equipmentRows] = await Promise.all([
-    db
-      .select({ id: diveSites.id, name: diveSites.name, country: diveSites.country })
-      .from(diveSites)
-      .orderBy(asc(diveSites.name)),
-    db.select({ id: shops.id, name: shops.name }).from(shops).orderBy(asc(shops.name)),
-    db
-      .select({ id: diveTypes.id, name: diveTypes.name })
-      .from(diveTypes)
-      .orderBy(sql`${diveTypes.sortOrder} nulls last`, asc(diveTypes.name)),
-    db
-      .select({
-        id: buddies.id,
-        firstName: buddies.firstName,
-        lastName: buddies.lastName,
-      })
-      .from(buddies)
-      .orderBy(asc(buddies.lastName), asc(buddies.firstName)),
-    db
-      .select({
-        id: equipment.id,
-        name: equipment.name,
-        category: equipment.category,
-        inactive: equipment.inactive,
-      })
-      .from(equipment)
-      .orderBy(asc(equipment.inactive), asc(equipment.category), asc(equipment.name)),
-  ])
+  const [siteRows, shopRows, typeRows, buddyRows, equipmentRows, setRows] =
+    await Promise.all([
+      db
+        .select({ id: diveSites.id, name: diveSites.name, country: diveSites.country })
+        .from(diveSites)
+        .orderBy(asc(diveSites.name)),
+      db.select({ id: shops.id, name: shops.name }).from(shops).orderBy(asc(shops.name)),
+      db
+        .select({ id: diveTypes.id, name: diveTypes.name })
+        .from(diveTypes)
+        .orderBy(sql`${diveTypes.sortOrder} nulls last`, asc(diveTypes.name)),
+      db
+        .select({
+          id: buddies.id,
+          firstName: buddies.firstName,
+          lastName: buddies.lastName,
+        })
+        .from(buddies)
+        .orderBy(asc(buddies.lastName), asc(buddies.firstName)),
+      db
+        .select({
+          id: equipment.id,
+          name: equipment.name,
+          category: equipment.category,
+          inactive: equipment.inactive,
+        })
+        .from(equipment)
+        .orderBy(asc(equipment.inactive), asc(equipment.category), asc(equipment.name)),
+      db
+        .select({
+          id: equipmentSets.id,
+          name: equipmentSets.name,
+          inactive: equipmentSets.inactive,
+          equipmentId: equipmentSetItems.equipmentId,
+          sortOrder: equipmentSetItems.sortOrder,
+        })
+        .from(equipmentSets)
+        .leftJoin(
+          equipmentSetItems,
+          eq(equipmentSetItems.equipmentSetId, equipmentSets.id),
+        )
+        .orderBy(
+          asc(equipmentSets.inactive),
+          asc(equipmentSets.name),
+          asc(equipmentSetItems.sortOrder),
+        ),
+    ])
+  const gearSets = new Map<
+    string,
+    { id: string; name: string; inactive: boolean; equipmentIds: string[] }
+  >()
+  for (const row of setRows) {
+    const set = gearSets.get(row.id) ?? {
+      id: row.id,
+      name: row.name,
+      inactive: row.inactive,
+      equipmentIds: [],
+    }
+    if (row.equipmentId) set.equipmentIds.push(row.equipmentId)
+    gearSets.set(row.id, set)
+  }
   return {
     sites: siteRows,
     shops: shopRows,
     diveTypes: typeRows,
     buddies: buddyRows,
     equipment: equipmentRows,
+    equipmentSets: [...gearSets.values()],
   }
 }
 
