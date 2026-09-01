@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Divetracx</title>
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="#087f8c"/>
+  <path d="M10 15c3.7-3.2 7.3-3.2 11 0s7.3 3.2 11 0 7.3-3.2 11-0 7.3 3.2 11 0" fill="none" stroke="#f5ffff" stroke-width="4" stroke-linecap="round" opacity=".6"/>
+  <path d="M12 22 24 47h13l9-15" fill="none" stroke="#f5ffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="49" cy="27" r="6" fill="#f5ffff"/>
+</svg>

@@ -2,7 +2,7 @@ import '@tanstack/react-start/server-only'
 
 import { asc, desc, eq, sql } from 'drizzle-orm'
 import { getDb } from '@/db'
-import { buddies, diveBuddies, diveSites, dives } from '@/db/schema'
+import { buddies, diveBuddies, diveSites, dives, diveTypes } from '@/db/schema'
 
 export async function loadBuddiesOverview() {
   const db = getDb()
@@ -37,10 +37,12 @@ export async function loadBuddyDetail(buddyId: string) {
       durationSeconds: dives.durationSeconds,
       maximumDepthMeters: dives.maximumDepthMeters,
       siteName: diveSites.name,
+      diveTypeName: diveTypes.name,
     })
     .from(diveBuddies)
     .innerJoin(dives, eq(diveBuddies.diveId, dives.id))
     .leftJoin(diveSites, eq(dives.siteId, diveSites.id))
+    .leftJoin(diveTypes, eq(dives.diveTypeId, diveTypes.id))
     .where(eq(diveBuddies.buddyId, buddyId))
     .orderBy(desc(dives.diveDate), desc(dives.entryTime))
 

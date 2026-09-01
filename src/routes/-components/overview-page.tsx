@@ -10,6 +10,7 @@ import {
   UsersRound,
   Waves,
 } from 'lucide-react'
+import { diveTypeIcon } from '@/components/dive-type-icon'
 import type { getDashboard } from '@/modules/dives/server/queries'
 
 type DashboardData = Awaited<ReturnType<typeof getDashboard>>
@@ -131,45 +132,59 @@ export function OverviewPage({ data }: { data: DashboardData }) {
               No dives yet. Log your first dive or import a logbook in Settings.
             </div>
           ) : (
-            data.recentDives.map((dive, index) => (
-              <Link
-                key={dive.id}
-                to="/dives/$diveId"
-                params={{ diveId: dive.id }}
-                className={`flex min-h-20 items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary md:px-6 ${index > 0 ? 'border-t border-border' : ''}`}
-              >
-                <div className="flex min-w-0 items-center gap-4">
-                  <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
-                    {dive.picturePath ? (
+            data.recentDives.map((dive, index) => {
+              const TypeIcon = diveTypeIcon(dive.diveTypeName)
+              return (
+                <Link
+                  key={dive.id}
+                  to="/dives/$diveId"
+                  params={{ diveId: dive.id }}
+                  className={`group relative isolate flex min-h-20 items-center justify-between gap-4 overflow-hidden p-4 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary md:px-6 ${index > 0 ? 'border-t border-border' : ''}`}
+                >
+                  {dive.picturePath ? (
+                    <>
                       <img
                         src={mediaUrl(dive.picturePath)}
                         alt=""
-                        className="size-full object-cover"
+                        aria-hidden="true"
+                        className="absolute inset-0 -z-20 size-full scale-105 object-cover blur-[2px]"
                         loading="lazy"
                       />
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="font-semibold">
-                      {dive.siteName ?? 'Unknown dive site'}
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-0 -z-10 bg-card/85 transition-colors group-hover:bg-card/70"
+                      />
+                    </>
+                  ) : null}
+                  <div className="flex min-w-0 items-center gap-4">
+                    <span
+                      title={dive.diveTypeName ?? undefined}
+                      className="grid size-11 shrink-0 place-items-center rounded-xl bg-accent text-primary shadow-sm"
+                    >
+                      <TypeIcon size={19} aria-hidden="true" />
+                      <span className="sr-only">{dive.diveTypeName ?? 'Dive'}</span>
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-semibold">
+                        {dive.siteName ?? 'Unknown dive site'}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {formatDate(dive.diveDate)} · {dive.country ?? 'Country not set'}
+                        {dive.diveTypeName ? ` · ${dive.diveTypeName}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono text-sm font-semibold">
+                      {Number(dive.maximumDepthMeters ?? 0).toFixed(1)} m
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {formatDate(dive.diveDate)} · {dive.country ?? 'Country not set'}
+                      {Math.round(dive.durationSeconds / 60)} min
                     </p>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-mono text-sm font-semibold">
-                    {Number(dive.maximumDepthMeters ?? 0).toFixed(1)} m
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {Math.round(dive.durationSeconds / 60)} min
-                  </p>
-                </div>
-              </Link>
-            ))
+                </Link>
+              )
+            })
           )}
         </div>
       </section>

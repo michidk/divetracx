@@ -2,7 +2,7 @@ import '@tanstack/react-start/server-only'
 
 import { and, asc, desc, eq, isNotNull, sql } from 'drizzle-orm'
 import { getDb } from '@/db'
-import { diveSites, dives, pictures } from '@/db/schema'
+import { diveSites, dives, diveTypes, pictures } from '@/db/schema'
 
 export async function loadSitesOverview() {
   const db = getDb()
@@ -46,8 +46,10 @@ export async function loadSiteDetail(siteId: string) {
         maximumDepthMeters: dives.maximumDepthMeters,
         waterTemperatureCelsius: dives.waterTemperatureCelsius,
         rating: dives.rating,
+        diveTypeName: diveTypes.name,
       })
       .from(dives)
+      .leftJoin(diveTypes, eq(dives.diveTypeId, diveTypes.id))
       .where(eq(dives.siteId, siteId))
       .orderBy(desc(dives.diveDate), desc(dives.entryTime)),
     db
