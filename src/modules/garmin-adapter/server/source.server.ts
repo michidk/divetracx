@@ -1,7 +1,5 @@
 import '@tanstack/react-start/server-only'
 
-import { existsSync, mkdirSync } from 'node:fs'
-import { join } from 'node:path'
 import { unzipSync } from 'fflate'
 import { GarminConnect } from 'garmin-connect'
 import {
@@ -19,6 +17,7 @@ import {
   type GarminAdapterEnvironment,
   getGarminAdapterEnvironment,
 } from './environment.server'
+import { ensureTokenDirectory, hasStoredTokens } from './token-store.server'
 
 export type GarminAdapterMode = 'full' | 'incremental'
 
@@ -29,35 +28,19 @@ export interface GarminAdapterBatchSource {
   ): Promise<GarminAdapterBatch>
 }
 
-function hasStoredTokens(tokenDirectory: string) {
-  return (
-    existsSync(join(tokenDirectory, 'oauth1_token.json')) &&
-    existsSync(join(tokenDirectory, 'oauth2_token.json'))
-  )
-}
-
-async function createClient(environment: GarminAdapterEnvironment) {
+function createClient(environment: GarminAdapterEnvironment) {
+  if (!hasStoredTokens(environment.GARMIN_TOKEN_DIRECTORY)) {
+    throw new Error(
+      'The adapter is not connected to Garmin Connect yet. Open the adapter ' +
+        'page in a browser and log in first.',
+    )
+  }
   const client = new GarminConnect(
-    {
-      username: environment.GARMIN_EMAIL ?? '',
-      password: environment.GARMIN_PASSWORD ?? '',
-    },
+    { username: '', password: '' },
     environment.GARMIN_DOMAIN,
   )
-  if (hasStoredTokens(environment.GARMIN_TOKEN_DIRECTORY)) {
-    client.loadTokenByFile(environment.GARMIN_TOKEN_DIRECTORY)
-    return client
-  }
-  if (environment.GARMIN_EMAIL && environment.GARMIN_PASSWORD) {
-    await client.login()
-    mkdirSync(environment.GARMIN_TOKEN_DIRECTORY, { recursive: true })
-    client.exportTokenToFile(environment.GARMIN_TOKEN_DIRECTORY)
-    return client
-  }
-  throw new Error(
-    `No Garmin Connect tokens found in ${environment.GARMIN_TOKEN_DIRECTORY}. ` +
-      'Run `bun run garmin:login` against the token volume first.',
-  )
+  client.loadTokenByFile(environment.GARMIN_TOKEN_DIRECTORY)
+  return client
 }
 
 function toBytes(payload: unknown): Uint8Array {
@@ -108,7 +91,7 @@ export class GarminConnectSource implements GarminAdapterBatchSource {
   ): Promise<GarminAdapterBatch> {
     const environment = this.environment
     const watermark = parseAdapterState(state)
-    const client = await createClient(environment)
+    const client = createClient(environment)
     const collected: CollectedActivity[] = []
     const seen = new Set<string>()
     let scanned = 0
@@ -163,7 +146,7 @@ export class GarminConnectSource implements GarminAdapterBatchSource {
     }
 
     // Persist tokens that the client may have refreshed during the batch.
-    mkdirSync(environment.GARMIN_TOKEN_DIRECTORY, { recursive: true })
+    ensureTokenDirectory(environment.GARMIN_TOKEN_DIRECTORY)
     client.exportTokenToFile(environment.GARMIN_TOKEN_DIRECTORY)
 
     return {

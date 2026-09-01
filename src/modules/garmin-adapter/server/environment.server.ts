@@ -5,9 +5,8 @@ import { z } from 'zod'
 const schema = z.object({
   GARMIN_ADAPTER_PORT: z.coerce.number().int().positive().default(8787),
   GARMIN_ADAPTER_AUTHORIZATION: z.string().trim().min(1).optional(),
+  GARMIN_ADAPTER_UI_PASSWORD: z.string().min(1).optional(),
   GARMIN_TOKEN_DIRECTORY: z.string().trim().min(1).default('/data/garmin-tokens'),
-  GARMIN_EMAIL: z.string().trim().min(1).optional(),
-  GARMIN_PASSWORD: z.string().min(1).optional(),
   GARMIN_DOMAIN: z.enum(['garmin.com', 'garmin.cn']).default('garmin.com'),
   GARMIN_ACTIVITY_PAGE_SIZE: z.coerce.number().int().positive().max(200).default(50),
   GARMIN_FULL_IMPORT_MAX_ACTIVITIES: z.coerce.number().int().positive().default(2_000),

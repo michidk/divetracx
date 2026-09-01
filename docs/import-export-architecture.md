@@ -315,15 +315,16 @@ schedule; it is an export destination, not bidirectional synchronization.
 ## Bundled Garmin adapter and log-entry matching
 
 Divetracx now ships an implementation of the adapter contract in
-`src/modules/garmin-adapter` (entry points `scripts/garmin-adapter.ts` and
-`scripts/garmin-adapter-login.ts`). Instead of the gated partner API it uses the
-Garmin Connect consumer API with garth-style persisted OAuth tokens: a one-time
-interactive login stores tokens in `GARMIN_TOKEN_DIRECTORY`, the adapter
-refreshes and re-persists them, sweeps activities newest-first, keeps diving
-sub-sports, downloads original FIT files, and returns one transactional batch
-whose next state is a start-time watermark. The Divetracx application still
-fails closed and only talks to the configured adapter URLs with the shared
-authorization value.
+`src/modules/garmin-adapter` (entry point `scripts/garmin-adapter.ts`). Instead
+of the gated partner API it uses the Garmin Connect consumer API with
+garth-style persisted OAuth tokens: the adapter serves a browser setup page
+(optionally password-protected with `GARMIN_ADAPTER_UI_PASSWORD`) where a
+one-time Garmin Connect login stores tokens in `GARMIN_TOKEN_DIRECTORY`;
+credentials are never persisted. The adapter refreshes and re-persists tokens,
+sweeps activities newest-first, keeps diving sub-sports, downloads original FIT
+files, and returns one transactional batch whose next state is a start-time
+watermark. The Divetracx application still fails closed and only talks to the
+configured adapter URLs with the shared authorization value.
 
 The Garmin connector reconciles activities against the existing logbook instead
 of duplicating dives: an activity attaches to the nearest existing dive whose
