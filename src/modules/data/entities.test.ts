@@ -1,60 +1,43 @@
 import { describe, expect, test } from 'bun:test'
 import { getTableColumns } from 'drizzle-orm'
-import {
-  buddies,
-  certifications,
-  diveProfileSamples,
-  divers,
-  diveSites,
-  dives,
-  diveTypes,
-  equipment,
-  importRuns,
-  pictures,
-  shops,
-  tanks,
-} from '@/db/schema'
+import { buddies, certifications, divers, diveSites, equipment } from '@/db/schema'
 import { entityDefinitionList, entityDefinitions, entityKeySchema } from './entities'
 
 const entityTables = {
-  dives,
   sites: diveSites,
   divers,
   buddies,
   equipment,
   certifications,
-  shops,
-  'dive-types': diveTypes,
-  tanks,
-  pictures,
-  'profile-samples': diveProfileSamples,
-  'sync-runs': importRuns,
 } as const
 
-const recordMetadataColumns = new Set([
-  'id',
-  'sourceKey',
-  'externalId',
-  'externalUuid',
-  'sourceUpdatedAt',
-  'sourcePayload',
-  'createdAt',
-  'updatedAt',
-  'storagePath',
-  'thumbnailStoragePath',
-  'mimeType',
-  'byteSize',
-  'scan1StoragePath',
-  'scan1ThumbnailStoragePath',
-  'scan1MimeType',
-  'scan1ByteSize',
-  'scan2StoragePath',
-  'scan2ThumbnailStoragePath',
-  'scan2MimeType',
-  'scan2ByteSize',
-])
+const recordMetadataColumns = new Set(['id', 'createdAt', 'updatedAt'])
 
-describe('data entity definitions', () => {
+// Columns that exist in the schema but are intentionally not user-editable:
+// they are either assigned automatically, preserved for import round-trips,
+// or managed through the dive editor instead of the taxonomy form.
+const managedElsewhereColumns: Record<keyof typeof entityTables, Set<string>> = {
+  sites: new Set(['waterType']),
+  divers: new Set(),
+  buddies: new Set(),
+  equipment: new Set(['diverId']),
+  certifications: new Set([
+    'diverId',
+    'sortOrder',
+    'scan1Path',
+    'scan2Path',
+    'scan1StoragePath',
+    'scan1ThumbnailStoragePath',
+    'scan1MimeType',
+    'scan1ByteSize',
+    'scan2StoragePath',
+    'scan2ThumbnailStoragePath',
+    'scan2MimeType',
+    'scan2ByteSize',
+  ]),
+}
+
+describe('taxonomy entity definitions', () => {
   test('defines every entity exactly once', () => {
     expect(entityDefinitionList).toHaveLength(entityKeySchema.options.length)
     expect(new Set(entityDefinitionList.map((item) => item.key)).size).toBe(
@@ -62,52 +45,35 @@ describe('data entity definitions', () => {
     )
   })
 
-  test('uses unique fields and valid references', () => {
+  test('uses unique field keys and non-empty sections', () => {
     for (const definition of entityDefinitionList) {
       const fieldKeys = definition.fields.map((field) => field.key)
       expect(new Set(fieldKeys).size).toBe(fieldKeys.length)
       for (const field of definition.fields) {
         expect(field.section.length).toBeGreaterThan(0)
-        if (field.reference) expect(entityDefinitions[field.reference]).toBeDefined()
       }
     }
   })
 
-  test('manages dive join tables through relationship fields', () => {
-    const diveFields = new Map(
-      entityDefinitions.dives.fields.map((field) => [field.key, field]),
-    )
-    expect(diveFields.get('buddyIds')).toMatchObject({
-      kind: 'multi-select',
-      reference: 'buddies',
-    })
-    expect(diveFields.get('equipmentIds')).toMatchObject({
-      kind: 'multi-select',
-      reference: 'equipment',
-    })
-  })
-
-  test('provides an editor field for every domain column', () => {
+  test('covers every user-editable domain column', () => {
     for (const entity of entityKeySchema.options) {
       const editorFields = new Set(
         entityDefinitions[entity].fields.map((field) => field.key),
       )
-      const domainColumns = Object.keys(getTableColumns(entityTables[entity])).filter(
-        (column) => !recordMetadataColumns.has(column),
+      const columns = new Set(Object.keys(getTableColumns(entityTables[entity])))
+      const domainColumns = [...columns].filter(
+        (column) =>
+          !recordMetadataColumns.has(column) &&
+          !managedElsewhereColumns[entity].has(column),
       )
       expect(
         domainColumns.filter((column) => !editorFields.has(column)),
-        `${entity} has domain columns without editor fields`,
+        `${entity} has editable columns without editor fields`,
+      ).toEqual([])
+      expect(
+        [...editorFields].filter((field) => !columns.has(field)),
+        `${entity} has editor fields without matching columns`,
       ).toEqual([])
     }
-  })
-
-  test('keeps import audit records read-only', () => {
-    expect(entityDefinitions['sync-runs'].mutable).toBeFalse()
-    expect(
-      entityDefinitionList
-        .filter((definition) => definition.key !== 'sync-runs')
-        .every((definition) => definition.mutable),
-    ).toBeTrue()
   })
 })

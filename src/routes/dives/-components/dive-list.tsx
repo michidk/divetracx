@@ -1,5 +1,7 @@
 import { Link } from '@tanstack/react-router'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Plus, Search } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Input } from '@/components/ui/input'
 import {
   formatDiveDate,
   formatDuration,
@@ -14,18 +16,62 @@ function mediaUrl(path: string) {
   return `/media/${path.split('/').map(encodeURIComponent).join('/')}`
 }
 
+function matchesSearch(dive: DiveListData[number], search: string) {
+  const query = search.trim().toLowerCase()
+  if (!query) return true
+  return [
+    dive.siteName,
+    dive.country,
+    dive.diveDate,
+    dive.number === null ? null : `#${dive.number}`,
+    dive.number === null ? null : String(dive.number),
+  ].some((value) => value?.toLowerCase().includes(query))
+}
+
 export function DiveList({ dives }: { dives: DiveListData }) {
+  const [search, setSearch] = useState('')
+  const filteredDives = useMemo(
+    () => dives.filter((dive) => matchesSearch(dive, search)),
+    [dives, search],
+  )
+
   return (
     <div className="space-y-7">
-      <header>
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
-          Logbook
-        </p>
-        <h1 className="mt-2 text-4xl font-semibold tracking-tight">Dives</h1>
-        <p className="mt-3 text-muted-foreground">
-          Your latest {dives.length} recorded dives.
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+            Logbook
+          </p>
+          <h1 className="mt-2 text-4xl font-semibold tracking-tight">Dives</h1>
+          <p className="mt-3 text-muted-foreground">
+            Your latest {dives.length} recorded dives.
+          </p>
+        </div>
+        <Link
+          to="/dives/new"
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20"
+        >
+          <Plus size={16} aria-hidden="true" /> Log dive
+        </Link>
       </header>
+
+      <label htmlFor="dive-search" className="relative block max-w-xl">
+        <span className="sr-only">Search dives</span>
+        <Search
+          size={17}
+          aria-hidden="true"
+          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+        />
+        <Input
+          id="dive-search"
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search by site, country, dive number, or date…"
+          className="min-h-12 bg-card pl-11 pr-4 shadow-sm"
+        />
+      </label>
+
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="hidden grid-cols-[4rem_5rem_minmax(12rem,1fr)_10rem_7rem_7rem_7rem_2rem] border-b border-border bg-muted/50 px-5 py-4 text-xs uppercase tracking-wider text-muted-foreground md:grid">
           <span>Picture</span>
@@ -37,7 +83,7 @@ export function DiveList({ dives }: { dives: DiveListData }) {
           <span className="text-right">Water</span>
           <span />
         </div>
-        {dives.map((dive) => (
+        {filteredDives.map((dive) => (
           <Link
             key={dive.id}
             to="/dives/$diveId"
@@ -92,9 +138,11 @@ export function DiveList({ dives }: { dives: DiveListData }) {
             />
           </Link>
         ))}
-        {dives.length === 0 ? (
+        {filteredDives.length === 0 ? (
           <p className="p-10 text-center text-sm text-muted-foreground">
-            No dives imported yet.
+            {dives.length === 0
+              ? 'No dives yet. Log your first dive or import a logbook in Settings.'
+              : 'No dives match this search.'}
           </p>
         ) : null}
       </div>

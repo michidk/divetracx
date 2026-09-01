@@ -1,30 +1,28 @@
 import { Link } from '@tanstack/react-router'
 import {
   Anchor,
-  Database,
-  Download,
+  Backpack,
+  CircleUserRound,
   MapPinned,
-  RefreshCw,
-  ScrollText,
-  TableProperties,
+  Settings,
+  UsersRound,
+  Waves,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 const navigation = [
-  { to: '/', label: 'Overview', icon: Anchor },
-  { to: '/dives', label: 'Dives', icon: Database },
-  { to: '/map', label: 'Map', icon: MapPinned },
-  { to: '/data', label: 'Data', icon: TableProperties },
-  { to: '/settings/sync', label: 'Integrations', icon: RefreshCw },
-  { to: '/settings/sync/logs', label: 'Import history', icon: ScrollText },
-  { to: '/settings/export', label: 'Export', icon: Download },
+  { to: '/dives', label: 'Dives', icon: Waves, exact: false },
+  { to: '/sites', label: 'Sites', icon: MapPinned, exact: false },
+  { to: '/buddies', label: 'Buddies', icon: UsersRound, exact: false },
+  { to: '/gear', label: 'Gear', icon: Backpack, exact: false },
+  { to: '/profile', label: 'Profile', icon: CircleUserRound, exact: false },
 ] as const
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-20 border-b border-border/80 bg-background/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-8">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-4 md:px-8">
           <Link to="/" className="flex items-center gap-3 font-semibold tracking-tight">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
               <Anchor size={18} aria-hidden="true" />
@@ -37,7 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 key={item.to}
                 to={item.to}
                 aria-label={item.label}
-                activeOptions={{ exact: true }}
+                activeOptions={{ exact: item.exact }}
                 activeProps={{ className: 'bg-accent text-foreground' }}
                 inactiveProps={{
                   className: 'text-muted-foreground hover:text-foreground',
@@ -48,6 +46,19 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span className="hidden lg:inline">{item.label}</span>
               </Link>
             ))}
+            <Link
+              to="/settings"
+              aria-label="Settings"
+              activeOptions={{ exact: false }}
+              activeProps={{ className: 'bg-accent text-foreground' }}
+              inactiveProps={{
+                className: 'text-muted-foreground hover:text-foreground',
+              }}
+              className="flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-medium transition-colors sm:px-3"
+            >
+              <Settings size={16} aria-hidden="true" />
+              <span className="sr-only">Settings</span>
+            </Link>
           </nav>
         </div>
       </header>

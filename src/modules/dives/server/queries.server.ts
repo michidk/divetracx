@@ -27,6 +27,11 @@ export async function loadDashboard() {
       totalSeconds: sql<number>`coalesce(sum(${dives.durationSeconds}), 0)::integer`,
       deepestMeters: sql<string>`coalesce(max(${dives.maximumDepthMeters}), 0)`,
       latestDiveDate: sql<string | null>`max(${dives.diveDate})`,
+      sitesVisited: sql<number>`count(distinct ${dives.siteId})::integer`,
+      siteCount: sql<number>`(select count(*) from ${diveSites})::integer`,
+      buddyCount: sql<number>`(select count(*) from ${buddies})::integer`,
+      gearCount: sql<number>`(select count(*) from ${equipment} where not ${equipment.inactive})::integer`,
+      certificationCount: sql<number>`(select count(*) from certifications)::integer`,
     })
     .from(dives)
 
@@ -60,6 +65,11 @@ export async function loadDashboard() {
       totalSeconds: 0,
       deepestMeters: '0',
       latestDiveDate: null,
+      sitesVisited: 0,
+      siteCount: 0,
+      buddyCount: 0,
+      gearCount: 0,
+      certificationCount: 0,
     },
     recentDives,
   }

@@ -11,18 +11,29 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as DataIndexRouteImport } from './routes/data/index'
+import { Route as BuddiesIndexRouteImport } from './routes/buddies/index'
 import { Route as DivesIndexRouteImport } from './routes/dives/index'
+import { Route as GearIndexRouteImport } from './routes/gear/index'
 import { Route as MapIndexRouteImport } from './routes/map/index'
+import { Route as ProfileIndexRouteImport } from './routes/profile/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
+import { Route as SitesIndexRouteImport } from './routes/sites/index'
 import { Route as ApiExportCsvRouteImport } from './routes/api/export/csv'
 import { Route as ApiExportDivemateRouteImport } from './routes/api/export/divemate'
 import { Route as ApiExportJsonRouteImport } from './routes/api/export/json'
 import { Route as ApiExportUddfRouteImport } from './routes/api/export/uddf'
-import { Route as DataEntityIndexRouteImport } from './routes/data/$entity/index'
+import { Route as BuddiesBuddyIdIndexRouteImport } from './routes/buddies/$buddyId/index'
+import { Route as BuddiesNewIndexRouteImport } from './routes/buddies/new/index'
 import { Route as DivesDiveIdIndexRouteImport } from './routes/dives/$diveId/index'
+import { Route as DivesNewIndexRouteImport } from './routes/dives/new/index'
+import { Route as GearGearIdIndexRouteImport } from './routes/gear/$gearId/index'
+import { Route as GearNewIndexRouteImport } from './routes/gear/new/index'
 import { Route as SettingsExportIndexRouteImport } from './routes/settings/export/index'
 import { Route as SettingsSyncIndexRouteImport } from './routes/settings/sync/index'
-import { Route as DataEntityRecordIdIndexRouteImport } from './routes/data/$entity/$recordId/index'
+import { Route as SitesSiteIdIndexRouteImport } from './routes/sites/$siteId/index'
+import { Route as SitesNewIndexRouteImport } from './routes/sites/new/index'
+import { Route as DivesDiveIdEditIndexRouteImport } from './routes/dives/$diveId/edit/index'
+import { Route as ProfileCertificationsCertificationIdIndexRouteImport } from './routes/profile/certifications/$certificationId/index'
 import { Route as SettingsSyncLogsIndexRouteImport } from './routes/settings/sync/logs/index'
 
 const IndexRoute = IndexRouteImport.update({
@@ -35,9 +46,9 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DataIndexRoute = DataIndexRouteImport.update({
-  id: '/data/',
-  path: '/data/',
+const BuddiesIndexRoute = BuddiesIndexRouteImport.update({
+  id: '/buddies/',
+  path: '/buddies/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DivesIndexRoute = DivesIndexRouteImport.update({
@@ -45,9 +56,29 @@ const DivesIndexRoute = DivesIndexRouteImport.update({
   path: '/dives/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GearIndexRoute = GearIndexRouteImport.update({
+  id: '/gear/',
+  path: '/gear/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MapIndexRoute = MapIndexRouteImport.update({
   id: '/map/',
   path: '/map/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileIndexRoute = ProfileIndexRouteImport.update({
+  id: '/profile/',
+  path: '/profile/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitesIndexRoute = SitesIndexRouteImport.update({
+  id: '/sites/',
+  path: '/sites/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiExportCsvRoute = ApiExportCsvRouteImport.update({
@@ -70,14 +101,34 @@ const ApiExportUddfRoute = ApiExportUddfRouteImport.update({
   path: '/api/export/uddf',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DataEntityIndexRoute = DataEntityIndexRouteImport.update({
-  id: '/data/$entity/',
-  path: '/data/$entity/',
+const BuddiesBuddyIdIndexRoute = BuddiesBuddyIdIndexRouteImport.update({
+  id: '/buddies/$buddyId/',
+  path: '/buddies/$buddyId/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BuddiesNewIndexRoute = BuddiesNewIndexRouteImport.update({
+  id: '/buddies/new/',
+  path: '/buddies/new/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DivesDiveIdIndexRoute = DivesDiveIdIndexRouteImport.update({
   id: '/dives/$diveId/',
   path: '/dives/$diveId/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DivesNewIndexRoute = DivesNewIndexRouteImport.update({
+  id: '/dives/new/',
+  path: '/dives/new/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GearGearIdIndexRoute = GearGearIdIndexRouteImport.update({
+  id: '/gear/$gearId/',
+  path: '/gear/$gearId/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GearNewIndexRoute = GearNewIndexRouteImport.update({
+  id: '/gear/new/',
+  path: '/gear/new/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsExportIndexRoute = SettingsExportIndexRouteImport.update({
@@ -90,11 +141,27 @@ const SettingsSyncIndexRoute = SettingsSyncIndexRouteImport.update({
   path: '/settings/sync/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DataEntityRecordIdIndexRoute = DataEntityRecordIdIndexRouteImport.update({
-  id: '/data/$entity/$recordId/',
-  path: '/data/$entity/$recordId/',
+const SitesSiteIdIndexRoute = SitesSiteIdIndexRouteImport.update({
+  id: '/sites/$siteId/',
+  path: '/sites/$siteId/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SitesNewIndexRoute = SitesNewIndexRouteImport.update({
+  id: '/sites/new/',
+  path: '/sites/new/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DivesDiveIdEditIndexRoute = DivesDiveIdEditIndexRouteImport.update({
+  id: '/dives/$diveId/edit/',
+  path: '/dives/$diveId/edit/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileCertificationsCertificationIdIndexRoute =
+  ProfileCertificationsCertificationIdIndexRouteImport.update({
+    id: '/profile/certifications/$certificationId/',
+    path: '/profile/certifications/$certificationId/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const SettingsSyncLogsIndexRoute = SettingsSyncLogsIndexRouteImport.update({
   id: '/settings/sync/logs/',
   path: '/settings/sync/logs/',
@@ -104,53 +171,86 @@ const SettingsSyncLogsIndexRoute = SettingsSyncLogsIndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
-  '/data/': typeof DataIndexRoute
+  '/buddies/': typeof BuddiesIndexRoute
   '/dives/': typeof DivesIndexRoute
+  '/gear/': typeof GearIndexRoute
   '/map/': typeof MapIndexRoute
+  '/profile/': typeof ProfileIndexRoute
+  '/settings/': typeof SettingsIndexRoute
+  '/sites/': typeof SitesIndexRoute
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/divemate': typeof ApiExportDivemateRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
-  '/data/$entity/': typeof DataEntityIndexRoute
+  '/buddies/$buddyId/': typeof BuddiesBuddyIdIndexRoute
+  '/buddies/new/': typeof BuddiesNewIndexRoute
   '/dives/$diveId/': typeof DivesDiveIdIndexRoute
+  '/dives/new/': typeof DivesNewIndexRoute
+  '/gear/$gearId/': typeof GearGearIdIndexRoute
+  '/gear/new/': typeof GearNewIndexRoute
   '/settings/export/': typeof SettingsExportIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
-  '/data/$entity/$recordId/': typeof DataEntityRecordIdIndexRoute
+  '/sites/$siteId/': typeof SitesSiteIdIndexRoute
+  '/sites/new/': typeof SitesNewIndexRoute
+  '/dives/$diveId/edit/': typeof DivesDiveIdEditIndexRoute
+  '/profile/certifications/$certificationId/': typeof ProfileCertificationsCertificationIdIndexRoute
   '/settings/sync/logs/': typeof SettingsSyncLogsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
-  '/data': typeof DataIndexRoute
+  '/buddies': typeof BuddiesIndexRoute
   '/dives': typeof DivesIndexRoute
+  '/gear': typeof GearIndexRoute
   '/map': typeof MapIndexRoute
+  '/profile': typeof ProfileIndexRoute
+  '/settings': typeof SettingsIndexRoute
+  '/sites': typeof SitesIndexRoute
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/divemate': typeof ApiExportDivemateRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
-  '/data/$entity': typeof DataEntityIndexRoute
+  '/buddies/$buddyId': typeof BuddiesBuddyIdIndexRoute
+  '/buddies/new': typeof BuddiesNewIndexRoute
   '/dives/$diveId': typeof DivesDiveIdIndexRoute
+  '/dives/new': typeof DivesNewIndexRoute
+  '/gear/$gearId': typeof GearGearIdIndexRoute
+  '/gear/new': typeof GearNewIndexRoute
   '/settings/export': typeof SettingsExportIndexRoute
   '/settings/sync': typeof SettingsSyncIndexRoute
-  '/data/$entity/$recordId': typeof DataEntityRecordIdIndexRoute
+  '/sites/$siteId': typeof SitesSiteIdIndexRoute
+  '/sites/new': typeof SitesNewIndexRoute
+  '/dives/$diveId/edit': typeof DivesDiveIdEditIndexRoute
+  '/profile/certifications/$certificationId': typeof ProfileCertificationsCertificationIdIndexRoute
   '/settings/sync/logs': typeof SettingsSyncLogsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
-  '/data/': typeof DataIndexRoute
+  '/buddies/': typeof BuddiesIndexRoute
   '/dives/': typeof DivesIndexRoute
+  '/gear/': typeof GearIndexRoute
   '/map/': typeof MapIndexRoute
+  '/profile/': typeof ProfileIndexRoute
+  '/settings/': typeof SettingsIndexRoute
+  '/sites/': typeof SitesIndexRoute
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/divemate': typeof ApiExportDivemateRoute
   '/api/export/json': typeof ApiExportJsonRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
-  '/data/$entity/': typeof DataEntityIndexRoute
+  '/buddies/$buddyId/': typeof BuddiesBuddyIdIndexRoute
+  '/buddies/new/': typeof BuddiesNewIndexRoute
   '/dives/$diveId/': typeof DivesDiveIdIndexRoute
+  '/dives/new/': typeof DivesNewIndexRoute
+  '/gear/$gearId/': typeof GearGearIdIndexRoute
+  '/gear/new/': typeof GearNewIndexRoute
   '/settings/export/': typeof SettingsExportIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
-  '/data/$entity/$recordId/': typeof DataEntityRecordIdIndexRoute
+  '/sites/$siteId/': typeof SitesSiteIdIndexRoute
+  '/sites/new/': typeof SitesNewIndexRoute
+  '/dives/$diveId/edit/': typeof DivesDiveIdEditIndexRoute
+  '/profile/certifications/$certificationId/': typeof ProfileCertificationsCertificationIdIndexRoute
   '/settings/sync/logs/': typeof SettingsSyncLogsIndexRoute
 }
 export interface FileRouteTypes {
@@ -158,70 +258,114 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/api/health'
-    | '/data/'
+    | '/buddies/'
     | '/dives/'
+    | '/gear/'
     | '/map/'
+    | '/profile/'
+    | '/settings/'
+    | '/sites/'
     | '/api/export/csv'
     | '/api/export/divemate'
     | '/api/export/json'
     | '/api/export/uddf'
-    | '/data/$entity/'
+    | '/buddies/$buddyId/'
+    | '/buddies/new/'
     | '/dives/$diveId/'
+    | '/dives/new/'
+    | '/gear/$gearId/'
+    | '/gear/new/'
     | '/settings/export/'
     | '/settings/sync/'
-    | '/data/$entity/$recordId/'
+    | '/sites/$siteId/'
+    | '/sites/new/'
+    | '/dives/$diveId/edit/'
+    | '/profile/certifications/$certificationId/'
     | '/settings/sync/logs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/api/health'
-    | '/data'
+    | '/buddies'
     | '/dives'
+    | '/gear'
     | '/map'
+    | '/profile'
+    | '/settings'
+    | '/sites'
     | '/api/export/csv'
     | '/api/export/divemate'
     | '/api/export/json'
     | '/api/export/uddf'
-    | '/data/$entity'
+    | '/buddies/$buddyId'
+    | '/buddies/new'
     | '/dives/$diveId'
+    | '/dives/new'
+    | '/gear/$gearId'
+    | '/gear/new'
     | '/settings/export'
     | '/settings/sync'
-    | '/data/$entity/$recordId'
+    | '/sites/$siteId'
+    | '/sites/new'
+    | '/dives/$diveId/edit'
+    | '/profile/certifications/$certificationId'
     | '/settings/sync/logs'
   id:
     | '__root__'
     | '/'
     | '/api/health'
-    | '/data/'
+    | '/buddies/'
     | '/dives/'
+    | '/gear/'
     | '/map/'
+    | '/profile/'
+    | '/settings/'
+    | '/sites/'
     | '/api/export/csv'
     | '/api/export/divemate'
     | '/api/export/json'
     | '/api/export/uddf'
-    | '/data/$entity/'
+    | '/buddies/$buddyId/'
+    | '/buddies/new/'
     | '/dives/$diveId/'
+    | '/dives/new/'
+    | '/gear/$gearId/'
+    | '/gear/new/'
     | '/settings/export/'
     | '/settings/sync/'
-    | '/data/$entity/$recordId/'
+    | '/sites/$siteId/'
+    | '/sites/new/'
+    | '/dives/$diveId/edit/'
+    | '/profile/certifications/$certificationId/'
     | '/settings/sync/logs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiHealthRoute: typeof ApiHealthRoute
-  DataIndexRoute: typeof DataIndexRoute
+  BuddiesIndexRoute: typeof BuddiesIndexRoute
   DivesIndexRoute: typeof DivesIndexRoute
+  GearIndexRoute: typeof GearIndexRoute
   MapIndexRoute: typeof MapIndexRoute
+  ProfileIndexRoute: typeof ProfileIndexRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
+  SitesIndexRoute: typeof SitesIndexRoute
   ApiExportCsvRoute: typeof ApiExportCsvRoute
   ApiExportDivemateRoute: typeof ApiExportDivemateRoute
   ApiExportJsonRoute: typeof ApiExportJsonRoute
   ApiExportUddfRoute: typeof ApiExportUddfRoute
-  DataEntityIndexRoute: typeof DataEntityIndexRoute
+  BuddiesBuddyIdIndexRoute: typeof BuddiesBuddyIdIndexRoute
+  BuddiesNewIndexRoute: typeof BuddiesNewIndexRoute
   DivesDiveIdIndexRoute: typeof DivesDiveIdIndexRoute
+  DivesNewIndexRoute: typeof DivesNewIndexRoute
+  GearGearIdIndexRoute: typeof GearGearIdIndexRoute
+  GearNewIndexRoute: typeof GearNewIndexRoute
   SettingsExportIndexRoute: typeof SettingsExportIndexRoute
   SettingsSyncIndexRoute: typeof SettingsSyncIndexRoute
-  DataEntityRecordIdIndexRoute: typeof DataEntityRecordIdIndexRoute
+  SitesSiteIdIndexRoute: typeof SitesSiteIdIndexRoute
+  SitesNewIndexRoute: typeof SitesNewIndexRoute
+  DivesDiveIdEditIndexRoute: typeof DivesDiveIdEditIndexRoute
+  ProfileCertificationsCertificationIdIndexRoute: typeof ProfileCertificationsCertificationIdIndexRoute
   SettingsSyncLogsIndexRoute: typeof SettingsSyncLogsIndexRoute
 }
 
@@ -241,11 +385,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/data/': {
-      id: '/data/'
-      path: '/data'
-      fullPath: '/data/'
-      preLoaderRoute: typeof DataIndexRouteImport
+    '/buddies/': {
+      id: '/buddies/'
+      path: '/buddies'
+      fullPath: '/buddies/'
+      preLoaderRoute: typeof BuddiesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dives/': {
@@ -255,11 +399,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DivesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/gear/': {
+      id: '/gear/'
+      path: '/gear'
+      fullPath: '/gear/'
+      preLoaderRoute: typeof GearIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/map/': {
       id: '/map/'
       path: '/map'
       fullPath: '/map/'
       preLoaderRoute: typeof MapIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile/': {
+      id: '/profile/'
+      path: '/profile'
+      fullPath: '/profile/'
+      preLoaderRoute: typeof ProfileIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/': {
+      id: '/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sites/': {
+      id: '/sites/'
+      path: '/sites'
+      fullPath: '/sites/'
+      preLoaderRoute: typeof SitesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/export/csv': {
@@ -290,11 +462,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExportUddfRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/data/$entity/': {
-      id: '/data/$entity/'
-      path: '/data/$entity'
-      fullPath: '/data/$entity/'
-      preLoaderRoute: typeof DataEntityIndexRouteImport
+    '/buddies/$buddyId/': {
+      id: '/buddies/$buddyId/'
+      path: '/buddies/$buddyId'
+      fullPath: '/buddies/$buddyId/'
+      preLoaderRoute: typeof BuddiesBuddyIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/buddies/new/': {
+      id: '/buddies/new/'
+      path: '/buddies/new'
+      fullPath: '/buddies/new/'
+      preLoaderRoute: typeof BuddiesNewIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dives/$diveId/': {
@@ -302,6 +481,27 @@ declare module '@tanstack/react-router' {
       path: '/dives/$diveId'
       fullPath: '/dives/$diveId/'
       preLoaderRoute: typeof DivesDiveIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dives/new/': {
+      id: '/dives/new/'
+      path: '/dives/new'
+      fullPath: '/dives/new/'
+      preLoaderRoute: typeof DivesNewIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gear/$gearId/': {
+      id: '/gear/$gearId/'
+      path: '/gear/$gearId'
+      fullPath: '/gear/$gearId/'
+      preLoaderRoute: typeof GearGearIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gear/new/': {
+      id: '/gear/new/'
+      path: '/gear/new'
+      fullPath: '/gear/new/'
+      preLoaderRoute: typeof GearNewIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/export/': {
@@ -318,11 +518,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsSyncIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/data/$entity/$recordId/': {
-      id: '/data/$entity/$recordId/'
-      path: '/data/$entity/$recordId'
-      fullPath: '/data/$entity/$recordId/'
-      preLoaderRoute: typeof DataEntityRecordIdIndexRouteImport
+    '/sites/$siteId/': {
+      id: '/sites/$siteId/'
+      path: '/sites/$siteId'
+      fullPath: '/sites/$siteId/'
+      preLoaderRoute: typeof SitesSiteIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sites/new/': {
+      id: '/sites/new/'
+      path: '/sites/new'
+      fullPath: '/sites/new/'
+      preLoaderRoute: typeof SitesNewIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dives/$diveId/edit/': {
+      id: '/dives/$diveId/edit/'
+      path: '/dives/$diveId/edit'
+      fullPath: '/dives/$diveId/edit/'
+      preLoaderRoute: typeof DivesDiveIdEditIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile/certifications/$certificationId/': {
+      id: '/profile/certifications/$certificationId/'
+      path: '/profile/certifications/$certificationId'
+      fullPath: '/profile/certifications/$certificationId/'
+      preLoaderRoute: typeof ProfileCertificationsCertificationIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/sync/logs/': {
@@ -338,18 +559,30 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiHealthRoute: ApiHealthRoute,
-  DataIndexRoute: DataIndexRoute,
+  BuddiesIndexRoute: BuddiesIndexRoute,
   DivesIndexRoute: DivesIndexRoute,
+  GearIndexRoute: GearIndexRoute,
   MapIndexRoute: MapIndexRoute,
+  ProfileIndexRoute: ProfileIndexRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
+  SitesIndexRoute: SitesIndexRoute,
   ApiExportCsvRoute: ApiExportCsvRoute,
   ApiExportDivemateRoute: ApiExportDivemateRoute,
   ApiExportJsonRoute: ApiExportJsonRoute,
   ApiExportUddfRoute: ApiExportUddfRoute,
-  DataEntityIndexRoute: DataEntityIndexRoute,
+  BuddiesBuddyIdIndexRoute: BuddiesBuddyIdIndexRoute,
+  BuddiesNewIndexRoute: BuddiesNewIndexRoute,
   DivesDiveIdIndexRoute: DivesDiveIdIndexRoute,
+  DivesNewIndexRoute: DivesNewIndexRoute,
+  GearGearIdIndexRoute: GearGearIdIndexRoute,
+  GearNewIndexRoute: GearNewIndexRoute,
   SettingsExportIndexRoute: SettingsExportIndexRoute,
   SettingsSyncIndexRoute: SettingsSyncIndexRoute,
-  DataEntityRecordIdIndexRoute: DataEntityRecordIdIndexRoute,
+  SitesSiteIdIndexRoute: SitesSiteIdIndexRoute,
+  SitesNewIndexRoute: SitesNewIndexRoute,
+  DivesDiveIdEditIndexRoute: DivesDiveIdEditIndexRoute,
+  ProfileCertificationsCertificationIdIndexRoute:
+    ProfileCertificationsCertificationIdIndexRoute,
   SettingsSyncLogsIndexRoute: SettingsSyncLogsIndexRoute,
 }
 export const routeTree = rootRouteImport

@@ -11,3 +11,4 @@ node_modules
 /backups/
 /recovered-images/
 /uploads/
+.serena/

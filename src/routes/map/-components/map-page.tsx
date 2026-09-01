@@ -176,11 +176,11 @@ export function MapPage({ sites }: { sites: DiveSiteMapData }) {
                       </Button>
                     ) : null}
                     <Link
-                      to="/data/$entity/$recordId"
-                      params={{ entity: 'sites', recordId: site.id }}
+                      to="/sites/$siteId"
+                      params={{ siteId: site.id }}
                       className="inline-flex min-h-9 items-center gap-1.5 text-primary hover:underline"
                     >
-                      <Pencil size={13} aria-hidden="true" /> Edit site
+                      <Pencil size={13} aria-hidden="true" /> Open site
                     </Link>
                     {site.latestDive ? (
                       <Link
