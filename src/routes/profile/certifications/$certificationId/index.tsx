@@ -1,10 +1,14 @@
 import { createFileRoute, Link, notFound, useRouter } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
 import { z } from 'zod'
+import { CertificationCard } from '@/components/certification-card'
 import { DeleteRecordButton } from '@/components/delete-record-button'
 import { EntityForm } from '@/components/entity-form'
-import { PictureGallery } from '@/components/picture-gallery'
 import { getCertification } from '@/modules/profile/server/queries'
+
+function mediaUrl(path: string) {
+  return `/media/${path.split('/').map(encodeURIComponent).join('/')}`
+}
 
 const certificationIdSchema = z.union([z.string().uuid(), z.literal('new')])
 
@@ -53,9 +57,24 @@ function CertificationRoute() {
       </header>
 
       {detail && detail.scans.length > 0 ? (
-        <section className="rounded-2xl border border-border bg-card p-6">
-          <h2 className="font-semibold">Card scans</h2>
-          <PictureGallery pictures={detail.scans} />
+        <section>
+          <CertificationCard
+            name={detail.certification.name}
+            organization={detail.certification.organization}
+            certificationNumber={detail.certification.certificationNumber}
+            frontSrc={
+              detail.scans[0]?.storagePath ? mediaUrl(detail.scans[0].storagePath) : null
+            }
+            backSrc={
+              detail.scans[1]?.storagePath ? mediaUrl(detail.scans[1].storagePath) : null
+            }
+            className="mx-auto w-full max-w-md"
+          />
+          {detail.scans.length > 1 ? (
+            <p className="mt-3 text-center text-xs text-muted-foreground">
+              Click the card to see the other side.
+            </p>
+          ) : null}
         </section>
       ) : null}
 
