@@ -1,6 +1,10 @@
 import { createServerFn } from '@tanstack/react-start'
-import { writeBackDiveMate } from './writeback.server'
+import { getDiveMateWriteBackStatus, startDiveMateWriteBack } from './writeback.server'
 
 export const runDiveMateWriteBack = createServerFn({ method: 'POST' }).handler(() =>
-  writeBackDiveMate(),
+  startDiveMateWriteBack(),
+)
+
+export const loadDiveMateWriteBackStatus = createServerFn({ method: 'GET' }).handler(() =>
+  getDiveMateWriteBackStatus(),
 )

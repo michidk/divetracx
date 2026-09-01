@@ -1,5 +1,6 @@
 import '@tanstack/react-start/server-only'
 
+import { randomUUID } from 'node:crypto'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -54,22 +55,49 @@ export interface DiveMateWriteBackResult {
   driveFileId: string
 }
 
+export type DiveMateWriteBackStage =
+  | 'reading-drive'
+  | 'reading-divetracx'
+  | 'updating-database'
+  | 'uploading-drive'
+
+export interface DiveMateWriteBackStatus {
+  id: string
+  state: 'running' | 'succeeded' | 'failed'
+  stage: DiveMateWriteBackStage
+  startedAt: string
+  finishedAt: string | null
+  result: DiveMateWriteBackResult | null
+  error: string | null
+}
+
+const writeBackState = globalThis as typeof globalThis & {
+  __divetracxWriteBack?: DiveMateWriteBackStatus
+}
+
+function setStage(stage: DiveMateWriteBackStage) {
+  if (writeBackState.__divetracxWriteBack?.state === 'running')
+    writeBackState.__divetracxWriteBack.stage = stage
+}
+
 export async function writeBackDiveMate(): Promise<DiveMateWriteBackResult> {
   const environment = getServerEnv()
   if (!environment.DIVEMATE_GOOGLE_DRIVE_FOLDER_ID) {
     throw new Error('DIVEMATE_GOOGLE_DRIVE_FOLDER_ID is not configured')
   }
-  const [drive, snapshot] = await Promise.all([
-    openGoogleDriveBackup(
-      environment.DIVEMATE_GOOGLE_DRIVE_FOLDER_ID,
-      environment.DIVEMATE_MAX_BACKUP_BYTES,
-    ),
-    loadExportSnapshot(),
-  ])
+  setStage('reading-drive')
+  const drivePromise = openGoogleDriveBackup(
+    environment.DIVEMATE_GOOGLE_DRIVE_FOLDER_ID,
+    environment.DIVEMATE_MAX_BACKUP_BYTES,
+  )
+  setStage('reading-divetracx')
+  const snapshotPromise = loadExportSnapshot()
+  const [drive, snapshot] = await Promise.all([drivePromise, snapshotPromise])
   const directory = await mkdtemp(join(tmpdir(), 'divetracx-writeback-'))
   const path = join(directory, 'DiveMate.ddb')
   try {
     await writeFile(path, drive.database)
+    setStage('updating-database')
     const database = await openSqlite(path)
     let updatedRecords = 0
     let skippedLocalRecords = 0
@@ -279,9 +307,42 @@ export async function writeBackDiveMate(): Promise<DiveMateWriteBackResult> {
     database.exec('PRAGMA wal_checkpoint(TRUNCATE)')
     database.close()
     const bytes = new Uint8Array(await readFile(path))
+    setStage('uploading-drive')
     await drive.replaceDatabase(bytes)
     return { updatedRecords, skippedLocalRecords, driveFileId: drive.databaseFile.id }
   } finally {
     await rm(directory, { recursive: true, force: true })
   }
+}
+
+export function startDiveMateWriteBack(): DiveMateWriteBackStatus {
+  const current = writeBackState.__divetracxWriteBack
+  if (current?.state === 'running') return current
+  const status: DiveMateWriteBackStatus = {
+    id: randomUUID(),
+    state: 'running',
+    stage: 'reading-drive',
+    startedAt: new Date().toISOString(),
+    finishedAt: null,
+    result: null,
+    error: null,
+  }
+  writeBackState.__divetracxWriteBack = status
+  void writeBackDiveMate().then(
+    (result) => {
+      status.state = 'succeeded'
+      status.result = result
+      status.finishedAt = new Date().toISOString()
+    },
+    (error) => {
+      status.state = 'failed'
+      status.error = error instanceof Error ? error.message : 'Drive write-back failed'
+      status.finishedAt = new Date().toISOString()
+    },
+  )
+  return status
+}
+
+export function getDiveMateWriteBackStatus(): DiveMateWriteBackStatus | null {
+  return writeBackState.__divetracxWriteBack ?? null
 }

@@ -6,6 +6,8 @@ import { GoogleAuth } from 'google-auth-library'
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive'
 const DRIVE_API = 'https://www.googleapis.com/drive/v3'
 const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder'
+const DRIVE_REQUEST_TIMEOUT_MS = 60_000
+const DRIVE_UPLOAD_TIMEOUT_MS = 120_000
 
 export interface GoogleDriveFile {
   id: string
@@ -98,6 +100,7 @@ export async function openGoogleDriveBackup(
           supportsAllDrives: true,
           includeItemsFromAllDrives: true,
         },
+        signal: AbortSignal.timeout(DRIVE_REQUEST_TIMEOUT_MS),
       })
       for (const entry of response.data.files ?? []) {
         if (!entry.id || !entry.name || !entry.mimeType) continue
@@ -135,6 +138,7 @@ export async function openGoogleDriveBackup(
       url: `${DRIVE_API}/files/${encodeURIComponent(file.id)}`,
       params: { alt: 'media', supportsAllDrives: true },
       responseType: 'arraybuffer',
+      signal: AbortSignal.timeout(DRIVE_REQUEST_TIMEOUT_MS),
     })
     const bytes = byteArray(response.data)
     if (maximumBytes && bytes.byteLength > maximumBytes) {
@@ -154,6 +158,7 @@ export async function openGoogleDriveBackup(
       params: { uploadType: 'media', keepRevisionForever: true, supportsAllDrives: true },
       headers: { 'content-type': 'application/octet-stream' },
       data: Uint8Array.from(bytes),
+      signal: AbortSignal.timeout(DRIVE_UPLOAD_TIMEOUT_MS),
     })
   }
   return {
