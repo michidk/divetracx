@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { agencyCatalog } from '@/modules/profile/agency-catalog'
 
 export const entityKeySchema = z.enum([
   'sites',
@@ -6,6 +7,7 @@ export const entityKeySchema = z.enum([
   'buddies',
   'equipment',
   'certifications',
+  'agencyMemberships',
 ])
 
 export type EntityKey = z.infer<typeof entityKeySchema>
@@ -133,7 +135,25 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
         kind: 'email',
         section: 'Emergency',
       },
-      { key: 'insurance', label: 'Insurance', kind: 'text', section: 'Emergency' },
+      { key: 'insurance', label: 'Insurer', kind: 'text', section: 'Insurance' },
+      {
+        key: 'insuranceTariff',
+        label: 'Tariff / plan',
+        kind: 'text',
+        section: 'Insurance',
+      },
+      {
+        key: 'insuranceNumber',
+        label: 'Policy number',
+        kind: 'text',
+        section: 'Insurance',
+      },
+      {
+        key: 'insuranceHotline',
+        label: 'Emergency hotline',
+        kind: 'tel',
+        section: 'Insurance',
+      },
       { key: 'notes', label: 'Notes', kind: 'textarea', section: 'Notes' },
     ],
   },
@@ -235,6 +255,41 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
         label: 'Instructor number',
         kind: 'text',
         section: 'Instructor',
+      },
+    ],
+  },
+  agencyMemberships: {
+    key: 'agencyMemberships',
+    singular: 'Agency membership',
+    plural: 'Agency memberships',
+    fields: [
+      {
+        key: 'agencyCode',
+        label: 'Agency',
+        kind: 'select',
+        section: 'Membership',
+        required: true,
+        options: [
+          ...agencyCatalog.map((agency) => ({
+            value: agency.code,
+            label: `${agency.shortName} · ${agency.name}`,
+          })),
+          { value: 'custom', label: 'Custom agency' },
+        ],
+      },
+      {
+        key: 'customAgencyName',
+        label: 'Custom agency name',
+        kind: 'text',
+        section: 'Membership',
+        help: 'Required only when Custom agency is selected.',
+      },
+      {
+        key: 'memberNumber',
+        label: 'Membership number',
+        kind: 'text',
+        section: 'Membership',
+        required: true,
       },
     ],
   },

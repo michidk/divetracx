@@ -2,7 +2,7 @@ import '@tanstack/react-start/server-only'
 
 import { asc, eq, sql } from 'drizzle-orm'
 import { getDb } from '@/db'
-import { certifications, divers, dives } from '@/db/schema'
+import { agencyMemberships, certifications, divers, dives } from '@/db/schema'
 
 function certificationScans(certification: typeof certifications.$inferSelect) {
   const scans: Array<{
@@ -37,7 +37,7 @@ export async function loadProfile() {
   const db = getDb()
   const [diver] = await db.select().from(divers).orderBy(asc(divers.createdAt)).limit(1)
 
-  const [certificationRows, [logbook]] = await Promise.all([
+  const [certificationRows, membershipRows, [logbook]] = await Promise.all([
     db
       .select()
       .from(certifications)
@@ -45,6 +45,7 @@ export async function loadProfile() {
         sql`${certifications.sortOrder} nulls last`,
         asc(certifications.certifiedAt),
       ),
+    db.select().from(agencyMemberships).orderBy(asc(agencyMemberships.createdAt)),
     db
       .select({
         totalDives: sql<number>`count(*)::integer`,
@@ -66,6 +67,7 @@ export async function loadProfile() {
       instructorName: certification.instructorName,
       scans: certificationScans(certification),
     })),
+    agencyMemberships: membershipRows,
     logbook: logbook ?? {
       totalDives: 0,
       totalSeconds: 0,
@@ -73,6 +75,15 @@ export async function loadProfile() {
       latestDiveDate: null,
     },
   }
+}
+
+export async function loadAgencyMembership(agencyMembershipId: string) {
+  const [membership] = await getDb()
+    .select()
+    .from(agencyMemberships)
+    .where(eq(agencyMemberships.id, agencyMembershipId))
+    .limit(1)
+  return membership ?? null
 }
 
 export async function loadCertification(certificationId: string) {

@@ -52,7 +52,7 @@ describe('canonical DiveMate export', () => {
     const now = new Date('2026-09-01T12:00:00Z')
     const snapshot = {
       format: 'divetracx-backup',
-      version: 8,
+      version: 9,
       exportedAt: now.toISOString(),
       data: {
         divers: [],
@@ -116,6 +116,7 @@ describe('canonical DiveMate export', () => {
           },
         ],
         certifications: [],
+        agencyMemberships: [],
         shops: [],
         diveTypes: [],
         dives: [

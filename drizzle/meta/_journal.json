@@ -127,6 +127,13 @@
       "when": 1788277946242,
       "tag": "0017_useful_tiger_shark",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788372229293,
+      "tag": "0018_brief_nick_fury",
+      "breakpoints": true
     }
   ]
 }

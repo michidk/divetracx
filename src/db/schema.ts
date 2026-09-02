@@ -39,6 +39,9 @@ export const divers = pgTable('divers', {
   emergencyPhone: text('emergency_phone'),
   emergencyEmail: text('emergency_email'),
   insurance: text('insurance'),
+  insuranceTariff: text('insurance_tariff'),
+  insuranceNumber: text('insurance_number'),
+  insuranceHotline: text('insurance_hotline'),
   notes: text('notes'),
   ...auditColumns,
 })
@@ -159,6 +162,21 @@ export const certifications = pgTable('certifications', {
   scan2ByteSize: integer('scan_2_byte_size'),
   ...auditColumns,
 })
+
+export const agencyMemberships = pgTable(
+  'agency_memberships',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    diverId: uuid('diver_id').references(() => divers.id, {
+      onDelete: 'set null',
+    }),
+    agencyCode: text('agency_code').notNull(),
+    customAgencyName: text('custom_agency_name'),
+    memberNumber: text('member_number').notNull(),
+    ...auditColumns,
+  },
+  (table) => [index('agency_memberships_diver_id_index').on(table.diverId)],
+)
 
 export const diveTypes = pgTable('dive_types', {
   id: uuid('id').primaryKey().defaultRandom(),

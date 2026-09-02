@@ -37,6 +37,7 @@ import { Route as SitesNewIndexRouteImport } from './routes/sites/new/index'
 import { Route as DivesDiveIdEditIndexRouteImport } from './routes/dives/$diveId/edit/index'
 import { Route as GearSetsGearSetIdIndexRouteImport } from './routes/gear/sets/$gearSetId/index'
 import { Route as GearSetsNewIndexRouteImport } from './routes/gear/sets/new/index'
+import { Route as ProfileAgenciesAgencyMembershipIdIndexRouteImport } from './routes/profile/agencies/$agencyMembershipId/index'
 import { Route as ProfileCertificationsCertificationIdIndexRouteImport } from './routes/profile/certifications/$certificationId/index'
 import { Route as SettingsSyncLogsIndexRouteImport } from './routes/settings/sync/logs/index'
 
@@ -180,6 +181,12 @@ const GearSetsNewIndexRoute = GearSetsNewIndexRouteImport.update({
   path: '/gear/sets/new/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfileAgenciesAgencyMembershipIdIndexRoute =
+  ProfileAgenciesAgencyMembershipIdIndexRouteImport.update({
+    id: '/profile/agencies/$agencyMembershipId/',
+    path: '/profile/agencies/$agencyMembershipId/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ProfileCertificationsCertificationIdIndexRoute =
   ProfileCertificationsCertificationIdIndexRouteImport.update({
     id: '/profile/certifications/$certificationId/',
@@ -221,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/dives/$diveId/edit/': typeof DivesDiveIdEditIndexRoute
   '/gear/sets/$gearSetId/': typeof GearSetsGearSetIdIndexRoute
   '/gear/sets/new/': typeof GearSetsNewIndexRoute
+  '/profile/agencies/$agencyMembershipId/': typeof ProfileAgenciesAgencyMembershipIdIndexRoute
   '/profile/certifications/$certificationId/': typeof ProfileCertificationsCertificationIdIndexRoute
   '/settings/sync/logs/': typeof SettingsSyncLogsIndexRoute
 }
@@ -253,6 +261,7 @@ export interface FileRoutesByTo {
   '/dives/$diveId/edit': typeof DivesDiveIdEditIndexRoute
   '/gear/sets/$gearSetId': typeof GearSetsGearSetIdIndexRoute
   '/gear/sets/new': typeof GearSetsNewIndexRoute
+  '/profile/agencies/$agencyMembershipId': typeof ProfileAgenciesAgencyMembershipIdIndexRoute
   '/profile/certifications/$certificationId': typeof ProfileCertificationsCertificationIdIndexRoute
   '/settings/sync/logs': typeof SettingsSyncLogsIndexRoute
 }
@@ -286,6 +295,7 @@ export interface FileRoutesById {
   '/dives/$diveId/edit/': typeof DivesDiveIdEditIndexRoute
   '/gear/sets/$gearSetId/': typeof GearSetsGearSetIdIndexRoute
   '/gear/sets/new/': typeof GearSetsNewIndexRoute
+  '/profile/agencies/$agencyMembershipId/': typeof ProfileAgenciesAgencyMembershipIdIndexRoute
   '/profile/certifications/$certificationId/': typeof ProfileCertificationsCertificationIdIndexRoute
   '/settings/sync/logs/': typeof SettingsSyncLogsIndexRoute
 }
@@ -320,6 +330,7 @@ export interface FileRouteTypes {
     | '/dives/$diveId/edit/'
     | '/gear/sets/$gearSetId/'
     | '/gear/sets/new/'
+    | '/profile/agencies/$agencyMembershipId/'
     | '/profile/certifications/$certificationId/'
     | '/settings/sync/logs/'
   fileRoutesByTo: FileRoutesByTo
@@ -352,6 +363,7 @@ export interface FileRouteTypes {
     | '/dives/$diveId/edit'
     | '/gear/sets/$gearSetId'
     | '/gear/sets/new'
+    | '/profile/agencies/$agencyMembershipId'
     | '/profile/certifications/$certificationId'
     | '/settings/sync/logs'
   id:
@@ -384,6 +396,7 @@ export interface FileRouteTypes {
     | '/dives/$diveId/edit/'
     | '/gear/sets/$gearSetId/'
     | '/gear/sets/new/'
+    | '/profile/agencies/$agencyMembershipId/'
     | '/profile/certifications/$certificationId/'
     | '/settings/sync/logs/'
   fileRoutesById: FileRoutesById
@@ -417,6 +430,7 @@ export interface RootRouteChildren {
   DivesDiveIdEditIndexRoute: typeof DivesDiveIdEditIndexRoute
   GearSetsGearSetIdIndexRoute: typeof GearSetsGearSetIdIndexRoute
   GearSetsNewIndexRoute: typeof GearSetsNewIndexRoute
+  ProfileAgenciesAgencyMembershipIdIndexRoute: typeof ProfileAgenciesAgencyMembershipIdIndexRoute
   ProfileCertificationsCertificationIdIndexRoute: typeof ProfileCertificationsCertificationIdIndexRoute
   SettingsSyncLogsIndexRoute: typeof SettingsSyncLogsIndexRoute
 }
@@ -619,6 +633,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GearSetsNewIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profile/agencies/$agencyMembershipId/': {
+      id: '/profile/agencies/$agencyMembershipId/'
+      path: '/profile/agencies/$agencyMembershipId'
+      fullPath: '/profile/agencies/$agencyMembershipId/'
+      preLoaderRoute: typeof ProfileAgenciesAgencyMembershipIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile/certifications/$certificationId/': {
       id: '/profile/certifications/$certificationId/'
       path: '/profile/certifications/$certificationId'
@@ -665,6 +686,8 @@ const rootRouteChildren: RootRouteChildren = {
   DivesDiveIdEditIndexRoute: DivesDiveIdEditIndexRoute,
   GearSetsGearSetIdIndexRoute: GearSetsGearSetIdIndexRoute,
   GearSetsNewIndexRoute: GearSetsNewIndexRoute,
+  ProfileAgenciesAgencyMembershipIdIndexRoute:
+    ProfileAgenciesAgencyMembershipIdIndexRoute,
   ProfileCertificationsCertificationIdIndexRoute:
     ProfileCertificationsCertificationIdIndexRoute,
   SettingsSyncLogsIndexRoute: SettingsSyncLogsIndexRoute,
