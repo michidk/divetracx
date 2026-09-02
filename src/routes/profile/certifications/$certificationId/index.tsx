@@ -10,6 +10,13 @@ function mediaUrl(path: string) {
   return `/media/${path.split('/').map(encodeURIComponent).join('/')}`
 }
 
+function scanMediaUrl(
+  scan: { thumbnailStoragePath: string | null; storagePath: string | null } | undefined,
+) {
+  const path = scan?.thumbnailStoragePath ?? scan?.storagePath
+  return path ? mediaUrl(path) : null
+}
+
 const certificationIdSchema = z.union([z.string().uuid(), z.literal('new')])
 
 export const Route = createFileRoute('/profile/certifications/$certificationId/')({
@@ -62,12 +69,8 @@ function CertificationRoute() {
             name={detail.certification.name}
             organization={detail.certification.organization}
             certificationNumber={detail.certification.certificationNumber}
-            frontSrc={
-              detail.scans[0]?.storagePath ? mediaUrl(detail.scans[0].storagePath) : null
-            }
-            backSrc={
-              detail.scans[1]?.storagePath ? mediaUrl(detail.scans[1].storagePath) : null
-            }
+            frontSrc={scanMediaUrl(detail.scans[0])}
+            backSrc={scanMediaUrl(detail.scans[1])}
             className="mx-auto w-full max-w-md"
           />
           {detail.scans.length > 1 ? (
