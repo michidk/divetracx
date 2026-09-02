@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { Award, Clock3, Plus, Waves } from 'lucide-react'
 import { EntityForm } from '@/components/entity-form'
+import { StatCard } from '@/components/stat-card'
 import { formatDiveDate, formatPersonName } from '@/modules/dives/format'
 import type { getProfile } from '@/modules/profile/server/queries'
 import { AgencyMembershipList } from './agency-membership-list'
@@ -32,31 +33,24 @@ export function ProfilePage({ profile }: { profile: ProfileData }) {
       </header>
 
       <section className="grid gap-4 sm:grid-cols-3">
-        <article className="rounded-2xl border border-border bg-card p-5">
-          <Waves className="text-primary" size={20} aria-hidden="true" />
-          <p className="mt-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Logged dives
-          </p>
-          <p className="mt-1 text-xl font-semibold">
-            {logbook.totalDives.toLocaleString()}
-          </p>
-        </article>
-        <article className="rounded-2xl border border-border bg-card p-5">
-          <Clock3 className="text-primary" size={20} aria-hidden="true" />
-          <p className="mt-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Bottom time
-          </p>
-          <p className="mt-1 text-xl font-semibold">
-            {formatHours(logbook.totalSeconds)} h
-          </p>
-        </article>
-        <article className="rounded-2xl border border-border bg-card p-5">
-          <Award className="text-primary" size={20} aria-hidden="true" />
-          <p className="mt-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Certifications
-          </p>
-          <p className="mt-1 text-xl font-semibold">{certifications.length}</p>
-        </article>
+        <StatCard
+          icon={Waves}
+          label="Logged dives"
+          value={logbook.totalDives.toLocaleString()}
+          valueClassName="text-xl"
+        />
+        <StatCard
+          icon={Clock3}
+          label="Bottom time"
+          value={`${formatHours(logbook.totalSeconds)} h`}
+          valueClassName="text-xl"
+        />
+        <StatCard
+          icon={Award}
+          label="Certifications"
+          value={certifications.length}
+          valueClassName="text-xl"
+        />
       </section>
 
       <section>
