@@ -2,7 +2,7 @@ import '@tanstack/react-start/server-only'
 
 import { asc, eq, sql } from 'drizzle-orm'
 import { getDb } from '@/db'
-import { agencyMemberships, certifications, divers, dives } from '@/db/schema'
+import { agencyMemberships, buddies, certifications, divers, dives } from '@/db/schema'
 
 function certificationScans(certification: typeof certifications.$inferSelect) {
   const scans: Array<{
@@ -39,8 +39,16 @@ export async function loadProfile() {
 
   const [certificationRows, membershipRows, [logbook]] = await Promise.all([
     db
-      .select()
+      .select({
+        certification: certifications,
+        instructor: {
+          id: buddies.id,
+          firstName: buddies.firstName,
+          lastName: buddies.lastName,
+        },
+      })
       .from(certifications)
+      .leftJoin(buddies, eq(certifications.instructorBuddyId, buddies.id))
       .orderBy(
         sql`${certifications.sortOrder} nulls last`,
         asc(certifications.certifiedAt),
@@ -58,13 +66,19 @@ export async function loadProfile() {
 
   return {
     diver: diver ?? null,
-    certifications: certificationRows.map((certification) => ({
+    certifications: certificationRows.map(({ certification, instructor }) => ({
       id: certification.id,
       name: certification.name,
       organization: certification.organization,
       certificationNumber: certification.certificationNumber,
       certifiedAt: certification.certifiedAt,
-      instructorName: certification.instructorName,
+      instructor: instructor?.id
+        ? {
+            id: instructor.id,
+            firstName: instructor.firstName,
+            lastName: instructor.lastName,
+          }
+        : null,
       scans: certificationScans(certification),
     })),
     agencyMemberships: membershipRows,
@@ -94,4 +108,15 @@ export async function loadCertification(certificationId: string) {
     .limit(1)
   if (!certification) return null
   return { certification, scans: certificationScans(certification) }
+}
+
+export async function loadCertificationInstructorOptions() {
+  return getDb()
+    .select({
+      id: buddies.id,
+      firstName: buddies.firstName,
+      lastName: buddies.lastName,
+    })
+    .from(buddies)
+    .orderBy(asc(buddies.lastName), asc(buddies.firstName), asc(buddies.createdAt))
 }

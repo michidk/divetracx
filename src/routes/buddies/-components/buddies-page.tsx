@@ -22,7 +22,7 @@ export function BuddiesPage({ buddies }: { buddies: BuddiesData }) {
           </p>
           <h1 className="mt-2 text-4xl font-semibold tracking-tight">Buddies</h1>
           <p className="mt-3 text-muted-foreground">
-            The {buddies.length} people you have shared dives with.
+            The {buddies.length} people in your dives and training history.
           </p>
         </div>
         <Link
@@ -35,7 +35,7 @@ export function BuddiesPage({ buddies }: { buddies: BuddiesData }) {
 
       {buddies.length === 0 ? (
         <p className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
-          No buddies yet. Add one here, then link them to dives in the dive editor.
+          No buddies yet. Add a person here, then link them to dives or certifications.
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -1,0 +1,1 @@
+ALTER TABLE "certifications" DROP COLUMN "instructor_name";

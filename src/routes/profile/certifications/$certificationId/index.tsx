@@ -4,7 +4,11 @@ import { z } from 'zod'
 import { CertificationCard } from '@/components/certification-card'
 import { DeleteRecordButton } from '@/components/delete-record-button'
 import { EntityForm } from '@/components/entity-form'
-import { getCertification } from '@/modules/profile/server/queries'
+import { formatPersonName } from '@/modules/dives/format'
+import {
+  getCertification,
+  getCertificationInstructorOptions,
+} from '@/modules/profile/server/queries'
 
 function mediaUrl(path: string) {
   return `/media/${path.split('/').map(encodeURIComponent).join('/')}`
@@ -23,14 +27,15 @@ export const Route = createFileRoute('/profile/certifications/$certificationId/'
   loader: async ({ params }) => {
     const certificationId = certificationIdSchema.safeParse(params.certificationId)
     if (!certificationId.success) throw notFound()
+    const instructorOptions = await getCertificationInstructorOptions()
     if (certificationId.data === 'new') {
-      return { certificationId: 'new' as const, detail: null }
+      return { certificationId: 'new' as const, detail: null, instructorOptions }
     }
     const detail = await getCertification({
       data: { certificationId: certificationId.data },
     })
     if (!detail) throw notFound()
-    return { certificationId: certificationId.data, detail }
+    return { certificationId: certificationId.data, detail, instructorOptions }
   },
   head: ({ loaderData }) => ({
     meta: [
@@ -45,7 +50,7 @@ export const Route = createFileRoute('/profile/certifications/$certificationId/'
 })
 
 function CertificationRoute() {
-  const { certificationId, detail } = Route.useLoaderData()
+  const { certificationId, detail, instructorOptions } = Route.useLoaderData()
   const router = useRouter()
   const isNew = certificationId === 'new'
 
@@ -81,6 +86,12 @@ function CertificationRoute() {
         entity="certifications"
         recordId={certificationId}
         record={detail?.certification ?? null}
+        selectOptions={{
+          instructorBuddyId: instructorOptions.map((buddy) => ({
+            value: buddy.id,
+            label: formatPersonName(buddy),
+          })),
+        }}
         onSaved={() => router.navigate({ to: '/profile' })}
       />
 
