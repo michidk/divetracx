@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from 'react'
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import type { PositionedDiveProfilePoint } from '../-lib/profile-chart'
 import {
   createProfileGeometry,
@@ -604,7 +605,7 @@ export function DiveProfileChart({
             ) : null}
           </div>
 
-          <div
+          <ScrollArea
             role="slider"
             tabIndex={0}
             aria-label="Dive profile sample"
@@ -614,7 +615,7 @@ export function DiveProfileChart({
             aria-valuetext={selectedDescription}
             onFocus={() => setSelectedIndex((current) => current ?? 0)}
             onKeyDown={selectFromKeyboard}
-            className="relative mt-4 overflow-x-auto rounded-xl border border-border bg-background outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="mt-4 rounded-xl border border-border bg-background outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <svg
               viewBox={`0 0 ${PROFILE_CHART_VIEWBOX.width} ${PROFILE_CHART_VIEWBOX.height}`}
@@ -918,7 +919,8 @@ export function DiveProfileChart({
             {selectedPoint ? (
               <ProfileMagnifier geometry={geometry} selectedPoint={selectedPoint} />
             ) : null}
-          </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
 
           <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-6">
             <p className="rounded-lg bg-muted/60 px-3 py-2">
