@@ -1,15 +1,21 @@
-import { afterEach, describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { createGarminSourceClient } from './client.server'
 
 const originalFetch = globalThis.fetch
 const originalEnvironment = {
+  databaseUrl: process.env.DATABASE_URL,
   full: process.env.GARMIN_ADAPTER_FULL_IMPORT_URL,
   incremental: process.env.GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL,
   authorization: process.env.GARMIN_ADAPTER_AUTHORIZATION,
 }
 
+beforeEach(() => {
+  process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/divetracx_test'
+})
+
 afterEach(() => {
   globalThis.fetch = originalFetch
+  restoreEnvironment('DATABASE_URL', originalEnvironment.databaseUrl)
   restoreEnvironment('GARMIN_ADAPTER_FULL_IMPORT_URL', originalEnvironment.full)
   restoreEnvironment(
     'GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL',
