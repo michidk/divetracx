@@ -68,8 +68,11 @@ function displayTankGas(tank: DiveData['tanks'][number]) {
   return 'Air'
 }
 
-function heroMediaUrl(photo: { storagePath: string | null }) {
-  const path = photo.storagePath ?? ''
+function heroMediaUrl(photo: {
+  storagePath: string | null
+  thumbnailStoragePath: string | null
+}) {
+  const path = photo.thumbnailStoragePath ?? photo.storagePath ?? ''
   return `/media/${path.split('/').map(encodeURIComponent).join('/')}`
 }
 

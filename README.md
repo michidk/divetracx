@@ -62,7 +62,11 @@ Configure `DIVEMATE_GOOGLE_DRIVE_FOLDER_ID` and
 `GOOGLE_APPLICATION_CREDENTIALS`. The importer reads `DiveMate.ddb` plus
 referenced `Media` and `Cards` files, using SQLite row IDs and content/file
 hashes for idempotent incremental detection. Images are copied to configured
-storage with immutable originals and generated thumbnails.
+storage with immutable originals and generated WebP thumbnails. Photo
+derivatives are bounded to 1280×1280 for galleries and page artwork;
+certification scans are bounded to 856×540 for card surfaces. Existing
+derivatives can be regenerated from their originals with
+`bun run media:refresh-thumbnails`.
 
 DiveMate export is a separate one-off operation. The configured `.ddb` is used
 only as a proprietary schema template; supported tables and fixed-width profile

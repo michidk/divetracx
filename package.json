@@ -25,6 +25,7 @@
     "db:studio": "drizzle-kit studio",
     "sync:divemate": "bun run scripts/sync-divemate.ts",
     "garmin:adapter": "bun run scripts/garmin-adapter.ts",
+    "media:refresh-thumbnails": "bun run scripts/refresh-thumbnails.ts",
     "import:incremental": "bun run scripts/import-integration.ts",
     "export:divemate": "bun run scripts/export-divemate.ts"
   },
