@@ -7,6 +7,11 @@ export function getServerEnv() {
   return createEnv({
     server: {
       DATABASE_URL: z.url(),
+      IMPORT_TIMEOUT_MS: z.coerce
+        .number()
+        .int()
+        .positive()
+        .default(15 * 60 * 1_000),
       DIVEMATE_GOOGLE_DRIVE_FOLDER_ID: z.string().trim().min(1).optional(),
       DIVEMATE_MAX_BACKUP_BYTES: z.coerce
         .number()
@@ -44,6 +49,7 @@ export function getServerEnv() {
     },
     runtimeEnvStrict: {
       DATABASE_URL: process.env.DATABASE_URL,
+      IMPORT_TIMEOUT_MS: process.env.IMPORT_TIMEOUT_MS,
       DIVEMATE_GOOGLE_DRIVE_FOLDER_ID: process.env.DIVEMATE_GOOGLE_DRIVE_FOLDER_ID,
       DIVEMATE_MAX_BACKUP_BYTES: process.env.DIVEMATE_MAX_BACKUP_BYTES,
       DIVEMATE_MAX_IMAGE_BYTES: process.env.DIVEMATE_MAX_IMAGE_BYTES,

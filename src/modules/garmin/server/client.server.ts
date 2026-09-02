@@ -88,6 +88,7 @@ async function requestBatch(
   url: string | undefined,
   mode: 'full' | 'incremental',
   state: Record<string, unknown>,
+  importSignal?: AbortSignal,
 ) {
   const environment = getServerEnv()
   if (!url) {
@@ -100,7 +101,10 @@ async function requestBatch(
     () => controller.abort(),
     environment.GARMIN_ADAPTER_TIMEOUT_MS,
   )
+  const abortFromImport = () => controller.abort(importSignal?.reason)
+  importSignal?.addEventListener('abort', abortFromImport, { once: true })
   try {
+    importSignal?.throwIfAborted()
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -132,7 +136,8 @@ async function requestBatch(
       `Garmin ${mode} Activity API adapter response`,
     )
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
+    if (importSignal?.aborted) throw importSignal.reason
+    if (controller.signal.aborted) {
       throw new Error(
         `Garmin adapter request timed out after ${environment.GARMIN_ADAPTER_TIMEOUT_MS}ms`,
       )
@@ -140,19 +145,26 @@ async function requestBatch(
     throw error
   } finally {
     clearTimeout(timeout)
+    importSignal?.removeEventListener('abort', abortFromImport)
   }
 }
 
 export function createGarminSourceClient(): GarminSourceClient {
   return {
-    fetchFull(state) {
-      return requestBatch(getServerEnv().GARMIN_ADAPTER_FULL_IMPORT_URL, 'full', state)
+    fetchFull(state, signal) {
+      return requestBatch(
+        getServerEnv().GARMIN_ADAPTER_FULL_IMPORT_URL,
+        'full',
+        state,
+        signal,
+      )
     },
-    fetchIncremental(state) {
+    fetchIncremental(state, signal) {
       return requestBatch(
         getServerEnv().GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL,
         'incremental',
         state,
+        signal,
       )
     },
   }

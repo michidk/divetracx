@@ -71,6 +71,7 @@ export interface PreparedImport<TData = unknown> {
 export interface PrepareImportContext {
   mode: ImportMode
   state: Record<string, unknown>
+  signal: AbortSignal
 }
 
 export interface CanonicalChangeCounts {
@@ -84,6 +85,7 @@ export interface ApplyImportContext<TData> {
   transaction: DatabaseTransaction
   mode: ImportMode
   runId: string
+  signal: AbortSignal
   prepared: PreparedImport<TData>
   records: ObservedExternalRecord[]
   findRecord(entityType: string, identityKey: string): ObservedExternalRecord

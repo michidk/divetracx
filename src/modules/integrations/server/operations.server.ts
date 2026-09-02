@@ -6,9 +6,14 @@ import { importRuns, integrationState, integrations } from '@/db/schema'
 import { getServerEnv } from '@/env'
 import { getIntegrationConnector, listIntegrationConnectors } from '../registry.server'
 import type { ImportMode, ImportTrigger } from '../types'
-import { performFullImport, performIncrementalImport } from './import-service.server'
+import {
+  expireTimedOutImportRuns,
+  performFullImport,
+  performIncrementalImport,
+} from './import-service.server'
 
 export async function loadIntegrationStatus() {
+  await expireTimedOutImportRuns()
   const environment = getServerEnv()
   return Promise.all(
     listIntegrationConnectors().map(async (connector) => {
@@ -69,6 +74,7 @@ export async function loadIntegrationStatus() {
 }
 
 export async function loadImportLogs() {
+  await expireTimedOutImportRuns()
   return getDb()
     .select({
       id: importRuns.id,

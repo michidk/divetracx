@@ -11,6 +11,7 @@
     "ingress",
     "resources",
     "migrations",
+    "imports",
     "sync",
     "divemate",
     "garmin",
@@ -59,6 +60,13 @@
         "ttlSecondsAfterFinished": { "type": "integer", "minimum": 0 },
         "hook": { "type": "object" },
         "resources": { "type": "object" }
+      }
+    },
+    "imports": {
+      "type": "object",
+      "required": ["timeoutMs"],
+      "properties": {
+        "timeoutMs": { "type": "integer", "minimum": 1000 }
       }
     },
     "sync": {

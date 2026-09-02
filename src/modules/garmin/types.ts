@@ -35,8 +35,14 @@ export interface GarminSourceBatch {
 }
 
 export interface GarminSourceClient {
-  fetchFull(state: Record<string, unknown>): Promise<GarminSourceBatch>
-  fetchIncremental(state: Record<string, unknown>): Promise<GarminSourceBatch>
+  fetchFull(
+    state: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<GarminSourceBatch>
+  fetchIncremental(
+    state: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<GarminSourceBatch>
 }
 
 export interface GarminProfileSample {
