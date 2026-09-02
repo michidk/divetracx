@@ -81,6 +81,9 @@ export const buddies = pgTable('buddies', {
   city: text('city'),
   state: text('state'),
   country: text('country'),
+  minimumDives: integer('minimum_dives'),
+  certifications: text('certifications'),
+  agencies: text('agencies'),
   notes: text('notes'),
   ...auditColumns,
 })
