@@ -4,6 +4,7 @@ import { and, asc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { getDb } from '@/db'
 import {
+  agencyMemberships,
   buddies,
   certifications,
   divers,
@@ -12,6 +13,7 @@ import {
   externalRecordLinks,
 } from '@/db/schema'
 import { getStorage } from '@/lib/storage'
+import { findAgency } from '@/modules/profile/agency-catalog'
 import type { EditorValues, EntityKey } from '../entities'
 
 const uuidSchema = z.string().uuid()
@@ -78,7 +80,7 @@ function recordId(value: string) {
   return parsed.data
 }
 
-/** Personal logbook: new gear and certifications belong to the primary diver. */
+/** Personal logbook records belong to the primary diver. */
 async function primaryDiverId() {
   const [diver] = await getDb()
     .select({ id: divers.id })
@@ -133,6 +135,9 @@ async function saveDiver(id: string, values: EditorValues) {
     emergencyPhone: optionalText(values, 'emergencyPhone'),
     emergencyEmail: optionalText(values, 'emergencyEmail'),
     insurance: optionalText(values, 'insurance'),
+    insuranceTariff: optionalText(values, 'insuranceTariff'),
+    insuranceNumber: optionalText(values, 'insuranceNumber'),
+    insuranceHotline: optionalText(values, 'insuranceHotline'),
     notes: optionalText(values, 'notes'),
     updatedAt: new Date(),
   }
@@ -232,12 +237,46 @@ async function saveCertification(id: string, values: EditorValues) {
   return row.id
 }
 
+async function saveAgencyMembership(id: string, values: EditorValues) {
+  const agencyCode = requiredText(values, 'agencyCode')
+  const isCustom = agencyCode === 'custom'
+  if (!isCustom && !findAgency(agencyCode)) {
+    throw new Error('Select a supported agency or choose Custom agency')
+  }
+
+  const customAgencyName = isCustom ? requiredText(values, 'customAgencyName') : null
+  const fields = {
+    agencyCode,
+    customAgencyName,
+    memberNumber: requiredText(values, 'memberNumber'),
+    updatedAt: new Date(),
+  }
+  const [row] =
+    id === 'new'
+      ? await getDb()
+          .insert(agencyMemberships)
+          .values({ ...fields, diverId: await primaryDiverId() })
+          .returning({ id: agencyMemberships.id })
+      : await getDb()
+          .update(agencyMemberships)
+          .set(fields)
+          .where(eq(agencyMemberships.id, recordId(id)))
+          .returning({ id: agencyMemberships.id })
+  if (!row) throw new Error('Agency membership was not found')
+  return row.id
+}
+
 export type DeletableEntityKey = Exclude<EntityKey, 'divers'>
 
 const deletableEntities: Record<
   DeletableEntityKey,
   {
-    table: typeof diveSites | typeof buddies | typeof equipment | typeof certifications
+    table:
+      | typeof diveSites
+      | typeof buddies
+      | typeof equipment
+      | typeof certifications
+      | typeof agencyMemberships
     canonicalType: string
   }
 > = {
@@ -245,6 +284,10 @@ const deletableEntities: Record<
   buddies: { table: buddies, canonicalType: 'buddy' },
   equipment: { table: equipment, canonicalType: 'equipment' },
   certifications: { table: certifications, canonicalType: 'certification' },
+  agencyMemberships: {
+    table: agencyMemberships,
+    canonicalType: 'agency_membership',
+  },
 }
 
 export async function deleteDataRecord(entity: DeletableEntityKey, id: string) {
@@ -305,5 +348,7 @@ export async function saveDataRecord(
       return saveEquipment(id, values)
     case 'certifications':
       return saveCertification(id, values)
+    case 'agencyMemberships':
+      return saveAgencyMembership(id, values)
   }
 }

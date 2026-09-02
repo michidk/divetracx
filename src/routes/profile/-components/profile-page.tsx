@@ -3,6 +3,7 @@ import { Award, Clock3, Plus, Waves } from 'lucide-react'
 import { EntityForm } from '@/components/entity-form'
 import { formatDiveDate, formatPersonName } from '@/modules/dives/format'
 import type { getProfile } from '@/modules/profile/server/queries'
+import { AgencyMembershipList } from './agency-membership-list'
 import { CertificationList } from './certification-list'
 
 type ProfileData = Awaited<ReturnType<typeof getProfile>>
@@ -14,7 +15,7 @@ function formatHours(seconds: number) {
 }
 
 export function ProfilePage({ profile }: { profile: ProfileData }) {
-  const { diver, certifications, logbook } = profile
+  const { diver, certifications, agencyMemberships, logbook } = profile
 
   return (
     <div className="space-y-7">
@@ -58,27 +59,31 @@ export function ProfilePage({ profile }: { profile: ProfileData }) {
         </article>
       </section>
 
+      <section>
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Agency memberships
+          </h2>
+          <Link
+            to="/profile/agencies/$agencyMembershipId"
+            params={{ agencyMembershipId: 'new' }}
+            className="inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+          >
+            <Plus size={15} aria-hidden="true" /> Add agency
+          </Link>
+        </div>
+        {agencyMemberships.length === 0 ? (
+          <p className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+            No agency memberships yet.
+          </p>
+        ) : (
+          <AgencyMembershipList memberships={agencyMemberships} />
+        )}
+      </section>
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.9fr)]">
         <section>
-          <div className="mb-3 flex items-center justify-between gap-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Certifications
-            </h2>
-            <Link
-              to="/profile/certifications/$certificationId"
-              params={{ certificationId: 'new' }}
-              className="inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-            >
-              <Plus size={15} aria-hidden="true" /> Add certification
-            </Link>
-          </div>
-          {certifications.length === 0 ? (
-            <p className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-              No certifications yet.
-            </p>
-          ) : (
-            <CertificationList certifications={certifications} />
-          )}
+          <CertificationList certifications={certifications} />
         </section>
 
         <div>

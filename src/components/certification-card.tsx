@@ -9,6 +9,8 @@ interface CertificationCardProps {
   frontSrc: string | null
   backSrc: string | null
   className?: string
+  flipped?: boolean
+  onFlippedChange?: (flipped: boolean) => void
 }
 
 function PlaceholderFace({
@@ -40,9 +42,19 @@ export function CertificationCard({
   frontSrc,
   backSrc,
   className,
+  flipped: controlledFlipped,
+  onFlippedChange,
 }: CertificationCardProps) {
-  const [flipped, setFlipped] = useState(false)
+  const [internalFlipped, setInternalFlipped] = useState(false)
+  const flipped = controlledFlipped ?? internalFlipped
   const canFlip = Boolean(backSrc)
+
+  function flip() {
+    if (!canFlip) return
+    const nextFlipped = !flipped
+    if (controlledFlipped === undefined) setInternalFlipped(nextFlipped)
+    onFlippedChange?.(nextFlipped)
+  }
 
   const front = frontSrc ? (
     <img
@@ -63,7 +75,7 @@ export function CertificationCard({
     <div className={cn('[perspective:1600px]', className)}>
       <button
         type="button"
-        onClick={() => canFlip && setFlipped((value) => !value)}
+        onClick={flip}
         disabled={!canFlip}
         aria-label={
           canFlip

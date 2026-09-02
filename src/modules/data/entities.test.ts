@@ -1,6 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import { getTableColumns } from 'drizzle-orm'
-import { buddies, certifications, divers, diveSites, equipment } from '@/db/schema'
+import {
+  agencyMemberships,
+  buddies,
+  certifications,
+  divers,
+  diveSites,
+  equipment,
+} from '@/db/schema'
 import { entityDefinitionList, entityDefinitions, entityKeySchema } from './entities'
 
 const entityTables = {
@@ -9,6 +16,7 @@ const entityTables = {
   buddies,
   equipment,
   certifications,
+  agencyMemberships,
 } as const
 
 const recordMetadataColumns = new Set(['id', 'createdAt', 'updatedAt'])
@@ -35,6 +43,7 @@ const managedElsewhereColumns: Record<keyof typeof entityTables, Set<string>> = 
     'scan2MimeType',
     'scan2ByteSize',
   ]),
+  agencyMemberships: new Set(['diverId']),
 }
 
 describe('taxonomy entity definitions', () => {
