@@ -36,6 +36,11 @@ export function BuddyPage({ detail }: { detail: BuddyDetail }) {
             <Waves size={13} aria-hidden="true" /> {dives.length}{' '}
             {dives.length === 1 ? 'dive together' : 'dives together'}
           </Badge>
+          {buddy.minimumDives !== null ? (
+            <Badge variant="secondary" className="rounded-lg px-2.5 py-1">
+              At least {buddy.minimumDives.toLocaleString()} total dives
+            </Badge>
+          ) : null}
           {lastDive ? (
             <Badge variant="accent" className="rounded-lg px-2.5 py-1">
               Last {formatDiveDate(lastDive.diveDate, 'medium')}
