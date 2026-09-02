@@ -30,6 +30,7 @@ import { Route as DivesDiveIdIndexRouteImport } from './routes/dives/$diveId/ind
 import { Route as DivesNewIndexRouteImport } from './routes/dives/new/index'
 import { Route as GearGearIdIndexRouteImport } from './routes/gear/$gearId/index'
 import { Route as GearNewIndexRouteImport } from './routes/gear/new/index'
+import { Route as SettingsAgenciesIndexRouteImport } from './routes/settings/agencies/index'
 import { Route as SettingsExportIndexRouteImport } from './routes/settings/export/index'
 import { Route as SettingsSyncIndexRouteImport } from './routes/settings/sync/index'
 import { Route as SitesSiteIdIndexRouteImport } from './routes/sites/$siteId/index'
@@ -146,6 +147,11 @@ const GearNewIndexRoute = GearNewIndexRouteImport.update({
   path: '/gear/new/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsAgenciesIndexRoute = SettingsAgenciesIndexRouteImport.update({
+  id: '/settings/agencies/',
+  path: '/settings/agencies/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsExportIndexRoute = SettingsExportIndexRouteImport.update({
   id: '/settings/export/',
   path: '/settings/export/',
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/dives/new/': typeof DivesNewIndexRoute
   '/gear/$gearId/': typeof GearGearIdIndexRoute
   '/gear/new/': typeof GearNewIndexRoute
+  '/settings/agencies/': typeof SettingsAgenciesIndexRoute
   '/settings/export/': typeof SettingsExportIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
   '/sites/$siteId/': typeof SitesSiteIdIndexRoute
@@ -254,6 +261,7 @@ export interface FileRoutesByTo {
   '/dives/new': typeof DivesNewIndexRoute
   '/gear/$gearId': typeof GearGearIdIndexRoute
   '/gear/new': typeof GearNewIndexRoute
+  '/settings/agencies': typeof SettingsAgenciesIndexRoute
   '/settings/export': typeof SettingsExportIndexRoute
   '/settings/sync': typeof SettingsSyncIndexRoute
   '/sites/$siteId': typeof SitesSiteIdIndexRoute
@@ -288,6 +296,7 @@ export interface FileRoutesById {
   '/dives/new/': typeof DivesNewIndexRoute
   '/gear/$gearId/': typeof GearGearIdIndexRoute
   '/gear/new/': typeof GearNewIndexRoute
+  '/settings/agencies/': typeof SettingsAgenciesIndexRoute
   '/settings/export/': typeof SettingsExportIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
   '/sites/$siteId/': typeof SitesSiteIdIndexRoute
@@ -323,6 +332,7 @@ export interface FileRouteTypes {
     | '/dives/new/'
     | '/gear/$gearId/'
     | '/gear/new/'
+    | '/settings/agencies/'
     | '/settings/export/'
     | '/settings/sync/'
     | '/sites/$siteId/'
@@ -356,6 +366,7 @@ export interface FileRouteTypes {
     | '/dives/new'
     | '/gear/$gearId'
     | '/gear/new'
+    | '/settings/agencies'
     | '/settings/export'
     | '/settings/sync'
     | '/sites/$siteId'
@@ -389,6 +400,7 @@ export interface FileRouteTypes {
     | '/dives/new/'
     | '/gear/$gearId/'
     | '/gear/new/'
+    | '/settings/agencies/'
     | '/settings/export/'
     | '/settings/sync/'
     | '/sites/$siteId/'
@@ -423,6 +435,7 @@ export interface RootRouteChildren {
   DivesNewIndexRoute: typeof DivesNewIndexRoute
   GearGearIdIndexRoute: typeof GearGearIdIndexRoute
   GearNewIndexRoute: typeof GearNewIndexRoute
+  SettingsAgenciesIndexRoute: typeof SettingsAgenciesIndexRoute
   SettingsExportIndexRoute: typeof SettingsExportIndexRoute
   SettingsSyncIndexRoute: typeof SettingsSyncIndexRoute
   SitesSiteIdIndexRoute: typeof SitesSiteIdIndexRoute
@@ -584,6 +597,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GearNewIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/agencies/': {
+      id: '/settings/agencies/'
+      path: '/settings/agencies'
+      fullPath: '/settings/agencies/'
+      preLoaderRoute: typeof SettingsAgenciesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/export/': {
       id: '/settings/export/'
       path: '/settings/export'
@@ -679,6 +699,7 @@ const rootRouteChildren: RootRouteChildren = {
   DivesNewIndexRoute: DivesNewIndexRoute,
   GearGearIdIndexRoute: GearGearIdIndexRoute,
   GearNewIndexRoute: GearNewIndexRoute,
+  SettingsAgenciesIndexRoute: SettingsAgenciesIndexRoute,
   SettingsExportIndexRoute: SettingsExportIndexRoute,
   SettingsSyncIndexRoute: SettingsSyncIndexRoute,
   SitesSiteIdIndexRoute: SitesSiteIdIndexRoute,

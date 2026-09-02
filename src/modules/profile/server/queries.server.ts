@@ -2,7 +2,14 @@ import '@tanstack/react-start/server-only'
 
 import { asc, eq, sql } from 'drizzle-orm'
 import { getDb } from '@/db'
-import { agencyMemberships, buddies, certifications, divers, dives } from '@/db/schema'
+import {
+  agencies,
+  agencyMemberships,
+  buddies,
+  certifications,
+  divers,
+  dives,
+} from '@/db/schema'
 
 function certificationScans(certification: typeof certifications.$inferSelect) {
   const scans: Array<{
@@ -53,7 +60,11 @@ export async function loadProfile() {
         sql`${certifications.sortOrder} nulls last`,
         asc(certifications.certifiedAt),
       ),
-    db.select().from(agencyMemberships).orderBy(asc(agencyMemberships.createdAt)),
+    db
+      .select({ membership: agencyMemberships, agency: agencies })
+      .from(agencyMemberships)
+      .innerJoin(agencies, eq(agencyMemberships.agencyId, agencies.id))
+      .orderBy(asc(agencyMemberships.createdAt)),
     db
       .select({
         totalDives: sql<number>`count(*)::integer`,
@@ -81,7 +92,10 @@ export async function loadProfile() {
         : null,
       scans: certificationScans(certification),
     })),
-    agencyMemberships: membershipRows,
+    agencyMemberships: membershipRows.map(({ membership, agency }) => ({
+      ...membership,
+      agency,
+    })),
     logbook: logbook ?? {
       totalDives: 0,
       totalSeconds: 0,
@@ -93,21 +107,27 @@ export async function loadProfile() {
 
 export async function loadAgencyMembership(agencyMembershipId: string) {
   const [membership] = await getDb()
-    .select()
+    .select({ membership: agencyMemberships, agency: agencies })
     .from(agencyMemberships)
+    .innerJoin(agencies, eq(agencyMemberships.agencyId, agencies.id))
     .where(eq(agencyMemberships.id, agencyMembershipId))
     .limit(1)
-  return membership ?? null
+  return membership ? { ...membership.membership, agency: membership.agency } : null
 }
 
 export async function loadCertification(certificationId: string) {
-  const [certification] = await getDb()
-    .select()
+  const [result] = await getDb()
+    .select({ certification: certifications, agency: agencies })
     .from(certifications)
+    .leftJoin(agencies, eq(certifications.agencyId, agencies.id))
     .where(eq(certifications.id, certificationId))
     .limit(1)
-  if (!certification) return null
-  return { certification, scans: certificationScans(certification) }
+  if (!result) return null
+  return {
+    certification: result.certification,
+    agency: result.agency,
+    scans: certificationScans(result.certification),
+  }
 }
 
 export async function loadCertificationInstructorOptions() {

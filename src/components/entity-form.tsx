@@ -1,6 +1,9 @@
+import { Popover } from '@base-ui/react/popover'
 import { useRouter } from '@tanstack/react-router'
-import { Save, Star } from 'lucide-react'
+import { format, isValid, parseISO } from 'date-fns'
+import { CalendarDays, Save, Star } from 'lucide-react'
 import { useState } from 'react'
+import { DayPicker } from 'react-day-picker'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -97,6 +100,7 @@ function FieldControl({
   onChange: (value: EditorValue) => void
 }) {
   const inputId = `field-${field.key}`
+  const [dateOpen, setDateOpen] = useState(false)
 
   if (field.kind === 'checkbox') {
     return (
@@ -115,6 +119,92 @@ function FieldControl({
   }
 
   const stringValue = typeof value === 'string' ? value : ''
+
+  if (field.kind === 'date-picker') {
+    const parsedDate = stringValue ? parseISO(stringValue) : null
+    const selected = parsedDate && isValid(parsedDate) ? parsedDate : undefined
+    return (
+      <div className="text-sm font-semibold">
+        {field.label}
+        {field.required ? <span className="text-red-600"> *</span> : null}
+        <Popover.Root open={dateOpen} onOpenChange={setDateOpen}>
+          <Popover.Trigger
+            type="button"
+            id={inputId}
+            className="mt-2 flex min-h-11 w-full items-center justify-between rounded-xl border border-border bg-background px-3 text-left text-sm font-normal outline-none transition hover:bg-muted/40 focus:border-primary focus:ring-2 focus:ring-primary/20"
+          >
+            <span className={selected ? undefined : 'text-muted-foreground'}>
+              {selected ? format(selected, 'PPP') : 'Select a date'}
+            </span>
+            <CalendarDays
+              size={16}
+              className="text-muted-foreground"
+              aria-hidden="true"
+            />
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Positioner sideOffset={6} align="start" className="z-50">
+              <Popover.Popup className="rounded-2xl border border-border bg-card p-3 text-card-foreground shadow-xl outline-none">
+                <DayPicker
+                  mode="single"
+                  selected={selected}
+                  defaultMonth={selected ?? new Date(1990, 0)}
+                  startMonth={new Date(1900, 0)}
+                  endMonth={new Date()}
+                  captionLayout="dropdown"
+                  onSelect={(date) => {
+                    onChange(date ? format(date, 'yyyy-MM-dd') : '')
+                    if (date) setDateOpen(false)
+                  }}
+                  classNames={{
+                    months: 'flex',
+                    month: 'space-y-3',
+                    month_caption: 'flex h-9 items-center justify-center px-10',
+                    caption_label: 'text-sm font-semibold',
+                    dropdowns: 'flex items-center justify-center gap-1',
+                    dropdown_root: 'relative rounded-md border border-border px-2 py-1',
+                    dropdown: 'absolute inset-0 cursor-pointer opacity-0',
+                    nav: 'absolute inset-x-3 top-3 flex justify-between',
+                    button_previous:
+                      'grid size-9 place-items-center rounded-lg hover:bg-muted',
+                    button_next:
+                      'grid size-9 place-items-center rounded-lg hover:bg-muted',
+                    chevron: 'size-4 fill-current',
+                    month_grid: 'border-collapse',
+                    weekdays: 'flex',
+                    weekday:
+                      'w-9 py-1 text-center text-xs font-normal text-muted-foreground',
+                    week: 'mt-1 flex w-full',
+                    day: 'relative size-9 p-0 text-center text-sm font-normal',
+                    day_button:
+                      'size-9 rounded-lg font-normal hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary',
+                    selected:
+                      '[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary',
+                    today: '[&>button]:font-bold [&>button]:text-primary',
+                    outside: 'text-muted-foreground opacity-40',
+                    disabled: 'text-muted-foreground opacity-30',
+                    hidden: 'invisible',
+                  }}
+                />
+                {selected ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange('')
+                      setDateOpen(false)
+                    }}
+                    className="mt-1 rounded-lg px-2 py-1 text-xs font-medium text-primary hover:bg-muted"
+                  >
+                    Clear date
+                  </button>
+                ) : null}
+              </Popover.Popup>
+            </Popover.Positioner>
+          </Popover.Portal>
+        </Popover.Root>
+      </div>
+    )
+  }
 
   if (field.kind === 'select') {
     const items = [{ value: '', label: 'Not set' }, ...(options ?? field.options ?? [])]
@@ -141,6 +231,11 @@ function FieldControl({
             ))}
           </SelectContent>
         </Select>
+        {field.help ? (
+          <span className="mt-1 block text-xs font-normal text-muted-foreground">
+            {field.help}
+          </span>
+        ) : null}
       </div>
     )
   }

@@ -2,6 +2,7 @@ import '@tanstack/react-start/server-only'
 
 import { getDb } from '@/db'
 import {
+  agencies,
   agencyMemberships,
   buddies,
   certifications,
@@ -26,9 +27,10 @@ export async function loadExportSnapshot(): Promise<ExportSnapshot> {
   return getDb().transaction(
     async (transaction) => ({
       format: 'divetracx-backup',
-      version: 11,
+      version: 12,
       exportedAt: new Date().toISOString(),
       data: {
+        agencies: await transaction.select().from(agencies),
         divers: await transaction.select().from(divers),
         diveSites: await transaction.select().from(diveSites),
         buddies: await transaction.select().from(buddies),

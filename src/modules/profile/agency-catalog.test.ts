@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { agencyCatalog, agencySelectionForName, findAgencyByName } from './agency-catalog'
+import { agencyCatalog, findAgencyByName, normalizedAgencyName } from './agency-catalog'
 
 describe('dive agency catalog', () => {
   test('includes every referenced agency with distinct SDI and TDI entries', () => {
@@ -23,18 +23,14 @@ describe('dive agency catalog', () => {
     expect(findAgencyByName('TDI')?.code).toBe('tdi')
     expect(findAgencyByName('Scuba Diving International')?.code).toBe('sdi')
     expect(
-      findAgencyByName('Federazione Italiana Pesca Sportiva e Attivita Subacquee')?.code,
+      findAgencyByName('Federazione Italiana Pesca Sportiva e Attività Subacquee')?.code,
     ).toBe('fipsas')
   })
 
-  test('preserves unknown organizations as custom agencies', () => {
-    expect(agencySelectionForName('Local Diving Association')).toEqual({
-      agencyCode: 'custom',
-      customAgencyName: 'Local Diving Association',
-    })
-    expect(agencySelectionForName(' PADI ')).toEqual({
-      agencyCode: 'padi',
-      customAgencyName: null,
-    })
+  test('normalizes names case-insensitively after trimming', () => {
+    expect(normalizedAgencyName(' Local Diving Association ')).toBe(
+      'local diving association',
+    )
+    expect(findAgencyByName(' PADI ')?.code).toBe('padi')
   })
 })
