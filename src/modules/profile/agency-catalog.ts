@@ -64,12 +64,8 @@ export function findAgency(code: string | null | undefined) {
   return agencyCatalog.find((agency) => agency.code === code) ?? null
 }
 
-function normalizedAgencyName(value: string) {
-  return value
-    .normalize('NFKD')
-    .replaceAll(/\p{Diacritic}/gu, '')
-    .toLocaleLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, '')
+export function normalizedAgencyName(value: string) {
+  return value.trim().toLowerCase()
 }
 
 export function findAgencyByName(name: string | null | undefined) {
@@ -84,23 +80,12 @@ export function findAgencyByName(name: string | null | undefined) {
   )
 }
 
-export function agencySelectionForName(name: string | null | undefined) {
-  const trimmedName = name?.trim() || null
-  const agency = findAgencyByName(trimmedName)
-  return {
-    agencyCode: agency?.code ?? (trimmedName ? 'custom' : null),
-    customAgencyName: agency ? null : trimmedName,
-  }
-}
-
-export function agencyDisplayName({
-  agencyCode,
-  customAgencyName,
-}: {
-  agencyCode: string
-  customAgencyName: string | null
-}) {
-  return findAgency(agencyCode)?.shortName ?? customAgencyName ?? 'Custom agency'
+export interface AgencyDisplayRecord {
+  name: string
+  fullName: string | null
+  logoSrc: string | null
+  darkLogo: boolean
+  builtIn: boolean
 }
 
 export function agencyInitials(name: string) {

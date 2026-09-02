@@ -1,22 +1,16 @@
 import { cn } from '@/lib/utils'
 import {
-  agencyDisplayName,
+  type AgencyDisplayRecord,
   agencyInitials,
-  findAgency,
 } from '@/modules/profile/agency-catalog'
 
 export function AgencyMark({
-  agencyCode,
-  customAgencyName,
+  agency,
   className,
 }: {
-  agencyCode: string
-  customAgencyName: string | null
+  agency: AgencyDisplayRecord
   className?: string
 }) {
-  const agency = findAgency(agencyCode)
-  const displayName = agencyDisplayName({ agencyCode, customAgencyName })
-
   return (
     <div
       className={cn(
@@ -24,17 +18,17 @@ export function AgencyMark({
         className,
       )}
       role="img"
-      aria-label={`${displayName} logo`}
+      aria-label={`${agency.name} logo`}
     >
-      <span aria-hidden="true">{agencyInitials(displayName)}</span>
-      {agency ? (
+      <span aria-hidden="true">{agencyInitials(agency.name)}</span>
+      {agency.logoSrc ? (
         <img
           src={agency.logoSrc}
           alt=""
           aria-hidden="true"
           className={cn(
-            'absolute inset-0 size-full object-contain p-1',
-            'darkLogo' in agency && agency.darkLogo ? 'bg-slate-900' : 'bg-white',
+            'absolute inset-0 size-full object-cover',
+            agency.darkLogo ? 'bg-slate-900' : 'bg-white',
           )}
           loading="lazy"
           referrerPolicy="no-referrer"

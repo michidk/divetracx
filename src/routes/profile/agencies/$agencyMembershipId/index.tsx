@@ -3,8 +3,8 @@ import { ArrowLeft } from 'lucide-react'
 import { z } from 'zod'
 import { DeleteRecordButton } from '@/components/delete-record-button'
 import { EntityForm } from '@/components/entity-form'
-import { agencyDisplayName } from '@/modules/profile/agency-catalog'
 import { AgencyMark } from '@/modules/profile/components/agency-mark'
+import { getAgencies } from '@/modules/profile/server/agencies'
 import { getAgencyMembership } from '@/modules/profile/server/queries'
 
 const agencyMembershipIdSchema = z.union([z.string().uuid(), z.literal('new')])
@@ -15,20 +15,20 @@ export const Route = createFileRoute('/profile/agencies/$agencyMembershipId/')({
       params.agencyMembershipId,
     )
     if (!agencyMembershipId.success) throw notFound()
-    if (agencyMembershipId.data === 'new') {
-      return { agencyMembershipId: 'new' as const, membership: null }
-    }
+    const agencyOptions = await getAgencies()
+    if (agencyMembershipId.data === 'new')
+      return { agencyMembershipId: 'new' as const, membership: null, agencyOptions }
     const membership = await getAgencyMembership({
       data: { agencyMembershipId: agencyMembershipId.data },
     })
     if (!membership) throw notFound()
-    return { agencyMembershipId: agencyMembershipId.data, membership }
+    return { agencyMembershipId: agencyMembershipId.data, membership, agencyOptions }
   },
   head: ({ loaderData }) => ({
     meta: [
       {
         title: loaderData?.membership
-          ? `${agencyDisplayName(loaderData.membership)} · Divetracx`
+          ? `${loaderData.membership.agency.name} · Divetracx`
           : 'New agency membership · Divetracx',
       },
     ],
@@ -37,7 +37,7 @@ export const Route = createFileRoute('/profile/agencies/$agencyMembershipId/')({
 })
 
 function AgencyMembershipRoute() {
-  const { agencyMembershipId, membership } = Route.useLoaderData()
+  const { agencyMembershipId, membership, agencyOptions } = Route.useLoaderData()
   const router = useRouter()
   const isNew = agencyMembershipId === 'new'
 
@@ -54,11 +54,11 @@ function AgencyMembershipRoute() {
           {isNew
             ? 'New agency membership'
             : membership
-              ? agencyDisplayName(membership)
+              ? membership.agency.name
               : 'Agency membership'}
         </h1>
         <p className="mt-3 text-muted-foreground">
-          Select a listed agency or choose Custom agency for any other organization.
+          Select an agency from your registry. Custom agencies can be added in Settings.
         </p>
       </header>
 
@@ -67,26 +67,24 @@ function AgencyMembershipRoute() {
         entity="agencyMemberships"
         recordId={agencyMembershipId}
         record={membership}
+        selectOptions={{
+          agencyId: agencyOptions.map((agency) => ({
+            value: agency.id,
+            label: agency.fullName ? `${agency.name} · ${agency.fullName}` : agency.name,
+          })),
+        }}
         onSaved={() => router.navigate({ to: '/profile' })}
         renderSectionExtra={(_section, values) => {
-          const agencyCode =
-            typeof values.agencyCode === 'string' && values.agencyCode
-              ? values.agencyCode
-              : 'custom'
-          const customAgencyName =
-            typeof values.customAgencyName === 'string'
-              ? values.customAgencyName || null
-              : null
+          const agency = agencyOptions.find((option) => option.id === values.agencyId)
+          if (!agency) return null
           return (
             <div className="mt-5 flex items-center gap-3 rounded-xl bg-muted/60 p-3">
-              <AgencyMark agencyCode={agencyCode} customAgencyName={customAgencyName} />
+              <AgencyMark agency={agency} />
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Card preview
                 </p>
-                <p className="mt-1 font-semibold">
-                  {agencyDisplayName({ agencyCode, customAgencyName })}
-                </p>
+                <p className="mt-1 font-semibold">{agency.name}</p>
               </div>
             </div>
           )
@@ -98,7 +96,7 @@ function AgencyMembershipRoute() {
           entity="agencyMemberships"
           recordId={agencyMembershipId}
           label="Delete membership"
-          confirmText={`Delete the ${agencyDisplayName(membership)} membership?`}
+          confirmText={`Delete the ${membership.agency.name} membership?`}
           onDeleted={() => router.navigate({ to: '/profile' })}
         />
       ) : null}

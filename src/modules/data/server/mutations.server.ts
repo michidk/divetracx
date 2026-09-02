@@ -4,6 +4,7 @@ import { and, asc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { getDb } from '@/db'
 import {
+  agencies,
   agencyMemberships,
   buddies,
   certifications,
@@ -13,7 +14,6 @@ import {
   externalRecordLinks,
 } from '@/db/schema'
 import { getStorage } from '@/lib/storage'
-import { findAgency } from '@/modules/profile/agency-catalog'
 import type { EditorValues, EntityKey } from '../entities'
 
 const uuidSchema = z.string().uuid()
@@ -96,6 +96,18 @@ async function primaryDiverId() {
     .orderBy(asc(divers.createdAt))
     .limit(1)
   return diver?.id ?? null
+}
+
+async function requiredAgency(values: EditorValues) {
+  const agencyId = optionalRecordId(values, 'agencyId')
+  if (!agencyId) throw new Error('agencyId is required')
+  const [agency] = await getDb()
+    .select({ id: agencies.id, name: agencies.name })
+    .from(agencies)
+    .where(eq(agencies.id, agencyId))
+    .limit(1)
+  if (!agency) throw new Error('Select an existing agency')
+  return agency
 }
 
 async function saveSite(id: string, values: EditorValues) {
@@ -224,18 +236,11 @@ async function saveEquipment(id: string, values: EditorValues) {
 }
 
 async function saveCertification(id: string, values: EditorValues) {
-  const agencyCode = requiredText(values, 'agencyCode')
-  const agency = findAgency(agencyCode)
-  const isCustom = agencyCode === 'custom'
-  if (!isCustom && !agency) {
-    throw new Error('Select a supported agency or choose Custom agency')
-  }
-  const customAgencyName = isCustom ? requiredText(values, 'customAgencyName') : null
+  const agency = await requiredAgency(values)
   const fields = {
     name: requiredText(values, 'name'),
-    organization: agency?.shortName ?? customAgencyName,
-    agencyCode,
-    customAgencyName,
+    organization: agency.name,
+    agencyId: agency.id,
     certificationNumber: optionalText(values, 'certificationNumber'),
     certifiedAt: optionalText(values, 'certifiedAt'),
     instructorBuddyId: optionalRecordId(values, 'instructorBuddyId'),
@@ -258,16 +263,9 @@ async function saveCertification(id: string, values: EditorValues) {
 }
 
 async function saveAgencyMembership(id: string, values: EditorValues) {
-  const agencyCode = requiredText(values, 'agencyCode')
-  const isCustom = agencyCode === 'custom'
-  if (!isCustom && !findAgency(agencyCode)) {
-    throw new Error('Select a supported agency or choose Custom agency')
-  }
-
-  const customAgencyName = isCustom ? requiredText(values, 'customAgencyName') : null
+  const agency = await requiredAgency(values)
   const fields = {
-    agencyCode,
-    customAgencyName,
+    agencyId: agency.id,
     memberNumber: requiredText(values, 'memberNumber'),
     updatedAt: new Date(),
   }

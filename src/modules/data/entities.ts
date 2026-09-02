@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { agencyCatalog } from '@/modules/profile/agency-catalog'
 
 export const entityKeySchema = z.enum([
   'sites',
@@ -23,6 +22,7 @@ export interface EntityField {
     | 'email'
     | 'tel'
     | 'date'
+    | 'date-picker'
     | 'number'
     | 'checkbox'
     | 'rating'
@@ -108,8 +108,22 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
     fields: [
       { key: 'firstName', label: 'First name', kind: 'text', section: 'Personal' },
       { key: 'lastName', label: 'Last name', kind: 'text', section: 'Personal' },
-      { key: 'birthDate', label: 'Birth date', kind: 'date', section: 'Personal' },
-      { key: 'bloodGroup', label: 'Blood group', kind: 'text', section: 'Personal' },
+      {
+        key: 'birthDate',
+        label: 'Birth date',
+        kind: 'date-picker',
+        section: 'Personal',
+      },
+      {
+        key: 'bloodGroup',
+        label: 'Blood group',
+        kind: 'select',
+        section: 'Personal',
+        options: ['0-', '0+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'].map((group) => ({
+          value: group,
+          label: group,
+        })),
+      },
       { key: 'email', label: 'Email', kind: 'email', section: 'Contact' },
       { key: 'phone', label: 'Phone', kind: 'tel', section: 'Contact' },
       { key: 'street', label: 'Street', kind: 'text', section: 'Address' },
@@ -255,25 +269,12 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
         required: true,
       },
       {
-        key: 'agencyCode',
+        key: 'agencyId',
         label: 'Agency',
         kind: 'select',
         section: 'Certification',
         required: true,
-        options: [
-          ...agencyCatalog.map((agency) => ({
-            value: agency.code,
-            label: `${agency.shortName} · ${agency.name}`,
-          })),
-          { value: 'custom', label: 'Custom agency' },
-        ],
-      },
-      {
-        key: 'customAgencyName',
-        label: 'Custom agency name',
-        kind: 'text',
-        section: 'Certification',
-        help: 'Required only when Custom agency is selected.',
+        help: 'Add more agencies in Settings.',
       },
       {
         key: 'certificationNumber',
@@ -308,25 +309,12 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
     plural: 'Agency memberships',
     fields: [
       {
-        key: 'agencyCode',
+        key: 'agencyId',
         label: 'Agency',
         kind: 'select',
         section: 'Membership',
         required: true,
-        options: [
-          ...agencyCatalog.map((agency) => ({
-            value: agency.code,
-            label: `${agency.shortName} · ${agency.name}`,
-          })),
-          { value: 'custom', label: 'Custom agency' },
-        ],
-      },
-      {
-        key: 'customAgencyName',
-        label: 'Custom agency name',
-        kind: 'text',
-        section: 'Membership',
-        help: 'Required only when Custom agency is selected.',
+        help: 'Add more agencies in Settings.',
       },
       {
         key: 'memberNumber',

@@ -1,6 +1,5 @@
 import { Link } from '@tanstack/react-router'
 import { Pencil } from 'lucide-react'
-import { agencyDisplayName, findAgency } from '@/modules/profile/agency-catalog'
 import { AgencyMark } from '@/modules/profile/components/agency-mark'
 import type { getProfile } from '@/modules/profile/server/queries'
 
@@ -16,20 +15,16 @@ export function AgencyMembershipList({
   return (
     <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {memberships.map((membership) => {
-        const agency = findAgency(membership.agencyCode)
-        const displayName = agencyDisplayName(membership)
+        const displayName = membership.agency.name
         return (
           <li key={membership.id}>
             <article className="flex h-full items-center gap-4 rounded-2xl border border-border bg-card p-4">
-              <AgencyMark
-                agencyCode={membership.agencyCode}
-                customAgencyName={membership.customAgencyName}
-              />
+              <AgencyMark agency={membership.agency} />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{displayName}</p>
-                {agency ? (
+                {membership.agency.fullName ? (
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {agency.name}
+                    {membership.agency.fullName}
                   </p>
                 ) : null}
                 <p className="mt-2 font-mono text-sm tracking-wide">

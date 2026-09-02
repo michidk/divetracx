@@ -62,9 +62,23 @@ describe('canonical DiveMate export', () => {
     const now = new Date('2026-09-01T12:00:00Z')
     const snapshot = {
       format: 'divetracx-backup',
-      version: 11,
+      version: 12,
       exportedAt: now.toISOString(),
       data: {
+        agencies: [
+          {
+            id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            code: null,
+            name: 'Example Agency',
+            fullName: null,
+            normalizedName: 'example agency',
+            logoSrc: null,
+            darkLogo: false,
+            builtIn: false,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ],
         divers: [],
         diveSites: [
           {
@@ -150,8 +164,7 @@ describe('canonical DiveMate export', () => {
             diverId: null,
             name: 'Advanced Diver',
             organization: 'Example Agency',
-            agencyCode: 'custom',
-            customAgencyName: 'Example Agency',
+            agencyId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
             certificationNumber: 'CERT-1',
             certifiedAt: '2026-08-01',
             instructorBuddyId: '99999999-9999-9999-9999-999999999999',

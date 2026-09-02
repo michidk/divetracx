@@ -5,6 +5,7 @@ import { CertificationCard } from '@/components/certification-card'
 import { DeleteRecordButton } from '@/components/delete-record-button'
 import { EntityForm } from '@/components/entity-form'
 import { formatPersonName } from '@/modules/dives/format'
+import { getAgencies } from '@/modules/profile/server/agencies'
 import {
   getCertification,
   getCertificationInstructorOptions,
@@ -27,15 +28,28 @@ export const Route = createFileRoute('/profile/certifications/$certificationId/'
   loader: async ({ params }) => {
     const certificationId = certificationIdSchema.safeParse(params.certificationId)
     if (!certificationId.success) throw notFound()
-    const instructorOptions = await getCertificationInstructorOptions()
+    const [instructorOptions, agencyOptions] = await Promise.all([
+      getCertificationInstructorOptions(),
+      getAgencies(),
+    ])
     if (certificationId.data === 'new') {
-      return { certificationId: 'new' as const, detail: null, instructorOptions }
+      return {
+        certificationId: 'new' as const,
+        detail: null,
+        instructorOptions,
+        agencyOptions,
+      }
     }
     const detail = await getCertification({
       data: { certificationId: certificationId.data },
     })
     if (!detail) throw notFound()
-    return { certificationId: certificationId.data, detail, instructorOptions }
+    return {
+      certificationId: certificationId.data,
+      detail,
+      instructorOptions,
+      agencyOptions,
+    }
   },
   head: ({ loaderData }) => ({
     meta: [
@@ -50,7 +64,8 @@ export const Route = createFileRoute('/profile/certifications/$certificationId/'
 })
 
 function CertificationRoute() {
-  const { certificationId, detail, instructorOptions } = Route.useLoaderData()
+  const { certificationId, detail, instructorOptions, agencyOptions } =
+    Route.useLoaderData()
   const router = useRouter()
   const isNew = certificationId === 'new'
 
@@ -87,6 +102,10 @@ function CertificationRoute() {
         recordId={certificationId}
         record={detail?.certification ?? null}
         selectOptions={{
+          agencyId: agencyOptions.map((agency) => ({
+            value: agency.id,
+            label: agency.fullName ? `${agency.name} · ${agency.fullName}` : agency.name,
+          })),
           instructorBuddyId: instructorOptions.map((buddy) => ({
             value: buddy.id,
             label: formatPersonName(buddy),
