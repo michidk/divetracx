@@ -1,13 +1,14 @@
 import '@tanstack/react-start/server-only'
 
-import { and, eq, inArray } from 'drizzle-orm'
-import { getDb } from '@/db'
+import { and, eq, inArray, lt, sql } from 'drizzle-orm'
+import { getDb, tryAcquireDbAdvisoryLock } from '@/db'
 import {
   externalRecordLinks,
   importRuns,
   integrationState,
   integrations,
 } from '@/db/schema'
+import { getServerEnv } from '@/env'
 import { externalRecordKey } from '../record-classification'
 import type {
   ApplyImportContext,
@@ -17,11 +18,64 @@ import type {
   PerformImportOptions,
 } from '../types'
 import {
-  acquireImportLock,
   markExternalRecordsProcessed,
   observeExternalRecords,
   replaceImportedCanonicalDataset,
 } from './import-repository.server'
+
+const IMPORT_LOCK_KEY = 'divetracx:import'
+
+export class ImportAlreadyRunningError extends Error {
+  constructor() {
+    super('Another synchronization job is already running')
+    this.name = 'ImportAlreadyRunningError'
+  }
+}
+
+function formatDuration(milliseconds: number) {
+  if (milliseconds % 60_000 === 0) {
+    const minutes = milliseconds / 60_000
+    return `${minutes} minute${minutes === 1 ? '' : 's'}`
+  }
+  if (milliseconds % 1_000 === 0) {
+    const seconds = milliseconds / 1_000
+    return `${seconds} second${seconds === 1 ? '' : 's'}`
+  }
+  return `${milliseconds}ms`
+}
+
+function timeoutError(timeoutMs: number) {
+  return new Error(`Synchronization timed out after ${formatDuration(timeoutMs)}`)
+}
+
+function importFailure(
+  error: unknown,
+  signal: AbortSignal,
+  deadlineAt: number,
+  timeoutMs: number,
+) {
+  if (signal.aborted) return signal.reason
+  if (
+    Date.now() >= deadlineAt ||
+    (error !== null &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === '57014')
+  ) {
+    return timeoutError(timeoutMs)
+  }
+  return error
+}
+
+async function withImportLock<T>(action: () => Promise<T>): Promise<T> {
+  const release = await tryAcquireDbAdvisoryLock(IMPORT_LOCK_KEY)
+  if (!release) throw new ImportAlreadyRunningError()
+  try {
+    return await action()
+  } finally {
+    await release()
+  }
+}
 
 function safeError(error: unknown) {
   const message = error instanceof Error ? error.message : 'Unknown import error'
@@ -68,13 +122,19 @@ function assertSupported(
   }
 }
 
-export async function performImport<TData>(
+async function performLockedImport<TData>(
   connector: IntegrationConnector<TData>,
   mode: ImportMode,
   options: PerformImportOptions,
+  signal: AbortSignal,
+  deadlineAt: number,
+  timeoutMs: number,
 ): Promise<ImportResult> {
-  assertSupported(connector, mode, options)
+  signal.throwIfAborted()
+  await expireTimedOutImportRuns(timeoutMs)
+  signal.throwIfAborted()
   await ensureIntegration(connector)
+  signal.throwIfAborted()
   const db = getDb()
   const [run] = await db
     .insert(importRuns)
@@ -89,15 +149,19 @@ export async function performImport<TData>(
 
   let discovered = 0
   try {
+    signal.throwIfAborted()
     const [storedState] = await db
       .select({ state: integrationState.state })
       .from(integrationState)
       .where(eq(integrationState.integrationKey, connector.descriptor.key))
       .limit(1)
+    signal.throwIfAborted()
     const prepared = await connector.prepareImport({
       mode,
       state: storedState?.state ?? {},
+      signal,
     })
+    signal.throwIfAborted()
     discovered = prepared.records.length
     if (!prepared.validation.complete) {
       throw new Error(
@@ -106,13 +170,20 @@ export async function performImport<TData>(
     }
 
     const result = await db.transaction(async (transaction) => {
-      await acquireImportLock(transaction)
-      if (mode === 'full') await replaceImportedCanonicalDataset(transaction)
+      signal.throwIfAborted()
+      const remainingMs = Math.max(1, deadlineAt - Date.now())
+      await transaction.execute(
+        sql`select set_config('statement_timeout', ${`${remainingMs}ms`}, true)`,
+      )
+      if (mode === 'full') {
+        await replaceImportedCanonicalDataset(transaction, signal)
+      }
       const observed = await observeExternalRecords(
         transaction,
         connector.descriptor.key,
         run.id,
         prepared.records,
+        signal,
       )
       const recordByKey = new Map(
         observed.map((record) => [
@@ -145,6 +216,7 @@ export async function performImport<TData>(
           canonicalEntityId,
           role = 'produced',
         ) => {
+          signal.throwIfAborted()
           await transaction
             .insert(externalRecordLinks)
             .values({ externalRecordId, canonicalEntityType, canonicalEntityId, role })
@@ -163,6 +235,7 @@ export async function performImport<TData>(
         }
       const unlinkCanonicalRecords: ApplyImportContext<TData>['unlinkCanonicalRecords'] =
         async (externalRecordId, canonicalEntityTypes) => {
+          signal.throwIfAborted()
           if (canonicalEntityTypes.length === 0) return
           await transaction
             .delete(externalRecordLinks)
@@ -183,6 +256,7 @@ export async function performImport<TData>(
         transaction,
         mode,
         runId: run.id,
+        signal,
         prepared,
         records: observed,
         findRecord,
@@ -190,7 +264,8 @@ export async function performImport<TData>(
         linkCanonicalRecord,
         unlinkCanonicalRecords,
       })
-      await markExternalRecordsProcessed(transaction, observed)
+      signal.throwIfAborted()
+      await markExternalRecordsProcessed(transaction, observed, signal)
 
       const created = observed.filter((record) => record.change === 'created').length
       const updated = observed.filter((record) => record.change === 'updated').length
@@ -206,6 +281,7 @@ export async function performImport<TData>(
         },
       }
       const finishedAt = new Date()
+      signal.throwIfAborted()
       await transaction
         .insert(integrationState)
         .values({
@@ -257,6 +333,7 @@ export async function performImport<TData>(
     })
     return result
   } catch (error) {
+    const reportedError = importFailure(error, signal, deadlineAt, timeoutMs)
     await db
       .update(importRuns)
       .set({
@@ -264,12 +341,54 @@ export async function performImport<TData>(
         finishedAt: new Date(),
         recordsDiscovered: discovered,
         recordsFailed: 1,
-        error: safeError(error),
+        error: safeError(reportedError),
       })
       .where(eq(importRuns.id, run.id))
       .catch(() => undefined)
-    throw error
+    throw reportedError
   }
+}
+
+export async function expireTimedOutImportRuns(
+  timeoutMs = getServerEnv().IMPORT_TIMEOUT_MS,
+  now = new Date(),
+) {
+  const cutoff = new Date(now.getTime() - timeoutMs)
+  await getDb()
+    .update(importRuns)
+    .set({
+      status: 'failed',
+      finishedAt: now,
+      recordsFailed: 1,
+      error: safeError(timeoutError(timeoutMs)),
+    })
+    .where(and(eq(importRuns.status, 'running'), lt(importRuns.startedAt, cutoff)))
+}
+
+export async function performImport<TData>(
+  connector: IntegrationConnector<TData>,
+  mode: ImportMode,
+  options: PerformImportOptions,
+): Promise<ImportResult> {
+  assertSupported(connector, mode, options)
+  return withImportLock(async () => {
+    const timeoutMs = getServerEnv().IMPORT_TIMEOUT_MS
+    const controller = new AbortController()
+    const deadlineAt = Date.now() + timeoutMs
+    const timer = setTimeout(() => controller.abort(timeoutError(timeoutMs)), timeoutMs)
+    try {
+      return await performLockedImport(
+        connector,
+        mode,
+        options,
+        controller.signal,
+        deadlineAt,
+        timeoutMs,
+      )
+    } finally {
+      clearTimeout(timer)
+    }
+  })
 }
 
 export function performFullImport<TData>(

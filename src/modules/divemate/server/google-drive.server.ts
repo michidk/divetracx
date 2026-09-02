@@ -82,7 +82,9 @@ export function findDriveFile(
 export async function openGoogleDriveBackup(
   rootFolderId: string,
   maximumDatabaseBytes: number,
+  importSignal?: AbortSignal,
 ): Promise<GoogleDriveBackup> {
+  importSignal?.throwIfAborted()
   const auth = new GoogleAuth({ scopes: [DRIVE_SCOPE] })
   const client = await auth.getClient()
   const files: GoogleDriveFile[] = []
@@ -90,6 +92,7 @@ export async function openGoogleDriveBackup(
   async function listFolder(folderId: string, folderPath: string): Promise<void> {
     let pageToken: string | undefined
     do {
+      importSignal?.throwIfAborted()
       const response = await client.request<DriveListResponse>({
         url: `${DRIVE_API}/files`,
         params: {
@@ -100,7 +103,9 @@ export async function openGoogleDriveBackup(
           supportsAllDrives: true,
           includeItemsFromAllDrives: true,
         },
-        signal: AbortSignal.timeout(DRIVE_REQUEST_TIMEOUT_MS),
+        signal: importSignal
+          ? AbortSignal.any([importSignal, AbortSignal.timeout(DRIVE_REQUEST_TIMEOUT_MS)])
+          : AbortSignal.timeout(DRIVE_REQUEST_TIMEOUT_MS),
       })
       for (const entry of response.data.files ?? []) {
         if (!entry.id || !entry.name || !entry.mimeType) continue
@@ -131,6 +136,7 @@ export async function openGoogleDriveBackup(
   const selectedDatabaseFile = databaseFile
 
   async function download(file: GoogleDriveFile, maximumBytes?: number) {
+    importSignal?.throwIfAborted()
     if (maximumBytes && file.size && file.size > maximumBytes) {
       throw new Error(`${file.path} exceeds the ${maximumBytes} byte limit`)
     }
@@ -138,7 +144,9 @@ export async function openGoogleDriveBackup(
       url: `${DRIVE_API}/files/${encodeURIComponent(file.id)}`,
       params: { alt: 'media', supportsAllDrives: true },
       responseType: 'arraybuffer',
-      signal: AbortSignal.timeout(DRIVE_REQUEST_TIMEOUT_MS),
+      signal: importSignal
+        ? AbortSignal.any([importSignal, AbortSignal.timeout(DRIVE_REQUEST_TIMEOUT_MS)])
+        : AbortSignal.timeout(DRIVE_REQUEST_TIMEOUT_MS),
     })
     const bytes = byteArray(response.data)
     if (maximumBytes && bytes.byteLength > maximumBytes) {
@@ -152,13 +160,16 @@ export async function openGoogleDriveBackup(
     throw new Error('DiveMate.ddb in Google Drive is not a SQLite 3 database')
   }
   async function replaceDatabase(bytes: Uint8Array) {
+    importSignal?.throwIfAborted()
     await client.request({
       url: `https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(selectedDatabaseFile.id)}`,
       method: 'PATCH',
       params: { uploadType: 'media', keepRevisionForever: true, supportsAllDrives: true },
       headers: { 'content-type': 'application/octet-stream' },
       data: Uint8Array.from(bytes),
-      signal: AbortSignal.timeout(DRIVE_UPLOAD_TIMEOUT_MS),
+      signal: importSignal
+        ? AbortSignal.any([importSignal, AbortSignal.timeout(DRIVE_UPLOAD_TIMEOUT_MS)])
+        : AbortSignal.timeout(DRIVE_UPLOAD_TIMEOUT_MS),
     })
   }
   return {

@@ -20,6 +20,7 @@ spec:
   failedJobsHistoryLimit: {{ .Values.sync.failedJobsHistoryLimit }}
   jobTemplate:
     spec:
+      activeDeadlineSeconds: {{ div .Values.imports.timeoutMs 1000 }}
       backoffLimit: {{ .Values.sync.backoffLimit }}
       template:
         metadata:
@@ -60,6 +61,8 @@ spec:
                       name: {{ include "divetracx.dbSecretName" . }}
                       key: url
                       {{- end }}
+                - name: IMPORT_TIMEOUT_MS
+                  value: {{ .Values.imports.timeoutMs | quote }}
                 - name: DIVEMATE_GOOGLE_DRIVE_FOLDER_ID
                   value: {{ .Values.divemate.googleDriveFolderId | quote }}
                 - name: GOOGLE_APPLICATION_CREDENTIALS

@@ -1,6 +1,6 @@
 import '@tanstack/react-start/server-only'
 
-import { eq, inArray, sql } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import type { DatabaseTransaction } from '@/db'
 import {
   buddies,
@@ -110,13 +110,11 @@ async function deleteCanonicalRows(
   }
 }
 
-export async function acquireImportLock(transaction: DatabaseTransaction) {
-  await transaction.execute(
-    sql`select pg_advisory_xact_lock(hashtext('divetracx:canonical-import'))`,
-  )
-}
-
-export async function replaceImportedCanonicalDataset(transaction: DatabaseTransaction) {
+export async function replaceImportedCanonicalDataset(
+  transaction: DatabaseTransaction,
+  signal: AbortSignal,
+) {
+  signal.throwIfAborted()
   const allLinks = await transaction
     .select({
       canonicalEntityType: externalRecordLinks.canonicalEntityType,
@@ -150,6 +148,7 @@ export async function replaceImportedCanonicalDataset(transaction: DatabaseTrans
   }
 
   for (const entityType of CANONICAL_DELETE_ORDER) {
+    signal.throwIfAborted()
     await deleteCanonicalRows(transaction, entityType, [
       ...(idsByType.get(entityType) ?? []),
     ])
@@ -166,7 +165,9 @@ export async function observeExternalRecords(
   integrationKey: string,
   runId: string,
   inputs: ExternalRecordInput[],
+  signal: AbortSignal,
 ): Promise<ObservedExternalRecord[]> {
+  signal.throwIfAborted()
   validateExternalRecordInputs(inputs)
   const hashedInputs = inputs.map((input) => ({
     ...input,
@@ -186,6 +187,7 @@ export async function observeExternalRecords(
   const observed: ObservedExternalRecord[] = []
 
   for (const record of classified) {
+    signal.throwIfAborted()
     if (record.change === 'created') {
       const [inserted] = await transaction
         .insert(externalRecords)
@@ -245,6 +247,7 @@ export async function observeExternalRecords(
   }
 
   const recordIds = observed.map((record) => record.id)
+  signal.throwIfAborted()
   const links: Array<CanonicalRecordLink & { externalRecordId: string }> =
     recordIds.length === 0
       ? []
@@ -267,7 +270,9 @@ export async function observeExternalRecords(
 export async function markExternalRecordsProcessed(
   transaction: DatabaseTransaction,
   records: ObservedExternalRecord[],
+  signal: AbortSignal,
 ) {
+  signal.throwIfAborted()
   const processedIds = records
     .filter((record) => record.change !== 'unchanged')
     .map((record) => record.id)

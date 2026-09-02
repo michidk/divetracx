@@ -30,7 +30,10 @@ template for a manual canonical `.ddb` export.
 
 The CronJob uses `concurrencyPolicy: Forbid` by default and records its runs as
 `schedule`. The application receives the same Secret, so **Sync now** uses the
-same importer and records runs as `manual`.
+same importer and records runs as `manual`. All import entry points share a
+PostgreSQL-backed single-run lock. They time out after `imports.timeoutMs`
+(15 minutes by default), and scheduled Jobs use the same value as their hard
+Kubernetes deadline.
 
 ## Garmin adapter
 
