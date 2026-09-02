@@ -73,11 +73,6 @@ function CertificationRoute() {
             backSrc={scanMediaUrl(detail.scans[1])}
             className="mx-auto w-full max-w-md"
           />
-          {detail.scans.length > 1 ? (
-            <p className="mt-3 text-center text-xs text-muted-foreground">
-              Click the card to see the other side.
-            </p>
-          ) : null}
         </section>
       ) : null}
 
