@@ -73,7 +73,7 @@ export function CertificationList({
             onClick={turnAllCards}
           >
             <Repeat size={15} aria-hidden="true" />
-            {allFlipped ? 'Show all fronts' : 'Turn all cards'}
+            {allFlipped ? 'Show all fronts' : 'Show all backs'}
           </Button>
           <Link
             to="/profile/certifications/$certificationId"
