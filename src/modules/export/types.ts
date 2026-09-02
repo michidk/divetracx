@@ -20,7 +20,7 @@ import type {
 
 export interface ExportSnapshot {
   format: 'divetracx-backup'
-  version: 9
+  version: 10
   exportedAt: string
   data: {
     divers: Array<typeof divers.$inferSelect>

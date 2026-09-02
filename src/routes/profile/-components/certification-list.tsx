@@ -3,7 +3,7 @@ import { Pencil, Plus, Repeat } from 'lucide-react'
 import { useState } from 'react'
 import { CertificationCard } from '@/components/certification-card'
 import { Button } from '@/components/ui/button'
-import { formatDiveDate } from '@/modules/dives/format'
+import { formatDiveDate, formatPersonName } from '@/modules/dives/format'
 import type { getProfile } from '@/modules/profile/server/queries'
 
 type Certification = Awaited<ReturnType<typeof getProfile>>['certifications'][number]
@@ -97,14 +97,13 @@ export function CertificationList({
               </h3>
               <ul className="grid gap-x-4 gap-y-6 sm:grid-cols-2">
                 {group.items.map((certification) => {
-                  const meta = [
-                    certification.certifiedAt
+                  const meta =
+                    (certification.certifiedAt
                       ? formatDiveDate(certification.certifiedAt)
-                      : null,
-                    certification.instructorName,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')
+                      : null) ||
+                    [certification.organization, certification.certificationNumber]
+                      .filter(Boolean)
+                      .join(' · ')
                   return (
                     <li key={certification.id} className="min-w-0">
                       <CertificationCard
@@ -131,14 +130,17 @@ export function CertificationList({
                             {certification.name}
                           </Link>
                           <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                            {meta ||
-                              [
-                                certification.organization,
-                                certification.certificationNumber,
-                              ]
-                                .filter(Boolean)
-                                .join(' · ') ||
-                              'No details'}
+                            {meta || (!certification.instructor ? 'No details' : null)}
+                            {meta && certification.instructor ? ' · ' : null}
+                            {certification.instructor ? (
+                              <Link
+                                to="/buddies/$buddyId"
+                                params={{ buddyId: certification.instructor.id }}
+                                className="hover:text-primary hover:underline"
+                              >
+                                {formatPersonName(certification.instructor)}
+                              </Link>
+                            ) : null}
                           </p>
                         </div>
                         <Link

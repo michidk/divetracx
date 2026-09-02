@@ -147,7 +147,9 @@ export const certifications = pgTable('certifications', {
   organization: text('organization'),
   certificationNumber: text('certification_number'),
   certifiedAt: date('certified_at'),
-  instructorName: text('instructor_name'),
+  instructorBuddyId: uuid('instructor_buddy_id').references(() => buddies.id, {
+    onDelete: 'set null',
+  }),
   instructorNumber: text('instructor_number'),
   sortOrder: integer('sort_order'),
   scan1Path: text('scan_1_path'),

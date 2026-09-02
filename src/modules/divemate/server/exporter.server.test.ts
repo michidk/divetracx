@@ -24,6 +24,16 @@ describe('canonical DiveMate export', () => {
     database.exec(`
       CREATE TABLE DBInfo (DBVersion TEXT, PrgName TEXT, UUID TEXT, Updated TEXT);
       INSERT INTO DBInfo VALUES ('4.0', 'DiveMate', 'template', NULL);
+      CREATE TABLE Buddy (
+        ID INTEGER, FirstName TEXT, LastName TEXT, Email TEXT, Mobile TEXT,
+        Street TEXT, Zip TEXT, City TEXT, State TEXT, Country TEXT,
+        Comments TEXT, UUID TEXT, Updated TEXT
+      );
+      CREATE TABLE Brevets (
+        ID INTEGER, DiverID INTEGER, Brevet TEXT, Org TEXT, Number TEXT,
+        CertDate TEXT, Instructor TEXT, InstructorNo TEXT, SortOrd INTEGER,
+        Scan1Path TEXT, Scan2Path TEXT, UUID TEXT, Updated TEXT
+      );
       CREATE TABLE Place (
         ID INTEGER, Place TEXT, Country TEXT, Region TEXT, WaterName TEXT,
         Lat TEXT, Lon TEXT, MaxDepth REAL, Altitude INTEGER, Difficulty TEXT,
@@ -52,7 +62,7 @@ describe('canonical DiveMate export', () => {
     const now = new Date('2026-09-01T12:00:00Z')
     const snapshot = {
       format: 'divetracx-backup',
-      version: 9,
+      version: 10,
       exportedAt: now.toISOString(),
       data: {
         divers: [],
@@ -75,7 +85,23 @@ describe('canonical DiveMate export', () => {
             updatedAt: now,
           },
         ],
-        buddies: [],
+        buddies: [
+          {
+            id: '99999999-9999-9999-9999-999999999999',
+            firstName: 'Ada',
+            lastName: 'Instructor',
+            email: null,
+            phone: null,
+            street: null,
+            postalCode: null,
+            city: null,
+            state: null,
+            country: null,
+            notes: null,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ],
         equipment: [
           {
             id: '55555555-5555-5555-5555-555555555555',
@@ -115,7 +141,31 @@ describe('canonical DiveMate export', () => {
             sortOrder: 0,
           },
         ],
-        certifications: [],
+        certifications: [
+          {
+            id: '88888888-8888-8888-8888-888888888888',
+            diverId: null,
+            name: 'Advanced Diver',
+            organization: 'Example Agency',
+            certificationNumber: 'CERT-1',
+            certifiedAt: '2026-08-01',
+            instructorBuddyId: '99999999-9999-9999-9999-999999999999',
+            instructorNumber: 'INST-42',
+            sortOrder: 1,
+            scan1Path: null,
+            scan2Path: null,
+            scan1StoragePath: null,
+            scan1ThumbnailStoragePath: null,
+            scan1MimeType: null,
+            scan1ByteSize: null,
+            scan2StoragePath: null,
+            scan2ThumbnailStoragePath: null,
+            scan2MimeType: null,
+            scan2ByteSize: null,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ],
         agencyMemberships: [],
         shops: [],
         diveTypes: [],
@@ -217,6 +267,11 @@ describe('canonical DiveMate export', () => {
       computer: 'Garmin Descent',
     })
     expect(exported.sites[0]?.name).toBe('Garmin site')
+    expect(exported.certifications[0]).toMatchObject({
+      name: 'Advanced Diver',
+      instructorName: 'Ada Instructor',
+      instructorNumber: 'INST-42',
+    })
     const exportedItem = exported.equipment.find((item) => !item.isSet)
     const exportedSet = exported.equipment.find((item) => item.isSet)
     if (!exportedItem) throw new Error('Exported equipment item is missing')

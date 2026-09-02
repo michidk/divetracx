@@ -134,6 +134,27 @@
       "when": 1788372229293,
       "tag": "0018_brief_nick_fury",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788372511439,
+      "tag": "0019_link_certification_instructor_buddy",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1788372518023,
+      "tag": "0020_backfill_certification_instructor_buddies",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1788372554896,
+      "tag": "0021_remove_certification_instructor_name",
+      "breakpoints": true
     }
   ]
 }

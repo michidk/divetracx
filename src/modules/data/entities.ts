@@ -249,7 +249,13 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
         kind: 'date',
         section: 'Certification',
       },
-      { key: 'instructorName', label: 'Instructor', kind: 'text', section: 'Instructor' },
+      {
+        key: 'instructorBuddyId',
+        label: 'Instructor',
+        kind: 'select',
+        section: 'Instructor',
+        help: 'Instructors are people in your buddy list.',
+      },
       {
         key: 'instructorNumber',
         label: 'Instructor number',

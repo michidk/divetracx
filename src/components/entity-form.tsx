@@ -88,10 +88,12 @@ export function RatingInput({
 function FieldControl({
   field,
   value,
+  options,
   onChange,
 }: {
   field: EntityField
   value: EditorValue | undefined
+  options?: EntityField['options']
   onChange: (value: EditorValue) => void
 }) {
   const inputId = `field-${field.key}`
@@ -115,7 +117,7 @@ function FieldControl({
   const stringValue = typeof value === 'string' ? value : ''
 
   if (field.kind === 'select') {
-    const items = [{ value: '', label: 'Not set' }, ...(field.options ?? [])]
+    const items = [{ value: '', label: 'Not set' }, ...(options ?? field.options ?? [])]
     if (stringValue && !items.some((item) => item.value === stringValue)) {
       items.push({ value: stringValue, label: `Code ${stringValue}` })
     }
@@ -196,11 +198,13 @@ export function EntityForm({
   record,
   onSaved,
   renderSectionExtra,
+  selectOptions,
 }: {
   entity: EntityKey
   recordId: string
   record: Record<string, unknown> | null
   onSaved?: (id: string) => void | Promise<void>
+  selectOptions?: Record<string, NonNullable<EntityField['options']>>
   renderSectionExtra?: (
     section: string,
     values: EditorValues,
@@ -251,6 +255,7 @@ export function EntityForm({
                   <FieldControl
                     field={field}
                     value={values[field.key]}
+                    options={selectOptions?.[field.key]}
                     onChange={(value) =>
                       setValues((current) => ({ ...current, [field.key]: value }))
                     }

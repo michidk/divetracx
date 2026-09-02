@@ -2,6 +2,7 @@ import '@tanstack/react-start/server-only'
 
 import type { ExportSnapshot } from '@/modules/export/types'
 import { encodeDiveMateProfile } from '../export-profile'
+import { formatDiveMateInstructor } from '../instructor'
 import type { SqliteBinding, SqliteDatabase } from './sqlite.server'
 
 function binding(value: unknown): SqliteBinding {
@@ -93,6 +94,7 @@ export function rewriteDiveMateDatabase(
   snapshot: ExportSnapshot,
 ) {
   const data = snapshot.data
+  const buddiesById = new Map(data.buddies.map((buddy) => [buddy.id, buddy]))
   const diverIds = assignDiveMateIds(data.divers)
   const siteIds = assignDiveMateIds(data.diveSites)
   const buddyIds = assignDiveMateIds(data.buddies)
@@ -277,7 +279,9 @@ export function rewriteDiveMateDatabase(
           Org: row.organization,
           Number: row.certificationNumber,
           CertDate: row.certifiedAt,
-          Instructor: row.instructorName,
+          Instructor: formatDiveMateInstructor(
+            row.instructorBuddyId ? buddiesById.get(row.instructorBuddyId) : null,
+          ),
           InstructorNo: row.instructorNumber,
           SortOrd: row.sortOrder,
           Scan1Path: row.scan1Path,

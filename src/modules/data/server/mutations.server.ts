@@ -80,6 +80,14 @@ function recordId(value: string) {
   return parsed.data
 }
 
+function optionalRecordId(values: EditorValues, key: string) {
+  const value = optionalText(values, key)
+  if (value === null) return null
+  const parsed = uuidSchema.safeParse(value)
+  if (!parsed.success) throw new Error(`${key} must reference an existing record`)
+  return parsed.data
+}
+
 /** Personal logbook records belong to the primary diver. */
 async function primaryDiverId() {
   const [diver] = await getDb()
@@ -218,7 +226,7 @@ async function saveCertification(id: string, values: EditorValues) {
     organization: optionalText(values, 'organization'),
     certificationNumber: optionalText(values, 'certificationNumber'),
     certifiedAt: optionalText(values, 'certifiedAt'),
-    instructorName: optionalText(values, 'instructorName'),
+    instructorBuddyId: optionalRecordId(values, 'instructorBuddyId'),
     instructorNumber: optionalText(values, 'instructorNumber'),
     updatedAt: new Date(),
   }

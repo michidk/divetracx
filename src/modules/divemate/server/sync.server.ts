@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { eq, inArray } from 'drizzle-orm'
+import { asc, eq, inArray } from 'drizzle-orm'
 import type { DatabaseTransaction } from '@/db'
 import {
   buddies,
@@ -35,6 +35,11 @@ import type {
   ExternalRecordInput,
   IntegrationConnector,
 } from '@/modules/integrations/types'
+import {
+  cleanDiveMateInstructorName,
+  formatDiveMateInstructor,
+  normalizeDiveMateInstructorName,
+} from '../instructor'
 import { parseDiveMateDatabase } from '../parser'
 import type { DiveMateSnapshot, DiveMateSourceRecord } from '../types'
 import { findDriveFile, openGoogleDriveBackup } from './google-drive.server'
@@ -103,6 +108,48 @@ interface SnapshotApplyContext {
     externalId: string,
     canonicalEntityTypes: string[],
   ): Promise<void>
+}
+
+async function loadInstructorBuddyIndex(transaction: DatabaseTransaction) {
+  const rows = await transaction
+    .select({
+      id: buddies.id,
+      firstName: buddies.firstName,
+      lastName: buddies.lastName,
+    })
+    .from(buddies)
+    .orderBy(asc(buddies.createdAt), asc(buddies.id))
+  const index = new Map<string, string>()
+  for (const buddy of rows) {
+    const normalizedName = normalizeDiveMateInstructorName(
+      formatDiveMateInstructor(buddy),
+    )
+    if (normalizedName && !index.has(normalizedName)) {
+      index.set(normalizedName, buddy.id)
+    }
+  }
+  return index
+}
+
+async function resolveInstructorBuddy(
+  transaction: DatabaseTransaction,
+  index: Map<string, string>,
+  importedName: string | null,
+) {
+  const name = cleanDiveMateInstructorName(importedName)
+  const normalizedName = normalizeDiveMateInstructorName(name)
+  if (!name || !normalizedName) return null
+
+  const existingId = index.get(normalizedName)
+  if (existingId) return existingId
+
+  const [buddy] = await transaction
+    .insert(buddies)
+    .values({ firstName: name })
+    .returning({ id: buddies.id })
+  if (!buddy) throw new Error('DiveMate instructor could not be linked to a buddy')
+  index.set(normalizedName, buddy.id)
+  return buddy.id
 }
 
 async function storeImage(
@@ -319,6 +366,8 @@ async function applySnapshot(
     }
   }
 
+  const instructorBuddyIdsByName = await loadInstructorBuddyIndex(tx)
+
   const equipmentIds = new Map<string, string>()
   for (const item of snapshot.equipment.filter((candidate) => !candidate.isSet)) {
     context.signal.throwIfAborted()
@@ -453,13 +502,18 @@ async function applySnapshot(
       'certification',
     )
     const scans = storedCertificationScans.get(item.externalId)
+    const instructorBuddyId = await resolveInstructorBuddy(
+      tx,
+      instructorBuddyIdsByName,
+      item.instructorName,
+    )
     const referenceValues = {
       diverId: item.diverExternalId ? (diverIds.get(item.diverExternalId) ?? null) : null,
       name: item.name,
       organization: item.organization,
       certificationNumber: item.certificationNumber,
       certifiedAt: item.certifiedAt,
-      instructorName: item.instructorName,
+      instructorBuddyId,
       instructorNumber: item.instructorNumber,
       sortOrder: item.sortOrder,
       scan1Path: item.scan1Path,
