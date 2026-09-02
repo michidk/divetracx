@@ -113,6 +113,7 @@ export async function loadDives(search: string, requestedPage: number) {
       siteName: diveSites.name,
       country: diveSites.country,
       diveTypeName: diveTypes.name,
+      decompressionDive: dives.decompressionDive,
       picturePath: sql<string | null>`(
         select coalesce(p.thumbnail_storage_path, p.storage_path)
         from pictures p
