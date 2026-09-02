@@ -31,6 +31,7 @@ const managedElsewhereColumns: Record<keyof typeof entityTables, Set<string>> = 
   equipment: new Set(['diverId']),
   certifications: new Set([
     'diverId',
+    'organization',
     'sortOrder',
     'scan1Path',
     'scan2Path',
