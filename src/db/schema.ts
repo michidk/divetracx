@@ -148,6 +148,8 @@ export const certifications = pgTable('certifications', {
   }),
   name: text('name').notNull(),
   organization: text('organization'),
+  agencyCode: text('agency_code'),
+  customAgencyName: text('custom_agency_name'),
   certificationNumber: text('certification_number'),
   certifiedAt: date('certified_at'),
   instructorBuddyId: uuid('instructor_buddy_id').references(() => buddies.id, {

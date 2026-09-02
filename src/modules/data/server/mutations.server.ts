@@ -224,9 +224,18 @@ async function saveEquipment(id: string, values: EditorValues) {
 }
 
 async function saveCertification(id: string, values: EditorValues) {
+  const agencyCode = requiredText(values, 'agencyCode')
+  const agency = findAgency(agencyCode)
+  const isCustom = agencyCode === 'custom'
+  if (!isCustom && !agency) {
+    throw new Error('Select a supported agency or choose Custom agency')
+  }
+  const customAgencyName = isCustom ? requiredText(values, 'customAgencyName') : null
   const fields = {
     name: requiredText(values, 'name'),
-    organization: optionalText(values, 'organization'),
+    organization: agency?.shortName ?? customAgencyName,
+    agencyCode,
+    customAgencyName,
     certificationNumber: optionalText(values, 'certificationNumber'),
     certifiedAt: optionalText(values, 'certifiedAt'),
     instructorBuddyId: optionalRecordId(values, 'instructorBuddyId'),

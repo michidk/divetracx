@@ -124,6 +124,7 @@ function FieldControl({
     return (
       <div className="text-sm font-semibold">
         {field.label}
+        {field.required ? <span className="text-red-600"> *</span> : null}
         <Select
           value={stringValue}
           items={items}

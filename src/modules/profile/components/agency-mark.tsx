@@ -32,7 +32,10 @@ export function AgencyMark({
           src={agency.logoSrc}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 size-full object-cover"
+          className={cn(
+            'absolute inset-0 size-full object-contain p-1',
+            'darkLogo' in agency && agency.darkLogo ? 'bg-slate-900' : 'bg-white',
+          )}
           loading="lazy"
           referrerPolicy="no-referrer"
           onError={(event) => event.currentTarget.classList.add('hidden')}

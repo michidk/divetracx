@@ -35,6 +35,7 @@ import type {
   ExternalRecordInput,
   IntegrationConnector,
 } from '@/modules/integrations/types'
+import { agencySelectionForName } from '@/modules/profile/agency-catalog'
 import {
   cleanDiveMateInstructorName,
   formatDiveMateInstructor,
@@ -507,10 +508,12 @@ async function applySnapshot(
       instructorBuddyIdsByName,
       item.instructorName,
     )
+    const agencySelection = agencySelectionForName(item.organization)
     const referenceValues = {
       diverId: item.diverExternalId ? (diverIds.get(item.diverExternalId) ?? null) : null,
       name: item.name,
       organization: item.organization,
+      ...agencySelection,
       certificationNumber: item.certificationNumber,
       certifiedAt: item.certifiedAt,
       instructorBuddyId,

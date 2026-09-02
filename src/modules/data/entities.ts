@@ -255,10 +255,25 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
         required: true,
       },
       {
-        key: 'organization',
-        label: 'Organization',
+        key: 'agencyCode',
+        label: 'Agency',
+        kind: 'select',
+        section: 'Certification',
+        required: true,
+        options: [
+          ...agencyCatalog.map((agency) => ({
+            value: agency.code,
+            label: `${agency.shortName} · ${agency.name}`,
+          })),
+          { value: 'custom', label: 'Custom agency' },
+        ],
+      },
+      {
+        key: 'customAgencyName',
+        label: 'Custom agency name',
         kind: 'text',
         section: 'Certification',
+        help: 'Required only when Custom agency is selected.',
       },
       {
         key: 'certificationNumber',

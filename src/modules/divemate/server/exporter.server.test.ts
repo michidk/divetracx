@@ -150,6 +150,8 @@ describe('canonical DiveMate export', () => {
             diverId: null,
             name: 'Advanced Diver',
             organization: 'Example Agency',
+            agencyCode: 'custom',
+            customAgencyName: 'Example Agency',
             certificationNumber: 'CERT-1',
             certifiedAt: '2026-08-01',
             instructorBuddyId: '99999999-9999-9999-9999-999999999999',
