@@ -1,15 +1,13 @@
 import '@tanstack/react-start/server-only'
 
-import { and, asc, eq, ilike, inArray } from 'drizzle-orm'
+import { and, asc, eq, inArray } from 'drizzle-orm'
 import { getDb } from '@/db'
 import {
   diveBuddies,
   diveEquipment,
   divers,
   dives,
-  diveTypes,
   externalRecordLinks,
-  shops,
   tanks,
 } from '@/db/schema'
 import type { DiveEntryInput } from './mutations'
@@ -51,31 +49,6 @@ function integer(
 function minutesToSeconds(value: string, label: string) {
   const raw = decimal(value, label, { min: 0 })
   return raw === null ? null : Math.round(Number(raw) * 60)
-}
-
-type Transaction = Parameters<Parameters<ReturnType<typeof getDb>['transaction']>[0]>[0]
-
-async function resolveNamedRecord(
-  transaction: Transaction,
-  table: typeof shops | typeof diveTypes,
-  selectedId: string,
-  newName: string,
-) {
-  const name = text(newName)
-  if (name) {
-    const [existing] = await transaction
-      .select({ id: table.id })
-      .from(table)
-      .where(ilike(table.name, name))
-      .limit(1)
-    if (existing) return existing.id
-    const [created] = await transaction
-      .insert(table)
-      .values({ name })
-      .returning({ id: table.id })
-    return created?.id ?? null
-  }
-  return text(selectedId)
 }
 
 function parseTanks(input: DiveEntryInput['tanks']) {
@@ -159,13 +132,10 @@ export async function saveDiveEntry(input: DiveEntryInput) {
     updatedAt: new Date(),
   }
   const parsedTanks = parseTanks(input.tanks)
+  const shopId = text(dive.shopId)
+  const diveTypeId = text(dive.diveTypeId)
 
   return getDb().transaction(async (transaction) => {
-    const [shopId, diveTypeId] = await Promise.all([
-      resolveNamedRecord(transaction, shops, dive.shopId, dive.newShopName),
-      resolveNamedRecord(transaction, diveTypes, dive.diveTypeId, dive.newDiveTypeName),
-    ])
-
     let diveRowId: string
     if (input.diveId === 'new') {
       const [primaryDiver] = await transaction

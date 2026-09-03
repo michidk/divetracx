@@ -150,13 +150,13 @@ and highlight with `hover:bg-muted/50`. Empty lists render a centered
 
 ### Forms
 
-`EntityForm` provides the field stack, inline star rating, and the
-"create inline" pattern for dive types, shops, buddies, and gear: a
-`min-h-11 rounded-xl border bg-background` row that expands into an input
-without leaving the page. Field labels are `text-sm font-medium`; validation and
-server errors appear directly under the field in `text-sm text-red-600` with
-`aria-live="polite"`. Recorded dive profiles, import history, and external
-provenance are view-only and must not gain edit affordances.
+`EntityForm` provides the field stack and inline star rating. Dive editors select
+existing taxonomy values; creating or renaming taxonomies belongs in Settings,
+not alongside the dive fields. Field labels are `text-sm font-medium`;
+validation and server errors appear directly under the field in
+`text-sm text-red-600` with `aria-live="polite"`. Recorded dive profiles, import
+history, and external provenance are view-only and must not gain edit
+affordances.
 
 ### Destructive actions
 

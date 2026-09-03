@@ -72,8 +72,6 @@ function initialDiveState(data: DiveEditorData) {
     siteId: dive?.siteId ?? '',
     shopId: dive?.shopId ?? '',
     diveTypeId: dive?.diveTypeId ?? '',
-    newShopName: '',
-    newDiveTypeName: '',
   }
 }
 
@@ -377,19 +375,7 @@ export function DiveEditor({
               </Select>
             )}
           </Field>
-          <Field label="Or add a new type">
-            {(id) => (
-              <Input
-                id={id}
-                type="text"
-                value={dive.newDiveTypeName}
-                placeholder="e.g. Night dive"
-                onChange={(event) => update('newDiveTypeName', event.target.value)}
-                className="mt-2"
-              />
-            )}
-          </Field>
-          <Field label="Dive shop / operator" className="sm:col-span-2 lg:col-span-2">
+          <Field label="Dive shop / operator">
             {(id) => (
               <Select
                 value={dive.shopId}
@@ -414,18 +400,6 @@ export function DiveEditor({
                   ))}
                 </SelectContent>
               </Select>
-            )}
-          </Field>
-          <Field label="Or add a new shop" className="sm:col-span-2 lg:col-span-2">
-            {(id) => (
-              <Input
-                id={id}
-                type="text"
-                value={dive.newShopName}
-                placeholder="e.g. Blue Ocean Diving"
-                onChange={(event) => update('newShopName', event.target.value)}
-                className="mt-2"
-              />
             )}
           </Field>
         </div>

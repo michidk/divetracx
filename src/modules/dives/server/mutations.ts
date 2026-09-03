@@ -44,8 +44,6 @@ export const diveEntryInputSchema = z.object({
     siteId: formText,
     shopId: formText,
     diveTypeId: formText,
-    newShopName: formText,
-    newDiveTypeName: formText,
   }),
   buddyIds: z.array(z.string().uuid()).default([]),
   equipmentIds: z.array(z.string().uuid()).default([]),
