@@ -1,6 +1,7 @@
 import { Select as SelectPrimitive } from '@base-ui/react/select'
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
+import { CheckIcon, ChevronDownIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ScrollArea } from './scroll-area'
 
 const Select = SelectPrimitive.Root
 
@@ -60,13 +61,9 @@ function SelectContent({
           )}
           {...props}
         >
-          <SelectPrimitive.ScrollUpArrow className="flex h-7 items-center justify-center">
-            <ChevronUpIcon className="size-4" />
-          </SelectPrimitive.ScrollUpArrow>
-          <SelectPrimitive.List className="p-1">{children}</SelectPrimitive.List>
-          <SelectPrimitive.ScrollDownArrow className="flex h-7 items-center justify-center">
-            <ChevronDownIcon className="size-4" />
-          </SelectPrimitive.ScrollDownArrow>
+          <ScrollArea className="max-h-72" viewportClassName="max-h-72">
+            <SelectPrimitive.List className="p-1 pr-3">{children}</SelectPrimitive.List>
+          </ScrollArea>
         </SelectPrimitive.Popup>
       </SelectPrimitive.Positioner>
     </SelectPrimitive.Portal>

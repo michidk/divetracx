@@ -207,7 +207,10 @@ function FieldControl({
   }
 
   if (field.kind === 'select') {
-    const items = [{ value: '', label: 'Not set' }, ...(options ?? field.options ?? [])]
+    const items = [
+      ...(field.required ? [] : [{ value: '', label: 'Not set' }]),
+      ...(options ?? field.options ?? []),
+    ]
     if (stringValue && !items.some((item) => item.value === stringValue)) {
       items.push({ value: stringValue, label: `Code ${stringValue}` })
     }
@@ -221,12 +224,19 @@ function FieldControl({
           onValueChange={(value) => onChange(value ?? '')}
         >
           <SelectTrigger id={inputId} className="mt-2">
-            <SelectValue placeholder="Not set" />
+            <SelectValue
+              placeholder={
+                field.required ? `Select ${field.label.toLowerCase()}` : 'Not set'
+              }
+            />
           </SelectTrigger>
           <SelectContent>
             {items.map((item) => (
               <SelectItem key={item.value} value={item.value}>
-                {item.label}
+                <span className="flex items-center gap-2.5">
+                  {item.leading}
+                  <span>{item.label}</span>
+                </span>
               </SelectItem>
             ))}
           </SelectContent>
