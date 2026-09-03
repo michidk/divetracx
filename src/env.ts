@@ -38,6 +38,11 @@ export function getServerEnv() {
         .int()
         .positive()
         .default(25 * 1024 * 1024),
+      MCP_SERVER_URL: z.url().optional(),
+      MCP_OAUTH_ISSUER: z.url().optional(),
+      MCP_OAUTH_AUDIENCE: z.string().trim().min(1).optional(),
+      MCP_OAUTH_SCOPE: z.string().trim().min(1).default('divetracx:read'),
+      MCP_ALLOWED_ORIGINS: z.string().trim().optional(),
       STORAGE_PROVIDER: z.enum(['local', 's3']).default('local'),
       STORAGE_PATH: z.string().trim().min(1).default('./uploads'),
       STORAGE_URL: z.string().trim().min(1).default('/media'),
@@ -61,6 +66,11 @@ export function getServerEnv() {
       GARMIN_ADAPTER_TIMEOUT_MS: process.env.GARMIN_ADAPTER_TIMEOUT_MS,
       GARMIN_ADAPTER_MAX_RESPONSE_BYTES: process.env.GARMIN_ADAPTER_MAX_RESPONSE_BYTES,
       GARMIN_MAX_FIT_BYTES: process.env.GARMIN_MAX_FIT_BYTES,
+      MCP_SERVER_URL: process.env.MCP_SERVER_URL,
+      MCP_OAUTH_ISSUER: process.env.MCP_OAUTH_ISSUER,
+      MCP_OAUTH_AUDIENCE: process.env.MCP_OAUTH_AUDIENCE,
+      MCP_OAUTH_SCOPE: process.env.MCP_OAUTH_SCOPE,
+      MCP_ALLOWED_ORIGINS: process.env.MCP_ALLOWED_ORIGINS,
       STORAGE_PROVIDER: process.env.STORAGE_PROVIDER,
       STORAGE_PATH: process.env.STORAGE_PATH,
       STORAGE_URL: process.env.STORAGE_URL,
