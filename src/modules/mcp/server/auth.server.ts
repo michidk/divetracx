@@ -1,149 +1,101 @@
 import '@tanstack/react-start/server-only'
 
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import {
-  type AuthInfo,
   OAuthError,
   OAuthErrorCode,
-  type OAuthMetadata,
   type OAuthTokenVerifier,
 } from '@modelcontextprotocol/server'
-import {
-  createRemoteJWKSet,
-  type JWTPayload,
-  type JWTVerifyGetKey,
-  jwtVerify,
-} from 'jose'
-import { z } from 'zod'
+import { jwtVerify } from 'jose'
 import type { McpConfig } from './config.server'
+import { MCP_READ_SCOPE } from './config.server'
+import type { OAuthStore } from './oauth-store.server'
 
-const discoverySchema = z
-  .object({
-    issuer: z.url(),
-    authorization_endpoint: z.url(),
-    token_endpoint: z.url(),
-    jwks_uri: z.url(),
-    registration_endpoint: z.url().optional(),
-    scopes_supported: z.array(z.string()).optional(),
-    response_types_supported: z.array(z.string()),
-    response_modes_supported: z.array(z.string()).optional(),
-    grant_types_supported: z.array(z.string()).optional(),
-    token_endpoint_auth_methods_supported: z.array(z.string()).optional(),
-    code_challenge_methods_supported: z.array(z.string()).optional(),
-    client_id_metadata_document_supported: z.boolean().optional(),
-    authorization_response_iss_parameter_supported: z.boolean().optional(),
-  })
-  .loose()
-
-export type DiscoveredOAuthMetadata = OAuthMetadata & { jwks_uri: string }
-
-function normalizedIssuer(value: string | URL) {
-  return new URL(value).toString().replace(/\/$/, '')
+function derivedSigningKey(secret: string) {
+  return createHmac('sha256', secret)
+    .update('divetracx:mcp-oauth:access-token:v1')
+    .digest()
 }
 
-export function oauthDiscoveryUrls(issuer: URL) {
-  const issuerPath = issuer.pathname.replace(/\/$/, '')
-  return [
-    new URL(`${issuerPath}/.well-known/openid-configuration`, issuer.origin),
-    new URL(`/.well-known/oauth-authorization-server${issuerPath}`, issuer.origin),
-  ]
+export function getOAuthSigningKey(secret: string) {
+  return derivedSigningKey(secret)
 }
 
-export async function discoverOAuthMetadata(
+function cookieValue(request: Request, name: string) {
+  for (const pair of (request.headers.get('cookie') ?? '').split(';')) {
+    const [key, ...value] = pair.trim().split('=')
+    if (key === name) return value.join('=')
+  }
+  return undefined
+}
+
+export function hasValidOwnerSession(
+  request: Request,
+  secret: string,
+  nowSeconds = Math.floor(Date.now() / 1_000),
+) {
+  const token = cookieValue(request, 'hodor')
+  if (!token) return false
+  const [expiryText, signatureHex, ...extra] = token.split('|')
+  if (!expiryText || !signatureHex || extra.length > 0) return false
+  const expiry = Number(expiryText)
+  if (!Number.isSafeInteger(expiry) || expiry < nowSeconds) return false
+
+  let actual: Buffer
+  try {
+    actual = Buffer.from(signatureHex, 'hex')
+  } catch {
+    return false
+  }
+  const expected = createHmac('sha256', secret).update(expiryText).digest()
+  return actual.length === expected.length && timingSafeEqual(actual, expected)
+}
+
+export function createLocalTokenVerifier(
   config: McpConfig,
-  fetcher: typeof fetch = fetch,
-): Promise<DiscoveredOAuthMetadata> {
-  let lastError: unknown
-
-  for (const url of oauthDiscoveryUrls(config.issuer)) {
-    try {
-      const response = await fetcher(url, {
-        headers: { Accept: 'application/json' },
-        signal: AbortSignal.timeout(5_000),
-      })
-      if (!response.ok) {
-        lastError = new Error(`OAuth discovery returned HTTP ${response.status}`)
-        continue
-      }
-
-      const metadata = discoverySchema.parse(await response.json())
-      if (normalizedIssuer(metadata.issuer) !== normalizedIssuer(config.issuer)) {
-        throw new Error('OAuth discovery issuer does not match MCP_OAUTH_ISSUER')
-      }
-      return metadata
-    } catch (error) {
-      lastError = error
-    }
-  }
-
-  throw new Error('Unable to discover the configured OAuth issuer', {
-    cause: lastError,
-  })
-}
-
-export function scopesFromPayload(payload: JWTPayload) {
-  if (typeof payload.scope === 'string') {
-    return payload.scope.split(/\s+/).filter(Boolean)
-  }
-  if (Array.isArray(payload.scp)) {
-    return payload.scp.filter((scope): scope is string => typeof scope === 'string')
-  }
-  return []
-}
-
-export function createJwtTokenVerifier(
-  config: McpConfig,
-  loadMetadata: () => Promise<DiscoveredOAuthMetadata>,
-  createKeySet: (url: URL) => JWTVerifyGetKey = createRemoteJWKSet,
+  store: Pick<OAuthStore, 'getActiveAccessToken'>,
 ): OAuthTokenVerifier {
-  const keySets = new Map<string, JWTVerifyGetKey>()
-
   return {
-    async verifyAccessToken(token: string): Promise<AuthInfo> {
+    async verifyAccessToken(token) {
       try {
-        const metadata = await loadMetadata()
-        let keySet = keySets.get(metadata.jwks_uri)
-        if (!keySet) {
-          keySet = createKeySet(new URL(metadata.jwks_uri))
-          keySets.set(metadata.jwks_uri, keySet)
+        const { payload } = await jwtVerify(
+          token,
+          derivedSigningKey(config.signingSecret),
+          {
+            algorithms: ['HS256'],
+            issuer: config.issuer.toString(),
+            audience: config.serverUrl.toString(),
+            typ: 'JWT',
+          },
+        )
+        if (
+          typeof payload.jti !== 'string' ||
+          typeof payload.cid !== 'string' ||
+          typeof payload.exp !== 'number' ||
+          typeof payload.scope !== 'string'
+        ) {
+          throw new Error('Missing access-token claims')
         }
-
-        const { payload } = await jwtVerify(token, keySet, {
-          issuer: metadata.issuer,
-          audience: config.audience,
-          algorithms: [
-            'RS256',
-            'RS384',
-            'RS512',
-            'PS256',
-            'PS384',
-            'PS512',
-            'ES256',
-            'ES384',
-            'ES512',
-            'EdDSA',
-          ],
-        })
-
-        if (!payload.exp) throw new Error('Access token has no expiration')
-        const clientId =
-          (typeof payload.client_id === 'string' && payload.client_id) ||
-          (typeof payload.azp === 'string' && payload.azp) ||
-          payload.sub
-        if (!clientId) throw new Error('Access token has no client identifier')
-
+        const scopes = payload.scope.split(' ').filter(Boolean)
+        const active = await store.getActiveAccessToken(payload.jti)
+        if (!active || active.clientId !== payload.cid) throw new Error('Token revoked')
         return {
           token,
-          clientId,
-          scopes: scopesFromPayload(payload),
+          clientId: payload.cid,
+          scopes,
           expiresAt: payload.exp,
+          resource: config.serverUrl,
         }
-      } catch (error) {
-        if (OAuthError.isInstance(error)) throw error
+      } catch {
         throw new OAuthError(
           OAuthErrorCode.InvalidToken,
-          'Invalid or expired access token',
+          'The access token is invalid, expired, or revoked',
         )
       }
     },
   }
+}
+
+export function scopeIsSufficient(scopes: string[]) {
+  return scopes.includes(MCP_READ_SCOPE)
 }

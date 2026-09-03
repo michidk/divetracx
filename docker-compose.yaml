@@ -29,13 +29,11 @@ services:
       GARMIN_ADAPTER_FULL_IMPORT_URL: ${GARMIN_ADAPTER_FULL_IMPORT_URL:-}
       GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL: ${GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL:-}
       GARMIN_ADAPTER_AUTHORIZATION: ${GARMIN_ADAPTER_AUTHORIZATION:-}
-      # OAuth-protected MCP is reached through a path-routing reverse proxy;
-      # Hodor's interactive cookie gate is not an MCP authorization server.
+      # The built-in MCP authorization server uses the existing Hodor owner
+      # session for consent and derives a separate OAuth signing key.
       MCP_SERVER_URL: ${MCP_SERVER_URL:-}
-      MCP_OAUTH_ISSUER: ${MCP_OAUTH_ISSUER:-}
-      MCP_OAUTH_AUDIENCE: ${MCP_OAUTH_AUDIENCE:-}
-      MCP_OAUTH_SCOPE: ${MCP_OAUTH_SCOPE:-divetracx:read}
       MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-}
+      HODOR_SECRET: ${HODOR_SECRET:?Set HODOR_SECRET in .env}
     expose:
       - "3000"
     depends_on:

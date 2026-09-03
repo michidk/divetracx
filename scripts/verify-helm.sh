@@ -20,7 +20,7 @@ run_helm() {
 }
 
 external_values=(
-  --set hodor.enabled=false
+  --set hodor.password=test-password
   --set postgresql.external.url=postgresql://user:pass@postgres:5432/divetracx
   --set divemate.existingSecret=divetracx-divemate
   --set divemate.googleDriveFolderId=example-folder-id
@@ -31,7 +31,6 @@ external_values=(
   --set garmin.sync.enabled=true
   --set mcp.enabled=true
   --set mcp.serverUrl=https://dives.example.test/api/mcp
-  --set mcp.oauth.issuer=https://auth.example.test/application/o/divetracx/
   --set mcp.ingress.enabled=true
   --set mcp.ingress.hosts[0].host=dives.example.test
 )

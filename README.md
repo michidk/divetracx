@@ -135,27 +135,23 @@ Divetracx can expose an optional read-only MCP endpoint at `/api/mcp`. It offers
 tools for searching dives, loading bounded dive details, listing sites, and
 reading aggregate statistics. Tool results can contain private health,
 location, contact, and certification data, so the endpoint is disabled unless
-both its public URL and OAuth issuer are configured.
+its canonical public URL is configured.
 
-Divetracx is an OAuth resource server, not an authorization server. Configure
-an OIDC provider that issues signed JWT access tokens with `iss`, `aud`, `exp`,
-and `scope` claims and publishes a JWKS endpoint. The audience must match
-`MCP_OAUTH_AUDIENCE` (the public MCP URL by default), and the token must contain
-`MCP_OAUTH_SCOPE` (`divetracx:read` by default). The provider must support
-authorization code with PKCE and either dynamic client registration or a
-pre-registered MCP client.
+Divetracx includes an instance-wide OAuth 2.1 authorization server. It uses the
+existing Hodor owner session for approval, supports dynamic client registration,
+requires S256 PKCE and an exact MCP resource indicator, rotates refresh tokens,
+and supports immediate revocation. Authorization codes and refresh tokens are
+stored as hashes. No external OAuth provider or OAuth-specific secret is needed.
 
 ```env
 MCP_SERVER_URL=https://dives.example.com/api/mcp
-MCP_OAUTH_ISSUER=https://auth.example.com/application/o/divetracx/
-MCP_OAUTH_AUDIENCE=https://dives.example.com/api/mcp
-MCP_OAUTH_SCOPE=divetracx:read
 ```
 
 MCP OAuth discovery uses these public routes:
 
 - `/.well-known/oauth-protected-resource/api/mcp`
 - `/.well-known/oauth-authorization-server`
+- `/oauth/register`, `/oauth/authorize`, `/oauth/token`, and `/oauth/revoke`
 
 They and `/api/mcp` must reach Divetracx directly rather than Hodor. All other
 application paths should remain behind Hodor. The Helm chart creates a
@@ -169,9 +165,8 @@ codex mcp add divetracx --url https://dives.example.com/api/mcp
 codex mcp login divetracx
 ```
 
-If the provider does not support dynamic client registration, pre-register the
-exact callback URL printed by Codex and pass its client ID with
-`--oauth-client-id` when adding the server.
+The authorization browser must use the same host as the Hodor-protected app so
+the owner can approve access with the existing session.
 
 ## Helm and scheduled imports
 

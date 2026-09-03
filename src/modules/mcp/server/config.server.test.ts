@@ -1,57 +1,39 @@
 import { describe, expect, test } from 'bun:test'
 import { resolveMcpConfig } from './config.server'
 
-const baseEnvironment = {
-  MCP_SERVER_URL: 'https://dives.example.com/api/mcp',
-  MCP_OAUTH_ISSUER: 'https://auth.example.com/realms/divetracx',
-  MCP_OAUTH_SCOPE: 'divetracx:read',
-}
-
-describe('resolveMcpConfig', () => {
-  test('disables MCP when neither URL is configured', () => {
-    expect(resolveMcpConfig({ MCP_OAUTH_SCOPE: 'divetracx:read' })).toBeNull()
+describe('MCP configuration', () => {
+  test('is disabled without a public server URL', () => {
+    expect(resolveMcpConfig({ HODOR_SECRET: 'x'.repeat(64) })).toBeNull()
   })
 
-  test('derives secure defaults from the public server URL', () => {
-    expect(resolveMcpConfig(baseEnvironment)).toEqual({
-      serverUrl: new URL('https://dives.example.com/api/mcp'),
-      issuer: new URL('https://auth.example.com/realms/divetracx'),
-      audience: 'https://dives.example.com/api/mcp',
-      scope: 'divetracx:read',
-      allowedHostnames: ['dives.example.com'],
-      allowedOriginHostnames: [],
-      dangerouslyAllowInsecureUrls: false,
-    })
-  })
-
-  test('allows HTTP only when both endpoints are loopback URLs', () => {
+  test('derives the built-in issuer and requires owner-session verification', () => {
     expect(
       resolveMcpConfig({
-        ...baseEnvironment,
-        MCP_SERVER_URL: 'http://localhost:3000/api/mcp',
-        MCP_OAUTH_ISSUER: 'http://127.0.0.1:8080/realms/divetracx',
-      })?.dangerouslyAllowInsecureUrls,
-    ).toBe(true)
+        MCP_SERVER_URL: 'https://dives.example.com/api/mcp',
+        HODOR_SECRET: 'x'.repeat(64),
+        MCP_ALLOWED_ORIGINS: 'https://chatgpt.com, https://example.test/path',
+      }),
+    ).toMatchObject({
+      issuer: new URL('https://dives.example.com/'),
+      allowedOrigins: ['https://chatgpt.com', 'https://example.test'],
+    })
+    expect(() =>
+      resolveMcpConfig({ MCP_SERVER_URL: 'https://dives.example.com/api/mcp' }),
+    ).toThrow('HODOR_SECRET')
   })
 
-  test('rejects partial, insecure, and incorrectly routed configuration', () => {
+  test('rejects insecure public and non-canonical MCP URLs', () => {
     expect(() =>
       resolveMcpConfig({
-        MCP_SERVER_URL: baseEnvironment.MCP_SERVER_URL,
-        MCP_OAUTH_SCOPE: 'divetracx:read',
-      }),
-    ).toThrow('configured together')
-    expect(() =>
-      resolveMcpConfig({
-        ...baseEnvironment,
         MCP_SERVER_URL: 'http://dives.example.com/api/mcp',
+        HODOR_SECRET: 'x'.repeat(64),
       }),
-    ).toThrow('must use HTTPS')
+    ).toThrow('HTTPS')
     expect(() =>
       resolveMcpConfig({
-        ...baseEnvironment,
         MCP_SERVER_URL: 'https://dives.example.com/mcp',
+        HODOR_SECRET: 'x'.repeat(64),
       }),
-    ).toThrow('/api/mcp path')
+    ).toThrow('/api/mcp')
   })
 })

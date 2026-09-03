@@ -583,3 +583,70 @@ export const externalRecordLinks = pgTable(
     ),
   ],
 )
+
+export const oauthClients = pgTable('oauth_clients', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  redirectUris: jsonb('redirect_uris').$type<string[]>().notNull(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  ...auditColumns,
+})
+
+export const oauthAuthorizationCodes = pgTable(
+  'oauth_authorization_codes',
+  {
+    codeHash: text('code_hash').primaryKey(),
+    clientId: text('client_id')
+      .notNull()
+      .references(() => oauthClients.id, { onDelete: 'cascade' }),
+    redirectUri: text('redirect_uri').notNull(),
+    codeChallenge: text('code_challenge').notNull(),
+    codeChallengeMethod: text('code_challenge_method').notNull(),
+    scopes: jsonb('scopes').$type<string[]>().notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('oauth_authorization_codes_client_index').on(table.clientId)],
+)
+
+export const oauthTokens = pgTable(
+  'oauth_tokens',
+  {
+    accessTokenId: text('access_token_id').primaryKey(),
+    clientId: text('client_id')
+      .notNull()
+      .references(() => oauthClients.id, { onDelete: 'cascade' }),
+    scopes: jsonb('scopes').$type<string[]>().notNull(),
+    accessTokenExpiresAt: timestamp('access_token_expires_at', {
+      withTimezone: true,
+    }).notNull(),
+    refreshTokenHash: text('refresh_token_hash'),
+    refreshTokenExpiresAt: timestamp('refresh_token_expires_at', {
+      withTimezone: true,
+    }),
+    originatingAuthorizationCodeHash: text('originating_authorization_code_hash'),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('oauth_tokens_refresh_token_hash_unique').on(table.refreshTokenHash),
+    index('oauth_tokens_client_index').on(table.clientId),
+    index('oauth_tokens_authorization_code_index').on(
+      table.originatingAuthorizationCodeHash,
+    ),
+  ],
+)
+
+export const mcpAuditEvents = pgTable(
+  'mcp_audit_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    event: text('event').notNull(),
+    outcome: text('outcome').notNull(),
+    clientId: text('client_id'),
+    toolName: text('tool_name'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('mcp_audit_events_created_at_index').on(table.createdAt)],
+)

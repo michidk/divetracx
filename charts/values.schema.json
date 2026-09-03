@@ -50,27 +50,10 @@
     "mcp": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "enabled",
-        "serverUrl",
-        "oauth",
-        "allowedOrigins",
-        "service",
-        "ingress"
-      ],
+      "required": ["enabled", "serverUrl", "allowedOrigins", "service", "ingress"],
       "properties": {
         "enabled": { "type": "boolean" },
         "serverUrl": { "type": "string" },
-        "oauth": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["issuer", "audience", "scope"],
-          "properties": {
-            "issuer": { "type": "string" },
-            "audience": { "type": "string" },
-            "scope": { "type": "string", "minLength": 1 }
-          }
-        },
         "allowedOrigins": {
           "type": "array",
           "items": { "type": "string", "format": "uri" }

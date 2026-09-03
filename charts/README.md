@@ -107,11 +107,10 @@ database and restore it into a fresh PostgreSQL 18 PVC (or use `pg_upgrade`).
 
 ## OAuth-protected MCP
 
-The optional MCP endpoint validates JWT access tokens from an external OIDC
-provider. Configure that provider with the public MCP URL as the token audience
-and grant the `divetracx:read` scope. It must publish discovery metadata and a
-JWKS endpoint; clients need authorization code with PKCE and either dynamic
-client registration or a pre-registered client.
+The optional MCP endpoint includes an instance-wide OAuth 2.1 authorization
+server. It uses the existing Hodor owner session for consent, dynamic client
+registration, mandatory S256 PKCE, refresh rotation, and revocation. No external
+OIDC provider settings are required.
 
 The MCP Ingress routes only the protocol endpoint and its OAuth discovery
 documents directly to the application, bypassing Hodor's interactive cookie
@@ -121,10 +120,6 @@ gate. The MCP endpoint independently requires OAuth on every protocol request.
 mcp:
   enabled: true
   serverUrl: https://dives.example.com/api/mcp
-  oauth:
-    issuer: https://auth.example.com/application/o/divetracx/
-    audience: https://dives.example.com/api/mcp # optional; defaults to serverUrl
-    scope: divetracx:read
   ingress:
     enabled: true
     className: nginx
@@ -136,9 +131,11 @@ mcp:
           - dives.example.com
 ```
 
-Do not expose the dedicated MCP Service with unrestricted paths through an
-additional proxy. For browser-based MCP clients, `mcp.allowedOrigins` can add
-an explicit Origin allowlist; native clients normally omit the Origin header.
+The MCP host must also be the normal Hodor-protected application host so the
+owner session can approve connections. Do not expose the dedicated MCP Service
+with unrestricted paths through an additional proxy. For browser-based MCP
+clients, `mcp.allowedOrigins` adds an explicit Origin allowlist; native clients
+normally omit the Origin header.
 
 ## Validate
 

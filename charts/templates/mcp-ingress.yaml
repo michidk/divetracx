@@ -44,5 +44,33 @@ spec:
                 name: {{ include "divetracx.fullname" $ }}-mcp
                 port:
                   name: http
+          - path: /oauth/register
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "divetracx.fullname" $ }}-mcp
+                port:
+                  name: http
+          - path: /oauth/authorize
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "divetracx.fullname" $ }}-mcp
+                port:
+                  name: http
+          - path: /oauth/token
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "divetracx.fullname" $ }}-mcp
+                port:
+                  name: http
+          - path: /oauth/revoke
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "divetracx.fullname" $ }}-mcp
+                port:
+                  name: http
     {{- end }}
 {{- end }}
