@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
+
 export interface DepthTrendPoint {
   month: string
   averageDepthMeters: string | null
@@ -24,43 +27,18 @@ function monthTitle(month: string) {
   })
 }
 
-interface SeriesPoint {
-  x: number
-  y: number
-  title: string
-}
-
-function Series({
-  points,
-  lineClass,
-  dotClass,
-}: {
-  points: SeriesPoint[]
-  lineClass: string
-  dotClass: string
-}) {
-  return (
-    <g>
-      <polyline
-        points={points.map((point) => `${point.x},${point.y}`).join(' ')}
-        fill="none"
-        strokeWidth="2"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        className={lineClass}
-      />
-      {points.map((point) => (
-        <circle key={`${point.x}`} cx={point.x} cy={point.y} r="2.5" className={dotClass}>
-          <title>{point.title}</title>
-        </circle>
-      ))}
-    </g>
-  )
+interface HoveredMonth {
+  point: DepthTrendPoint
+  clientX: number
+  clientY: number
 }
 
 // Monthly average depths over the whole logbook, with the depth axis growing
-// downward the way divers read profile charts.
+// downward the way divers read profile charts. Hovering the chart highlights
+// the nearest month and shows its values.
 export function DepthTrend({ points }: { points: DepthTrendPoint[] }) {
+  const [hovered, setHovered] = useState<HoveredMonth | null>(null)
+
   const withDepth = points.filter(
     (point) =>
       point.averageDepthMeters !== null || point.averageMaximumDepthMeters !== null,
@@ -90,20 +68,17 @@ export function DepthTrend({ points }: { points: DepthTrendPoint[] }) {
   const x = (month: string) => PAD_LEFT + (monthIndex(month) - firstIndex) * step
   const y = (depth: number) => PAD_TOP + (depth / depthCeiling) * plotHeight
 
-  const series = (
-    key: 'averageDepthMeters' | 'averageMaximumDepthMeters',
-    label: string,
-  ) =>
+  const series = (key: 'averageDepthMeters' | 'averageMaximumDepthMeters') =>
     withDepth
       .filter((point) => point[key] !== null)
       .map((point) => ({
+        month: point.month,
         x: x(point.month),
         y: y(Number(point[key])),
-        title: `${label} ${Number(point[key]).toFixed(1)} m · ${monthTitle(point.month)} (${point.diveCount} ${point.diveCount === 1 ? 'dive' : 'dives'})`,
       }))
 
-  const averageMaxSeries = series('averageMaximumDepthMeters', 'Avg max depth')
-  const averageSeries = series('averageDepthMeters', 'Avg depth')
+  const averageMaxSeries = series('averageMaximumDepthMeters')
+  const averageSeries = series('averageDepthMeters')
 
   const gridDepths: number[] = []
   for (let depth = 0; depth <= depthCeiling; depth += gridStep) gridDepths.push(depth)
@@ -116,6 +91,28 @@ export function DepthTrend({ points }: { points: DepthTrendPoint[] }) {
       year: String(Math.floor(index / 12)),
     })
   }
+
+  const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const pointerX = event.clientX - rect.left
+    let nearest: DepthTrendPoint | null = null
+    let nearestDistance = Number.POSITIVE_INFINITY
+    for (const point of withDepth) {
+      const distance = Math.abs(x(point.month) - pointerX)
+      if (distance < nearestDistance) {
+        nearest = point
+        nearestDistance = distance
+      }
+    }
+    if (!nearest) return
+    setHovered({
+      point: nearest,
+      clientX: rect.left + x(nearest.month),
+      clientY: rect.top + PAD_TOP,
+    })
+  }
+
+  const hoveredX = hovered ? x(hovered.point.month) : null
 
   return (
     <article className="rounded-2xl border border-border bg-card p-5">
@@ -132,12 +129,14 @@ export function DepthTrend({ points }: { points: DepthTrendPoint[] }) {
           </span>
         </div>
       </div>
-      <div className="overflow-x-auto pb-1">
+      <ScrollArea className="pb-1">
         <svg
           width={width}
           height={HEIGHT}
           role="img"
           aria-label="Average dive depth per month across the logbook"
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setHovered(null)}
         >
           {gridDepths.map((depth) => (
             <g key={depth}>
@@ -182,18 +181,86 @@ export function DepthTrend({ points }: { points: DepthTrendPoint[] }) {
               </text>
             </g>
           ))}
-          <Series
-            points={averageMaxSeries}
-            lineClass="stroke-primary"
-            dotClass="fill-primary"
-          />
-          <Series
-            points={averageSeries}
-            lineClass="stroke-primary/40"
-            dotClass="fill-primary/40"
-          />
+          {hoveredX !== null ? (
+            <line
+              x1={hoveredX}
+              x2={hoveredX}
+              y1={PAD_TOP}
+              y2={plotBottom}
+              strokeWidth="1"
+              className="stroke-muted-foreground/60"
+            />
+          ) : null}
+          {[
+            {
+              seriesPoints: averageMaxSeries,
+              lineClass: 'stroke-primary',
+              dotClass: 'fill-primary',
+            },
+            {
+              seriesPoints: averageSeries,
+              lineClass: 'stroke-primary/40',
+              dotClass: 'fill-primary/40',
+            },
+          ].map(({ seriesPoints, lineClass, dotClass }) => (
+            <g key={lineClass}>
+              <polyline
+                points={seriesPoints.map((point) => `${point.x},${point.y}`).join(' ')}
+                fill="none"
+                strokeWidth="2"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                className={lineClass}
+              />
+              {seriesPoints.map((point) => (
+                <circle
+                  key={point.month}
+                  cx={point.x}
+                  cy={point.y}
+                  r={hovered?.point.month === point.month ? 4 : 2.5}
+                  className={dotClass}
+                />
+              ))}
+            </g>
+          ))}
         </svg>
-      </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
+      {hovered ? (
+        <div
+          role="tooltip"
+          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-xl border border-border bg-card p-3 shadow-xl"
+          style={{ left: hovered.clientX, top: hovered.clientY - 8 }}
+        >
+          <p className="text-xs font-semibold">
+            {monthTitle(hovered.point.month)} · {hovered.point.diveCount}{' '}
+            {hovered.point.diveCount === 1 ? 'dive' : 'dives'}
+          </p>
+          <div className="mt-1.5 space-y-1 text-xs">
+            {hovered.point.averageMaximumDepthMeters !== null ? (
+              <p className="flex items-center gap-1.5">
+                <span className="h-0.5 w-3 rounded-full bg-primary" aria-hidden="true" />
+                <span className="text-muted-foreground">Avg max depth</span>
+                <span className="font-mono font-semibold">
+                  {Number(hovered.point.averageMaximumDepthMeters).toFixed(1)} m
+                </span>
+              </p>
+            ) : null}
+            {hovered.point.averageDepthMeters !== null ? (
+              <p className="flex items-center gap-1.5">
+                <span
+                  className="h-0.5 w-3 rounded-full bg-primary/40"
+                  aria-hidden="true"
+                />
+                <span className="text-muted-foreground">Avg depth</span>
+                <span className="font-mono font-semibold">
+                  {Number(hovered.point.averageDepthMeters).toFixed(1)} m
+                </span>
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </article>
   )
 }

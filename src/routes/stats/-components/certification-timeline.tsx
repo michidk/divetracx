@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { formatDiveDate } from '@/modules/dives/format'
 
 export interface TimelineCertification {
@@ -8,12 +9,12 @@ export interface TimelineCertification {
   certifiedAt: string | null
 }
 
-const HEIGHT = 248
-const AXIS_Y = 124
-const PAD_X = 56
-// Label lanes alternate above and below the axis at two distances so
-// neighbouring certifications do not overlap.
-const LANES = [-72, 72, -36, 36] as const
+const PAD_X = 72
+const NAME_MAX_LENGTH = 20
+// Label lanes alternate above and below the axis, moving further out when the
+// nearer lanes are still occupied by a neighbouring label.
+const LANE_OFFSETS = [-48, 48, -84, 84, -120, 120] as const
+const LABEL_GAP = 12
 const DAY_MS = 86_400_000
 
 function dayNumber(date: string) {
@@ -24,7 +25,14 @@ function truncate(value: string, maxLength: number) {
   return value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value
 }
 
-// A left-to-right timeline of when each certification was gained.
+function metaText(certification: { organization: string | null; certifiedAt: string }) {
+  const year = certification.certifiedAt.slice(0, 4)
+  return certification.organization ? `${certification.organization} · ${year}` : year
+}
+
+// A left-to-right timeline of when each certification was gained. Labels are
+// assigned to the innermost lane whose previous label leaves enough room, so
+// clustered certifications never overlap.
 export function CertificationTimeline({
   certifications,
 }: {
@@ -44,10 +52,36 @@ export function CertificationTimeline({
   const firstDay = dayNumber(firstCert.certifiedAt)
   const lastDay = Math.max(dayNumber(lastCert.certifiedAt), firstDay + 1)
 
-  const width = Math.max(720, dated.length * 96)
+  const width = Math.max(720, dated.length * 116)
   const plotWidth = width - PAD_X * 2
   const x = (date: string) =>
     PAD_X + ((dayNumber(date) - firstDay) / (lastDay - firstDay)) * plotWidth
+
+  const lanes = LANE_OFFSETS.map((offset) => ({
+    offset,
+    lastRight: Number.NEGATIVE_INFINITY,
+  }))
+  const placed = dated.map((certification) => {
+    const centerX = x(certification.certifiedAt)
+    const halfWidth =
+      Math.max(
+        truncate(certification.name, NAME_MAX_LENGTH).length * 7,
+        metaText(certification).length * 5.4,
+      ) /
+        2 +
+      6
+    const lane =
+      lanes.find((candidate) => centerX - halfWidth >= candidate.lastRight + LABEL_GAP) ??
+      lanes.reduce((best, candidate) =>
+        candidate.lastRight < best.lastRight ? candidate : best,
+      )
+    lane.lastRight = centerX + halfWidth
+    return { certification, centerX, offset: lane.offset }
+  })
+
+  const maxOffset = Math.max(...placed.map((entry) => Math.abs(entry.offset)))
+  const axisY = maxOffset + 40
+  const height = axisY * 2
 
   const firstYear = Number(firstCert.certifiedAt.slice(0, 4))
   const lastYear = Number(lastCert.certifiedAt.slice(0, 4))
@@ -62,18 +96,18 @@ export function CertificationTimeline({
         {dated.length.toLocaleString()} certifications since{' '}
         {formatDiveDate(firstCert.certifiedAt, 'medium')}
       </p>
-      <div className="overflow-x-auto pb-1">
+      <ScrollArea className="pb-1">
         <svg
           width={width}
-          height={HEIGHT}
+          height={height}
           role="img"
           aria-label="Timeline of gained certifications"
         >
           <line
             x1={PAD_X - 16}
             x2={width - PAD_X + 16}
-            y1={AXIS_Y}
-            y2={AXIS_Y}
+            y1={axisY}
+            y2={axisY}
             strokeWidth="2"
             className="stroke-border"
           />
@@ -82,14 +116,14 @@ export function CertificationTimeline({
               <line
                 x1={tick.x}
                 x2={tick.x}
-                y1={AXIS_Y - 5}
-                y2={AXIS_Y + 5}
+                y1={axisY - 5}
+                y2={axisY + 5}
                 strokeWidth="1"
                 className="stroke-muted-foreground/50"
               />
               <text
                 x={tick.x}
-                y={AXIS_Y + 18}
+                y={axisY + 20}
                 textAnchor="middle"
                 fontSize="9"
                 className="fill-muted-foreground/80"
@@ -98,14 +132,12 @@ export function CertificationTimeline({
               </text>
             </g>
           ))}
-          {dated.map((certification, index) => {
-            const lane = LANES[index % LANES.length] ?? -72
-            const above = lane < 0
-            const nameY = AXIS_Y + lane
+          {placed.map(({ certification, centerX, offset }) => {
+            const above = offset < 0
+            const nameY = axisY + offset
             const metaY = nameY + 12
             const leaderStart = above ? metaY + 8 : nameY - 12
-            const leaderEnd = above ? AXIS_Y - 7 : AXIS_Y + 7
-            const centerX = x(certification.certifiedAt)
+            const leaderEnd = above ? axisY - 7 : axisY + 7
             return (
               <g key={certification.id}>
                 <title>
@@ -120,7 +152,7 @@ export function CertificationTimeline({
                   strokeDasharray="2 3"
                   className="stroke-muted-foreground/50"
                 />
-                <circle cx={centerX} cy={AXIS_Y} r="4.5" className="fill-primary" />
+                <circle cx={centerX} cy={axisY} r="4.5" className="fill-primary" />
                 <text
                   x={centerX}
                   y={nameY}
@@ -129,7 +161,7 @@ export function CertificationTimeline({
                   fontWeight="600"
                   className="fill-foreground"
                 >
-                  {truncate(certification.name, 20)}
+                  {truncate(certification.name, NAME_MAX_LENGTH)}
                 </text>
                 <text
                   x={centerX}
@@ -138,15 +170,14 @@ export function CertificationTimeline({
                   fontSize="9.5"
                   className="fill-muted-foreground"
                 >
-                  {certification.organization
-                    ? `${certification.organization} · ${certification.certifiedAt.slice(0, 4)}`
-                    : certification.certifiedAt.slice(0, 4)}
+                  {metaText(certification)}
                 </text>
               </g>
             )
           })}
         </svg>
-      </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
       <p className="mt-2 text-xs text-muted-foreground">
         Manage certifications on the{' '}
         <Link to="/profile" className="font-medium text-primary hover:underline">
