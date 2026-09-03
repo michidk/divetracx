@@ -24,6 +24,7 @@ export function CoordinatePicker({
   const containerRef = useRef<HTMLElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markerRef = useRef<MapLibreMarker | null>(null)
+  const markerCoordinatesRef = useRef<{ lat: number; lng: number } | null>(null)
   const onChangeRef = useRef(onChange)
   const coordinatesRef = useRef(parseCoordinates(latitude, longitude))
   const [failed, setFailed] = useState(false)
@@ -56,9 +57,13 @@ export function CoordinatePicker({
 
         const marker = new maplibregl.Marker({ draggable: true, color: '#0e7490' })
         markerRef.current = marker
-        if (initial) marker.setLngLat([initial.lng, initial.lat]).addTo(map)
+        if (initial) {
+          marker.setLngLat([initial.lng, initial.lat]).addTo(map)
+          markerCoordinatesRef.current = initial
+        }
 
         const report = (lngLat: { lat: number; lng: number }) => {
+          markerCoordinatesRef.current = lngLat
           onChangeRef.current(lngLat.lat.toFixed(7), lngLat.lng.toFixed(7))
         }
         marker.on('dragend', () => report(marker.getLngLat()))
@@ -80,6 +85,7 @@ export function CoordinatePicker({
       disposed = true
       markerRef.current?.remove()
       markerRef.current = null
+      markerCoordinatesRef.current = null
       mapRef.current?.remove()
       mapRef.current = null
     }
@@ -93,16 +99,19 @@ export function CoordinatePicker({
     if (!map || !marker) return
     if (!coordinates) {
       marker.remove()
+      markerCoordinatesRef.current = null
       return
     }
-    const current = marker.getLngLat()
+    const current = markerCoordinatesRef.current
     if (
+      current &&
       Math.abs(current.lat - coordinates.lat) < 1e-7 &&
       Math.abs(current.lng - coordinates.lng) < 1e-7
     ) {
       return
     }
     marker.setLngLat([coordinates.lng, coordinates.lat]).addTo(map)
+    markerCoordinatesRef.current = coordinates
     map.easeTo({ center: [coordinates.lng, coordinates.lat] })
   }, [latitude, longitude])
 
