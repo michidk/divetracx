@@ -1,6 +1,7 @@
 import { useRouter } from '@tanstack/react-router'
-import { Camera, Trash2, UserRound } from 'lucide-react'
+import { Camera, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
+import diverSilhouetteUrl from '@/assets/diver-silhouette.svg?url'
 import { Button } from '@/components/ui/button'
 import { deletePicture } from '@/modules/media/server/mutations'
 
@@ -77,7 +78,11 @@ export function ProfileImage({
             className="size-full object-cover"
           />
         ) : (
-          <UserRound size={56} className="text-primary/55" aria-hidden="true" />
+          <img
+            src={diverSilhouetteUrl}
+            alt="Generic scuba diver profile"
+            className="size-full p-5 text-primary/65"
+          />
         )}
       </div>
       <input

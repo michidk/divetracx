@@ -28,6 +28,10 @@ RUN apt-get update && \
     apt-get purge --yes --auto-remove python3 make g++ && \
     rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && \
+    apt-get install --yes --no-install-recommends fontconfig fonts-dejavu-core && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder --chown=app:nodejs /app/.output ./.output
 COPY --from=builder --chown=app:nodejs /app/drizzle ./drizzle
 COPY --from=builder --chown=app:nodejs /app/scripts ./scripts
