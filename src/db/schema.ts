@@ -314,7 +314,6 @@ export const dives = pgTable(
     suit: text('suit'),
     boat: text('boat'),
     divemaster: text('divemaster'),
-    legacyBuddyText: text('legacy_buddy_text'),
     notes: text('notes'),
     ...auditColumns,
   },

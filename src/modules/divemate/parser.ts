@@ -356,7 +356,7 @@ function mapDive(row: SourceRow): DiveMateDive | null {
     suit: text(row.Divesuit),
     boat: text(row.Boat),
     divemaster: text(row.Divemaster),
-    legacyBuddyText: text(row.Buddy),
+    buddyName: text(row.Buddy),
     notes: text(row.Comments),
   }
 }
