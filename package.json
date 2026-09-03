@@ -37,7 +37,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-router": "^1.170.16",
     "@tanstack/react-start": "^1.168.26",
-    "axios-cookiejar-support": "5.0.5",
+    "axios-cookiejar-support": "7.0.0",
     "better-sqlite3": "13.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
