@@ -1,3 +1,4 @@
+import { normalizeDiveMateDiveTypeName } from './dive-type'
 import { openSqlite, type SqliteDatabase } from './server/sqlite.server'
 import type {
   DiveMateBuddy,
@@ -307,7 +308,13 @@ function mapShop(row: SourceRow): DiveMateShop | null {
 function mapDiveType(row: SourceRow): DiveMateDiveType | null {
   const source = sourceRecord(row)
   const name = text(row.Typename)
-  return source && name ? { ...source, name, sortOrder: integer(row.SortOrd) } : null
+  return source && name
+    ? {
+        ...source,
+        name: normalizeDiveMateDiveTypeName(name),
+        sortOrder: integer(row.SortOrd),
+      }
+    : null
 }
 
 function mapDive(row: SourceRow): DiveMateDive | null {
@@ -349,7 +356,7 @@ function mapDive(row: SourceRow): DiveMateDive | null {
     suit: text(row.Divesuit),
     boat: text(row.Boat),
     divemaster: text(row.Divemaster),
-    legacyBuddyText: text(row.Buddy),
+    buddyName: text(row.Buddy),
     notes: text(row.Comments),
   }
 }

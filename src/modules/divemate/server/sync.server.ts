@@ -112,7 +112,7 @@ interface SnapshotApplyContext {
   ): Promise<void>
 }
 
-async function loadInstructorBuddyIndex(transaction: DatabaseTransaction) {
+async function loadBuddyNameIndex(transaction: DatabaseTransaction) {
   const rows = await transaction
     .select({
       id: buddies.id,
@@ -133,7 +133,7 @@ async function loadInstructorBuddyIndex(transaction: DatabaseTransaction) {
   return index
 }
 
-async function resolveInstructorBuddy(
+async function resolveNamedBuddy(
   transaction: DatabaseTransaction,
   index: Map<string, string>,
   importedName: string | null,
@@ -149,7 +149,7 @@ async function resolveInstructorBuddy(
     .insert(buddies)
     .values({ firstName: name })
     .returning({ id: buddies.id })
-  if (!buddy) throw new Error('DiveMate instructor could not be linked to a buddy')
+  if (!buddy) throw new Error('DiveMate person could not be linked to a buddy')
   index.set(normalizedName, buddy.id)
   return buddy.id
 }
@@ -368,7 +368,7 @@ async function applySnapshot(
     }
   }
 
-  const instructorBuddyIdsByName = await loadInstructorBuddyIndex(tx)
+  const buddyIdsByName = await loadBuddyNameIndex(tx)
 
   const equipmentIds = new Map<string, string>()
   for (const item of snapshot.equipment.filter((candidate) => !candidate.isSet)) {
@@ -504,9 +504,9 @@ async function applySnapshot(
       'certification',
     )
     const scans = storedCertificationScans.get(item.externalId)
-    const instructorBuddyId = await resolveInstructorBuddy(
+    const instructorBuddyId = await resolveNamedBuddy(
       tx,
-      instructorBuddyIdsByName,
+      buddyIdsByName,
       item.instructorName,
     )
     const agencyId = await resolveAgencyId(tx, item.organization)
@@ -612,7 +612,6 @@ async function applySnapshot(
       suit: item.suit,
       boat: item.boat,
       divemaster: item.divemaster,
-      legacyBuddyText: item.legacyBuddyText,
       notes: item.notes,
       updatedAt: new Date(),
     }
@@ -631,10 +630,14 @@ async function applySnapshot(
     if (oldBuddyLinks.length > 0)
       await tx.delete(diveBuddies).where(inArray(diveBuddies.id, oldBuddyLinks))
     await context.unlink('dive', item.externalId, ['dive_buddy'])
-    const importedBuddyIds = item.buddyExternalIds
-      .map((id) => buddyIds.get(id))
-      .filter((id): id is string => Boolean(id))
-    if (importedBuddyIds.length > 0) {
+    const importedBuddyIds = new Set(
+      item.buddyExternalIds
+        .map((id) => buddyIds.get(id))
+        .filter((id): id is string => Boolean(id)),
+    )
+    const namedBuddyId = await resolveNamedBuddy(tx, buddyIdsByName, item.buddyName)
+    if (namedBuddyId) importedBuddyIds.add(namedBuddyId)
+    if (importedBuddyIds.size > 0) {
       for (const buddyId of importedBuddyIds) {
         context.signal.throwIfAborted()
         const [association] = await tx
@@ -883,7 +886,7 @@ function diveMateExternalRecords(
     externalId: source.externalId,
     rawPayload: source.sourcePayload,
     fileMetadata,
-    mapperVersion: 1,
+    mapperVersion: entityType === 'dive_type' || entityType === 'dive' ? 2 : 1,
   })
   return [
     ...snapshot.divers.map((item) => record('diver', item)),

@@ -112,12 +112,20 @@ export function rewriteDiveMateDatabase(
   const tankIds = assignDiveMateIds(data.tanks)
   const pictureIds = assignDiveMateIds(data.pictures)
   const buddyIdsByDive = new Map<string, number[]>()
+  const buddyNamesByDive = new Map<string, string[]>()
   for (const relation of data.diveBuddies) {
     const id = buddyIds.get(relation.buddyId)
     if (id) {
       buddyIdsByDive.set(relation.diveId, [
         ...(buddyIdsByDive.get(relation.diveId) ?? []),
         id,
+      ])
+    }
+    const name = formatDiveMateInstructor(buddiesById.get(relation.buddyId))
+    if (name) {
+      buddyNamesByDive.set(relation.diveId, [
+        ...(buddyNamesByDive.get(relation.diveId) ?? []),
+        name,
       ])
     }
   }
@@ -339,7 +347,7 @@ export function rewriteDiveMateDatabase(
             Divesuit: row.suit,
             Boat: row.boat,
             Divemaster: row.divemaster,
-            Buddy: row.legacyBuddyText,
+            Buddy: buddyNamesByDive.get(row.id)?.[0] ?? null,
             Comments: row.notes,
             ProfileInt: profile.profileIntervalSeconds,
             Profile: profile.profile,

@@ -96,7 +96,10 @@ describe('parseDiveMateDatabase', () => {
       CREATE TABLE Divetype (
         ID INTEGER, Typename TEXT, SortOrd INTEGER, UUID TEXT, Updated TEXT
       );
-      INSERT INTO Divetype VALUES (5, 'Deep', 1, 'type-uuid', '2026-01-01');
+      INSERT INTO Divetype VALUES (5, 'Tieftauchgang', 1, 'type-uuid', '2026-01-01');
+      INSERT INTO Divetype VALUES (6, 'Höhlentauchgang', 2, 'cave-uuid', '2026-01-01');
+      INSERT INTO Divetype VALUES (7, 'Ausbildung', 3, 'training-uuid', '2026-01-01');
+      INSERT INTO Divetype VALUES (8, 'Custom type', 4, 'custom-uuid', '2026-01-01');
       CREATE TABLE Logbook (
         ID INTEGER, DiverID INTEGER, PlaceID INTEGER, ShopID INTEGER,
         TypeOfDive INTEGER, BuddyIDs TEXT, UsedEquip TEXT, Number INTEGER,
@@ -155,6 +158,13 @@ describe('parseDiveMateDatabase', () => {
     expect(snapshot.databaseProgram).toBe('DiveMate')
     expect(snapshot.databaseUuid).toBe('database-uuid')
     expect(snapshot.databaseUpdatedAt).toBe('2026-07-26T12:00:00')
+    expect(snapshot.diveTypes.map(({ name }) => name)).toEqual([
+      'Deep dive',
+      'Cave dive',
+      'Training',
+      'Custom type',
+    ])
+    expect(snapshot.diveTypes[0]?.sourcePayload.Typename).toBe('Tieftauchgang')
     expect(snapshot.dives).toHaveLength(1)
     expect(snapshot.dives[0]).toMatchObject({
       externalId: '11',
@@ -170,7 +180,7 @@ describe('parseDiveMateDatabase', () => {
       maximumPpo2: '1.31',
       equipmentWeightKg: '12.4',
       decompressionDive: true,
-      legacyBuddyText: 'Legacy Buddy',
+      buddyName: 'Legacy Buddy',
     })
     expect(snapshot.divers[0]).toMatchObject({
       street: '1 Ocean Road',

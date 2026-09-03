@@ -8,6 +8,9 @@ SQLite backups without making the application depend on DiveMate at runtime.
 
 - Pages use folder routes (`src/routes/<segment>/index.tsx`).
 - Route-private UI lives in a hyphen-prefixed colocated folder.
+- Reuse generic components from `src/components/` instead of duplicating UI
+  markup or styles. When a UI pattern gains a second consumer, create or
+  promote a shared generic component with one consistent visual contract.
 - Reusable dive and DiveMate code lives in `src/modules/`; modules never import
   from `src/routes/`.
 - PostgreSQL/Drizzle definitions live in `src/db/`.
@@ -15,6 +18,9 @@ SQLite backups without making the application depend on DiveMate at runtime.
   server-only.
 - DiveMate synchronization is additive and idempotent. Imported external IDs
   are upserted; records missing from a later backup are not deleted.
+- Never add legacy fields to the canonical schema or UI. Preserve older source
+  formats with database migrations and import mappings that translate their data
+  into canonical entities and relationships.
 - Do not expose `DATABASE_URL` or Google service-account credentials to browser code.
 
 ## Commands

@@ -237,7 +237,6 @@ export async function loadDive(diveId: string) {
           suit: dives.suit,
           boat: dives.boat,
           divemaster: dives.divemaster,
-          legacyBuddyText: dives.legacyBuddyText,
           notes: dives.notes,
           updatedAt: dives.updatedAt,
           diver: {

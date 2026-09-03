@@ -197,6 +197,13 @@
       "when": 1788424931091,
       "tag": "0027_good_millenium_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1788427856719,
+      "tag": "0028_clumsy_mauler",
+      "breakpoints": true
     }
   ]
 }

@@ -137,7 +137,7 @@ export interface DiveMateDive extends DiveMateSourceRecord {
   suit: string | null
   boat: string | null
   divemaster: string | null
-  legacyBuddyText: string | null
+  buddyName: string | null
   notes: string | null
 }
 
