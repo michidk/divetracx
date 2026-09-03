@@ -88,6 +88,22 @@ spec:
               value: {{ .Values.garmin.maxResponseBytes | quote }}
             - name: GARMIN_MAX_FIT_BYTES
               value: {{ .Values.garmin.maxFitBytes | quote }}
+            {{- if .Values.mcp.enabled }}
+            - name: MCP_SERVER_URL
+              value: {{ required "mcp.serverUrl is required when MCP is enabled" .Values.mcp.serverUrl | quote }}
+            - name: MCP_OAUTH_ISSUER
+              value: {{ required "mcp.oauth.issuer is required when MCP is enabled" .Values.mcp.oauth.issuer | quote }}
+            {{- if .Values.mcp.oauth.audience }}
+            - name: MCP_OAUTH_AUDIENCE
+              value: {{ .Values.mcp.oauth.audience | quote }}
+            {{- end }}
+            - name: MCP_OAUTH_SCOPE
+              value: {{ .Values.mcp.oauth.scope | quote }}
+            {{- if .Values.mcp.allowedOrigins }}
+            - name: MCP_ALLOWED_ORIGINS
+              value: {{ join "," .Values.mcp.allowedOrigins | quote }}
+            {{- end }}
+            {{- end }}
             - name: STORAGE_PROVIDER
               value: {{ .Values.storage.provider | quote }}
             - name: STORAGE_URL

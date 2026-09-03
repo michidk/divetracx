@@ -43,6 +43,27 @@ ingress:
           pathType: Prefix
   tls: []
 
+mcp:
+  enabled: false
+  # Public resource URL. The path must be /api/mcp.
+  serverUrl: ""
+  oauth:
+    # OIDC issuer whose signed JWT access tokens protect the MCP resource.
+    issuer: ""
+    # Defaults to serverUrl when empty.
+    audience: ""
+    scope: "divetracx:read"
+  # Optional browser Origin allowlist. Non-browser MCP clients omit Origin.
+  allowedOrigins: []
+  service:
+    port: 80
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts: []
+    tls: []
+
 resources:
   limits:
     cpu: 500m

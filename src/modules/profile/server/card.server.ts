@@ -1,5 +1,6 @@
 import '@tanstack/react-start/server-only'
 
+import diverSilhouette from '@/assets/diver-silhouette.svg?raw'
 import { getStorage } from '@/lib/storage'
 import { formatPersonName } from '@/modules/dives/format'
 import { loadProfile } from './queries.server'
@@ -29,13 +30,6 @@ function formatHours(seconds: number) {
   )
 }
 
-function initials(firstName?: string | null, lastName?: string | null) {
-  return (
-    `${firstName?.trim().charAt(0) ?? ''}${lastName?.trim().charAt(0) ?? ''}`.toUpperCase() ||
-    'DX'
-  )
-}
-
 async function profileImageData(storagePath: string | null | undefined) {
   if (!storagePath) return null
   const storage = getStorage()
@@ -48,6 +42,10 @@ async function profileImageData(storagePath: string | null | undefined) {
     .png()
     .toBuffer()
   return `data:image/png;base64,${image.toString('base64')}`
+}
+
+function svgDataUrl(svg: string) {
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
 }
 
 function certificationPills(
@@ -91,7 +89,7 @@ export async function renderProfileCard() {
   const photo = imageData
     ? `<image href="${imageData}" x="80" y="145" width="300" height="300" preserveAspectRatio="xMidYMid slice" clip-path="url(#avatar)" />`
     : `<circle cx="230" cy="295" r="150" fill="url(#avatarGradient)" />
-       <text x="230" y="325" text-anchor="middle" class="initials">${xml(initials(diver?.firstName, diver?.lastName))}</text>`
+       <image href="${svgDataUrl(diverSilhouette.replaceAll('currentColor', '#d9ffff'))}" x="105" y="170" width="250" height="250" opacity="0.92" />`
   const skills = certificationPills(certifications)
   const skillHeading = certifications.length
     ? `${certifications.length} certification${certifications.length === 1 ? '' : 's'}`
@@ -111,7 +109,7 @@ export async function renderProfileCard() {
         </linearGradient>
         <clipPath id="avatar"><circle cx="230" cy="295" r="150" /></clipPath>
         <style>
-          text { font-family: Manrope, Arial, sans-serif; fill: #f3ffff; }
+          text { font-family: "DejaVu Sans", sans-serif; fill: #f3ffff; }
           .brand { font-size: 22px; font-weight: 700; letter-spacing: 5px; }
           .name { font-size: 52px; font-weight: 700; letter-spacing: -1px; }
           .eyebrow { font-size: 16px; font-weight: 700; letter-spacing: 3px; fill: #8ce7e6; }
@@ -120,7 +118,6 @@ export async function renderProfileCard() {
           .statValue { font-size: 31px; font-weight: 700; }
           .statLabel { font-size: 13px; font-weight: 700; letter-spacing: 2px; fill: #9edbdc; }
           .footer { font-size: 16px; fill: #c6eeee; }
-          .initials { font-size: 88px; font-weight: 700; }
         </style>
       </defs>
       <rect width="1200" height="630" rx="38" fill="url(#ocean)" />

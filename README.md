@@ -129,6 +129,50 @@ editor, photos can be uploaded to dives and sites, and Settings offers a
 chronological renumbering action. Recorded dive profiles are view-only. Import
 history and external provenance remain read-only.
 
+## Model Context Protocol
+
+Divetracx can expose an optional read-only MCP endpoint at `/api/mcp`. It offers
+tools for searching dives, loading bounded dive details, listing sites, and
+reading aggregate statistics. Tool results can contain private health,
+location, contact, and certification data, so the endpoint is disabled unless
+both its public URL and OAuth issuer are configured.
+
+Divetracx is an OAuth resource server, not an authorization server. Configure
+an OIDC provider that issues signed JWT access tokens with `iss`, `aud`, `exp`,
+and `scope` claims and publishes a JWKS endpoint. The audience must match
+`MCP_OAUTH_AUDIENCE` (the public MCP URL by default), and the token must contain
+`MCP_OAUTH_SCOPE` (`divetracx:read` by default). The provider must support
+authorization code with PKCE and either dynamic client registration or a
+pre-registered MCP client.
+
+```env
+MCP_SERVER_URL=https://dives.example.com/api/mcp
+MCP_OAUTH_ISSUER=https://auth.example.com/application/o/divetracx/
+MCP_OAUTH_AUDIENCE=https://dives.example.com/api/mcp
+MCP_OAUTH_SCOPE=divetracx:read
+```
+
+MCP OAuth discovery uses these public routes:
+
+- `/.well-known/oauth-protected-resource/api/mcp`
+- `/.well-known/oauth-authorization-server`
+
+They and `/api/mcp` must reach Divetracx directly rather than Hodor. All other
+application paths should remain behind Hodor. The Helm chart creates a
+dedicated, path-limited Service and Ingress when `mcp.enabled` and
+`mcp.ingress.enabled` are set.
+
+Connect Codex after deployment:
+
+```bash
+codex mcp add divetracx --url https://dives.example.com/api/mcp
+codex mcp login divetracx
+```
+
+If the provider does not support dynamic client registration, pre-register the
+exact callback URL printed by Codex and pass its client ID with
+`--oauth-client-id` when adding the server.
+
 ## Helm and scheduled imports
 
 The chart in `charts/` deploys the app, migrations, optional Hodor gate, and

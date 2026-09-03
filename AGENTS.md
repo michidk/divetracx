@@ -18,6 +18,9 @@ SQLite backups without making the application depend on DiveMate at runtime.
   server-only.
 - DiveMate synchronization is additive and idempotent. Imported external IDs
   are upserted; records missing from a later backup are not deleted.
+- Never add legacy fields to the canonical schema or UI. Preserve older source
+  formats with database migrations and import mappings that translate their data
+  into canonical entities and relationships.
 - Do not expose `DATABASE_URL` or Google service-account credentials to browser code.
 
 ## Commands

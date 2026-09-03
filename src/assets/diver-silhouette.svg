@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title" color="#087f8c">
+  <title id="title">Scuba diver silhouette</title>
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="386" cy="92" r="13" stroke-width="12" opacity=".55"/>
+    <circle cx="421" cy="53" r="8" stroke-width="9" opacity=".35"/>
+    <path d="M336 125c23-15 51-11 67 10 16 22 12 52-9 69-22 17-53 13-70-9-16-22-11-53 12-70Z" fill="currentColor" stroke="none"/>
+    <path d="m363 127 47 42m-21-56 32 29" stroke-width="15"/>
+    <path d="M310 200c-34 7-67 26-93 55l-36 40 61 54 44-35c23-19 42-43 53-71 8-19-8-47-29-43Z" fill="currentColor" stroke="none"/>
+    <rect x="248" y="202" width="55" height="139" rx="25" fill="none" stroke-width="19" transform="rotate(42 276 272)"/>
+    <path d="m222 271-67-34-50 4m112 39-73-5-45 28" stroke-width="27"/>
+    <path d="m109 231-61-40 12 58 45 4m-5 39-57 22 59 24 43-55" fill="currentColor" stroke="none"/>
+    <path d="m257 335 63 49 52 8m-124-46 51 68 46 25" stroke-width="29"/>
+    <path d="m368 379 78-4-49 48-34-19m29 24 68 29-68 14-28-57" fill="currentColor" stroke="none"/>
+    <path d="M343 213c37 11 65 34 81 70l18 41" stroke-width="24"/>
+    <path d="m429 315 23 42m-13-35 34 15" stroke-width="15"/>
+  </g>
+</svg>

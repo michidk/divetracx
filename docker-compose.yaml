@@ -29,6 +29,13 @@ services:
       GARMIN_ADAPTER_FULL_IMPORT_URL: ${GARMIN_ADAPTER_FULL_IMPORT_URL:-}
       GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL: ${GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL:-}
       GARMIN_ADAPTER_AUTHORIZATION: ${GARMIN_ADAPTER_AUTHORIZATION:-}
+      # OAuth-protected MCP is reached through a path-routing reverse proxy;
+      # Hodor's interactive cookie gate is not an MCP authorization server.
+      MCP_SERVER_URL: ${MCP_SERVER_URL:-}
+      MCP_OAUTH_ISSUER: ${MCP_OAUTH_ISSUER:-}
+      MCP_OAUTH_AUDIENCE: ${MCP_OAUTH_AUDIENCE:-}
+      MCP_OAUTH_SCOPE: ${MCP_OAUTH_SCOPE:-divetracx:read}
+      MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-}
     expose:
       - "3000"
     depends_on:
@@ -52,7 +59,7 @@ services:
       - divetracx-garmin-tokens:/data/garmin-tokens
 
   hodor:
-    image: ${HODOR_IMAGE:-ghcr.io/michidk/hodor@sha256:7cdb5de7ee2c776ee6c2ae049e1b2050caa60288d7b3148e26117a5d6bba18b2}
+    image: ${HODOR_IMAGE:-ghcr.io/michidk/hodor@sha256:f251ea949368465930b7f0fe008e306f3b7ee4215a8da638758b0dc7dc19a180}
     restart: unless-stopped
     depends_on:
       - app

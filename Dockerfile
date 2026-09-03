@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM oven/bun:1.3.14 AS builder
+FROM oven/bun:1.4.0 AS builder
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ RUN apt-get update && \
 COPY . .
 RUN bun run build
 
-FROM oven/bun:1.3.14-slim AS runner
+FROM oven/bun:1.4.0-slim AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production
@@ -26,6 +26,10 @@ RUN apt-get update && \
     apt-get install --yes --no-install-recommends python3 make g++ && \
     bun install --frozen-lockfile --production && \
     apt-get purge --yes --auto-remove python3 make g++ && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && \
+    apt-get install --yes --no-install-recommends fontconfig fonts-dejavu-core && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder --chown=app:nodejs /app/.output ./.output

@@ -9,6 +9,7 @@
     "serviceAccount",
     "service",
     "ingress",
+    "mcp",
     "resources",
     "migrations",
     "imports",
@@ -46,6 +47,64 @@
       }
     },
     "ingress": { "type": "object" },
+    "mcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "serverUrl",
+        "oauth",
+        "allowedOrigins",
+        "service",
+        "ingress"
+      ],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "serverUrl": { "type": "string" },
+        "oauth": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["issuer", "audience", "scope"],
+          "properties": {
+            "issuer": { "type": "string" },
+            "audience": { "type": "string" },
+            "scope": { "type": "string", "minLength": 1 }
+          }
+        },
+        "allowedOrigins": {
+          "type": "array",
+          "items": { "type": "string", "format": "uri" }
+        },
+        "service": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["port"],
+          "properties": {
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+          }
+        },
+        "ingress": {
+          "type": "object",
+          "required": ["enabled", "className", "annotations", "hosts", "tls"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "className": { "type": "string" },
+            "annotations": { "$ref": "#/definitions/stringMap" },
+            "hosts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["host"],
+                "properties": {
+                  "host": { "type": "string", "minLength": 1 }
+                }
+              }
+            },
+            "tls": { "type": "array", "items": { "type": "object" } }
+          }
+        }
+      }
+    },
     "resources": { "type": "object" },
     "livenessProbe": { "type": "object" },
     "readinessProbe": { "type": "object" },
