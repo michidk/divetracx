@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { formatDiveDate, formatMeters } from '@/modules/dives/format'
 
 const DAY_MS = 86_400_000
@@ -113,7 +114,7 @@ export function DiveHeatmap({
           {selected.diveCount.toLocaleString()}{' '}
           {selected.diveCount === 1 ? 'dive' : 'dives'} in {selected.year}
         </p>
-        <div className="overflow-x-auto pb-1">
+        <ScrollArea className="pb-1">
           <div className="inline-flex flex-col">
             <div className="mb-1 flex gap-[3px] pl-9">
               {weeks.map((week, weekIndex) => {
@@ -179,7 +180,8 @@ export function DiveHeatmap({
               ))}
             </div>
           </div>
-        </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
         <div className="mt-3 flex items-center justify-end gap-1.5 text-[10px] text-muted-foreground">
           <span>Less</span>
           {LEVEL_CLASSES.map((levelClass) => (
@@ -192,29 +194,31 @@ export function DiveHeatmap({
         </div>
       </article>
 
-      <nav
-        aria-label="Calendar year"
-        className="mt-4 flex flex-row flex-wrap gap-2 lg:absolute lg:inset-y-0 lg:right-0 lg:mt-0 lg:w-24 lg:flex-col lg:flex-nowrap lg:overflow-y-auto lg:pr-1"
-      >
-        {years.map((entry) => (
-          <button
-            key={entry.year}
-            type="button"
-            aria-pressed={entry.year === selected.year}
-            onClick={() => {
-              setSelectedYear(entry.year)
-              setHoveredDate(null)
-            }}
-            className={`min-h-9 shrink-0 rounded-xl px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-              entry.year === selected.year
-                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-            }`}
-          >
-            {entry.year}
-          </button>
-        ))}
-      </nav>
+      <ScrollArea className="mt-4 lg:absolute lg:inset-y-0 lg:right-0 lg:mt-0 lg:w-24">
+        <nav
+          aria-label="Calendar year"
+          className="flex flex-row flex-wrap gap-2 lg:flex-col lg:flex-nowrap lg:pr-1"
+        >
+          {years.map((entry) => (
+            <button
+              key={entry.year}
+              type="button"
+              aria-pressed={entry.year === selected.year}
+              onClick={() => {
+                setSelectedYear(entry.year)
+                setHoveredDate(null)
+              }}
+              className={`min-h-9 shrink-0 rounded-xl px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                entry.year === selected.year
+                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+              }`}
+            >
+              {entry.year}
+            </button>
+          ))}
+        </nav>
+      </ScrollArea>
 
       {hoveredDate ? (
         <div
