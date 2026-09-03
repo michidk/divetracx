@@ -6,6 +6,8 @@ import { getStorage } from '@/lib/storage'
 
 const DEMO_ASSETS = [
   'profile-diver.webp',
+  'wreck-diver-front.webp',
+  'wreck-diver-back.webp',
   'coral-lantern-reef.webp',
   'azure-step-wall.webp',
   'north-basin-wreck.webp',

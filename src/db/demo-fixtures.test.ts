@@ -65,6 +65,27 @@ describe('demo fixtures', () => {
     ).toBe(3)
   })
 
+  test('seeds two PADI certifications and the fictional Wreck Diver card', async () => {
+    const seededCertifications = await database.select().from(schema.certifications)
+    const seededAgencies = await database.select().from(schema.agencies)
+    const padi = seededAgencies.find((agency) => agency.code === 'padi')
+
+    expect(padi).toBeDefined()
+    expect(seededCertifications).toHaveLength(2)
+    expect(seededCertifications.every((item) => item.agencyId === padi?.id)).toBe(true)
+    expect(seededCertifications.map((item) => item.name).sort()).toEqual([
+      'Open Water Diver',
+      'Wreck Diver',
+    ])
+    expect(
+      seededCertifications.find((item) => item.name === 'Wreck Diver'),
+    ).toMatchObject({
+      certifiedAt: '2025-07-10',
+      scan1StoragePath: 'demo/wreck-diver-front.webp',
+      scan2StoragePath: 'demo/wreck-diver-back.webp',
+    })
+  })
+
   test('does not seed contact, insurance, serial-number, or integration data', async () => {
     const [diver] = await database.select().from(schema.divers)
     const gear = await database.select().from(schema.equipment)
