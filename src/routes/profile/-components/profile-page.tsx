@@ -6,6 +6,8 @@ import { formatDiveDate, formatPersonName } from '@/modules/dives/format'
 import type { getProfile } from '@/modules/profile/server/queries'
 import { AgencyMembershipList } from './agency-membership-list'
 import { CertificationList } from './certification-list'
+import { ProfileImage } from './profile-image'
+import { SkillCard } from './skill-card'
 
 type ProfileData = Awaited<ReturnType<typeof getProfile>>
 
@@ -20,16 +22,21 @@ export function ProfilePage({ profile }: { profile: ProfileData }) {
 
   return (
     <div className="space-y-7">
-      <header>
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Diver</p>
-        <h1 className="mt-2 text-4xl font-semibold tracking-tight">
-          {diver ? formatPersonName(diver) : 'Profile'}
-        </h1>
-        <p className="mt-3 text-muted-foreground">
-          {logbook.firstDiveDate
-            ? `Diving since ${formatDiveDate(logbook.firstDiveDate)}`
-            : 'Your personal details, emergency information, and certifications.'}
-        </p>
+      <header className="flex flex-col-reverse gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+            Diver
+          </p>
+          <h1 className="mt-2 text-4xl font-semibold tracking-tight">
+            {diver ? formatPersonName(diver) : 'Profile'}
+          </h1>
+          <p className="mt-3 text-muted-foreground">
+            {logbook.firstDiveDate
+              ? `Diving since ${formatDiveDate(logbook.firstDiveDate)}`
+              : 'Your personal details, emergency information, and certifications.'}
+          </p>
+        </div>
+        <ProfileImage diverId={diver?.id ?? null} image={profile.profileImage} />
       </header>
 
       <section className="grid gap-4 sm:grid-cols-3">
@@ -52,6 +59,8 @@ export function ProfilePage({ profile }: { profile: ProfileData }) {
           valueClassName="text-xl"
         />
       </section>
+
+      <SkillCard imageVersion={profile.profileImage?.id ?? 'no-profile-image'} />
 
       <section>
         <div className="mb-3 flex items-center justify-between gap-4">

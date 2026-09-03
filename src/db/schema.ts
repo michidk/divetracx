@@ -375,7 +375,7 @@ export const tanks = pgTable(
   (table) => [index('tanks_dive_id_index').on(table.diveId)],
 )
 
-export const pictureKind = pgEnum('picture_kind', ['photo', 'signature'])
+export const pictureKind = pgEnum('picture_kind', ['photo', 'signature', 'profile'])
 
 export const pictures = pgTable(
   'pictures',

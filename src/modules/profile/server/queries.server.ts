@@ -1,6 +1,6 @@
 import '@tanstack/react-start/server-only'
 
-import { asc, eq, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, sql } from 'drizzle-orm'
 import { getDb } from '@/db'
 import {
   agencies,
@@ -9,6 +9,7 @@ import {
   certifications,
   divers,
   dives,
+  pictures,
 } from '@/db/schema'
 
 function certificationScans(certification: typeof certifications.$inferSelect) {
@@ -44,39 +45,58 @@ export async function loadProfile() {
   const db = getDb()
   const [diver] = await db.select().from(divers).orderBy(asc(divers.createdAt)).limit(1)
 
-  const [certificationRows, membershipRows, [logbook]] = await Promise.all([
-    db
-      .select({
-        certification: certifications,
-        instructor: {
-          id: buddies.id,
-          firstName: buddies.firstName,
-          lastName: buddies.lastName,
-        },
-      })
-      .from(certifications)
-      .leftJoin(buddies, eq(certifications.instructorBuddyId, buddies.id))
-      .orderBy(
-        sql`${certifications.sortOrder} nulls last`,
-        asc(certifications.certifiedAt),
-      ),
-    db
-      .select({ membership: agencyMemberships, agency: agencies })
-      .from(agencyMemberships)
-      .innerJoin(agencies, eq(agencyMemberships.agencyId, agencies.id))
-      .orderBy(asc(agencyMemberships.createdAt)),
-    db
-      .select({
-        totalDives: sql<number>`count(*)::integer`,
-        totalSeconds: sql<number>`coalesce(sum(${dives.durationSeconds}), 0)::integer`,
-        firstDiveDate: sql<string | null>`min(${dives.diveDate})`,
-        latestDiveDate: sql<string | null>`max(${dives.diveDate})`,
-      })
-      .from(dives),
-  ])
+  const [certificationRows, membershipRows, [logbook], profileImages] = await Promise.all(
+    [
+      db
+        .select({
+          certification: certifications,
+          instructor: {
+            id: buddies.id,
+            firstName: buddies.firstName,
+            lastName: buddies.lastName,
+          },
+        })
+        .from(certifications)
+        .leftJoin(buddies, eq(certifications.instructorBuddyId, buddies.id))
+        .orderBy(
+          sql`${certifications.sortOrder} nulls last`,
+          asc(certifications.certifiedAt),
+        ),
+      db
+        .select({ membership: agencyMemberships, agency: agencies })
+        .from(agencyMemberships)
+        .innerJoin(agencies, eq(agencyMemberships.agencyId, agencies.id))
+        .orderBy(asc(agencyMemberships.createdAt)),
+      db
+        .select({
+          totalDives: sql<number>`count(*)::integer`,
+          totalSeconds: sql<number>`coalesce(sum(${dives.durationSeconds}), 0)::integer`,
+          firstDiveDate: sql<string | null>`min(${dives.diveDate})`,
+          latestDiveDate: sql<string | null>`max(${dives.diveDate})`,
+          maximumDepthMeters: sql<number>`coalesce(max(${dives.maximumDepthMeters})::double precision, 0)`,
+          visitedSites: sql<number>`count(distinct ${dives.siteId})::integer`,
+        })
+        .from(dives),
+      diver
+        ? db
+            .select({
+              id: pictures.id,
+              path: pictures.path,
+              storagePath: pictures.storagePath,
+              thumbnailStoragePath: pictures.thumbnailStoragePath,
+              description: pictures.description,
+            })
+            .from(pictures)
+            .where(and(eq(pictures.diverId, diver.id), eq(pictures.kind, 'profile')))
+            .orderBy(desc(pictures.createdAt))
+            .limit(1)
+        : Promise.resolve([]),
+    ],
+  )
 
   return {
     diver: diver ?? null,
+    profileImage: profileImages[0] ?? null,
     certifications: certificationRows.map(({ certification, instructor }) => ({
       id: certification.id,
       name: certification.name,
@@ -101,6 +121,8 @@ export async function loadProfile() {
       totalSeconds: 0,
       firstDiveDate: null,
       latestDiveDate: null,
+      maximumDepthMeters: 0,
+      visitedSites: 0,
     },
   }
 }

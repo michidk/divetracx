@@ -16,7 +16,10 @@ export default defineConfig({
     tanstackStart(),
     nitro({
       preset: 'bun',
-      routes: { '/media/**': './src/lib/server/media-handler.ts' },
+      routes: {
+        '/media/**': './src/lib/server/media-handler.ts',
+        '/profile-card.png': './src/lib/server/profile-card-handler.ts',
+      },
     }),
     viteReact(),
   ],
