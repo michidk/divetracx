@@ -178,6 +178,7 @@ describe('canonical DiveMate export', () => {
             agencyId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
             certificationNumber: 'CERT-1',
             certifiedAt: '2026-08-01',
+            featuredOnCard: false,
             instructorBuddyId: '99999999-9999-9999-9999-999999999999',
             sortOrder: 1,
             scan1Path: null,

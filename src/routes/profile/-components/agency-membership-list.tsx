@@ -13,12 +13,12 @@ export function AgencyMembershipList({
   memberships: AgencyMembership[]
 }) {
   return (
-    <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <ul className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {memberships.map((membership) => {
         const displayName = membership.agency.name
         return (
-          <li key={membership.id}>
-            <article className="relative flex h-full items-center gap-4 rounded-2xl border border-border bg-card p-4">
+          <li key={membership.id} className="min-w-0">
+            <article className="relative flex h-full min-w-0 items-center gap-4 overflow-hidden rounded-2xl border border-border bg-card p-4">
               <AgencyMark agency={membership.agency} />
               <div className="min-w-0 flex-1 pr-24">
                 <p className="truncate font-semibold">{displayName}</p>

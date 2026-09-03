@@ -103,6 +103,8 @@ export async function loadProfile() {
       organization: certification.organization,
       certificationNumber: certification.certificationNumber,
       certifiedAt: certification.certifiedAt,
+      featuredOnCard: certification.featuredOnCard,
+      updatedAt: certification.updatedAt.toISOString(),
       instructor: instructor?.id
         ? {
             id: instructor.id,
@@ -114,6 +116,7 @@ export async function loadProfile() {
     })),
     agencyMemberships: membershipRows.map(({ membership, agency }) => ({
       ...membership,
+      updatedAt: membership.updatedAt.toISOString(),
       agency,
     })),
     logbook: logbook ?? {

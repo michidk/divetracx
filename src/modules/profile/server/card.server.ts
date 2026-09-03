@@ -5,7 +5,7 @@ import { resolve } from 'node:path'
 import diverFallbackImage from '@/assets/diver-fallback.png?inline'
 import { getStorage } from '@/lib/storage'
 import { formatPersonName } from '@/modules/dives/format'
-import { agencyCatalog } from '@/modules/profile/agency-catalog'
+import { agencyCatalog, agencyInitials } from '@/modules/profile/agency-catalog'
 import { loadProfile } from './queries.server'
 
 const CARD_WIDTH = 1200
@@ -86,36 +86,38 @@ async function agencyLogoData(source: string | null) {
 }
 
 function certificationPills(
-  certifications: Array<{ name: string; certifiedAt: string | null }>,
+  certifications: Array<{
+    name: string
+    certifiedAt: string | null
+    featuredOnCard: boolean
+  }>,
 ) {
   const visible = [...certifications]
+    .filter((certification) => certification.featuredOnCard)
     .sort((left, right) =>
       (right.certifiedAt ?? '').localeCompare(left.certifiedAt ?? ''),
     )
     .slice(0, 8)
+  const columns = visible.length < 4 ? 1 : 2
   const pills = visible.map((certification, index) => {
-    const column = index % 2
-    const row = Math.floor(index / 2)
-    const label = compact(certification.name, 24)
+    const column = index % columns
+    const row = Math.floor(index / columns)
+    const label = compact(certification.name, 20)
     return `
       <g transform="translate(${450 + column * 335} ${225 + row * 55})">
         <rect width="315" height="42" rx="21" fill="#ffffff" fill-opacity="0.1" stroke="#82d9dc" stroke-opacity="0.4" />
         <circle cx="23" cy="21" r="5" fill="#56d6d4" />
-        <text x="42" y="27" class="skill">${xml(label)}</text>
+        <text x="42" y="27" class="skill" clip-path="url(#skillLabel)">${xml(label)}</text>
       </g>`
   })
 
-  if (certifications.length > visible.length) {
-    pills.push(`
-      <text x="1100" y="462" text-anchor="end" class="more">+${certifications.length - visible.length} more</text>`)
-  }
   return pills.join('')
 }
 
 async function agencyMembershipBadges(
   memberships: Array<{
     memberNumber: string
-    agency: { logoSrc: string | null; darkLogo: boolean }
+    agency: { name: string; logoSrc: string | null; darkLogo: boolean }
   }>,
 ) {
   const visible = memberships.slice(0, 4)
@@ -125,14 +127,19 @@ async function agencyMembershipBadges(
   return visible
     .map((membership, index) => {
       const logo = logos[index]
-      if (!logo) return ''
       const column = index % 2
       const row = Math.floor(index / 2)
+      const agencyName = compact(membership.agency.name, 11)
+      const logoContent = logo
+        ? `<image href="${logo}" x="5" y="5" width="34" height="34" preserveAspectRatio="xMidYMid meet" clip-path="url(#agencyLogo)" />`
+        : `<text x="22" y="26" text-anchor="middle" class="membershipFallback">${xml(agencyInitials(membership.agency.name))}</text>`
       return `
         <g transform="translate(${80 + column * 155} ${468 + row * 54})">
-          <rect width="145" height="44" rx="12" fill="${membership.agency.darkLogo ? '#132833' : '#ffffff'}" fill-opacity="0.95" />
-          <image href="${logo}" x="5" y="5" width="34" height="34" preserveAspectRatio="xMidYMid meet" />
-          <text x="47" y="28" class="membership">${xml(compact(membership.memberNumber, 12))}</text>
+          <rect width="145" height="44" rx="12" fill="#ffffff" fill-opacity="0.95" />
+          <circle cx="22" cy="22" r="17" fill="${membership.agency.darkLogo ? '#132833' : '#ffffff'}" stroke="#d3e1e2" />
+          ${logoContent}
+          <text x="47" y="18" class="membershipAgency">${xml(agencyName)}</text>
+          <text x="47" y="34" class="membershipNumber">${xml(compact(membership.memberNumber, 12))}</text>
         </g>`
     })
     .join('')
@@ -148,17 +155,23 @@ export async function renderProfileCard() {
   const since = logbook.firstDiveDate
     ? new Date(`${logbook.firstDiveDate}T00:00:00Z`).getUTCFullYear().toString()
     : '—'
-  const depth = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(
-    logbook.maximumDepthMeters,
-  )
+  const depth = new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 1,
+  }).format(logbook.maximumDepthMeters)
   const photo = imageData
-    ? `<image href="${imageData}" x="80" y="145" width="300" height="300" preserveAspectRatio="xMidYMid slice" clip-path="url(#avatar)" />`
-    : `<image href="${diverFallbackImage}" x="80" y="145" width="300" height="300" preserveAspectRatio="xMidYMid slice" clip-path="url(#avatar)" />`
+    ? `<image href="${imageData}" x="80" y="110" width="300" height="300" preserveAspectRatio="xMidYMid slice" clip-path="url(#avatar)" />`
+    : `<image href="${diverFallbackImage}" x="80" y="110" width="300" height="300" preserveAspectRatio="xMidYMid slice" clip-path="url(#avatar)" />`
   const skills = certificationPills(certifications)
   const memberships = await agencyMembershipBadges(agencyMemberships)
   const skillHeading = certifications.length
     ? `${certifications.length} certification${certifications.length === 1 ? '' : 's'}`
     : 'No certifications added yet'
+  const insurance = diver?.insurance
+    ? `Insurance: ${compact(
+        [diver.insurance, diver.insuranceTariff].filter(Boolean).join(' · '),
+        58,
+      )}`
+    : null
 
   const svg = `
     <svg width="${CARD_WIDTH}" height="${CARD_HEIGHT}" viewBox="0 0 ${CARD_WIDTH} ${CARD_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
@@ -172,18 +185,21 @@ export async function renderProfileCard() {
           <stop stop-color="#38bfc2" />
           <stop offset="1" stop-color="#0a4557" />
         </linearGradient>
-        <clipPath id="avatar"><circle cx="230" cy="295" r="150" /></clipPath>
+        <clipPath id="avatar"><circle cx="230" cy="260" r="150" /></clipPath>
+        <clipPath id="agencyLogo" clipPathUnits="userSpaceOnUse"><circle cx="22" cy="22" r="16" /></clipPath>
+        <clipPath id="skillLabel" clipPathUnits="userSpaceOnUse"><rect x="42" y="0" width="255" height="42" /></clipPath>
         <style>
           text { font-family: "DejaVu Sans", sans-serif; fill: #f3ffff; }
           .brand { font-size: 22px; font-weight: 700; letter-spacing: 5px; }
           .name { font-size: 52px; font-weight: 700; letter-spacing: -1px; }
           .eyebrow { font-size: 16px; font-weight: 700; letter-spacing: 3px; fill: #8ce7e6; }
           .skill { font-size: 18px; font-weight: 600; }
-          .more { font-size: 15px; font-weight: 600; fill: #bfe9e8; }
           .statValue { font-size: 31px; font-weight: 700; }
           .statLabel { font-size: 13px; font-weight: 700; letter-spacing: 2px; fill: #9edbdc; }
           .footer { font-size: 16px; fill: #c6eeee; }
-          .membership { font-size: 13px; font-weight: 700; fill: #093743; }
+          .membershipAgency { font-size: 11px; font-weight: 700; fill: #093743; }
+          .membershipNumber { font-size: 10px; font-weight: 600; fill: #456269; }
+          .membershipFallback { font-size: 10px; font-weight: 700; fill: #087f8c; }
         </style>
       </defs>
       <rect width="1200" height="630" rx="38" fill="url(#ocean)" />
@@ -196,7 +212,7 @@ export async function renderProfileCard() {
         <text x="57" y="27" class="brand">DIVETRACX</text>
       </g>
 
-      <circle cx="230" cy="295" r="158" fill="none" stroke="#9ff3ef" stroke-width="3" stroke-opacity="0.7" />
+      <circle cx="230" cy="260" r="158" fill="none" stroke="#9ff3ef" stroke-width="3" stroke-opacity="0.7" />
       ${photo}
       ${memberships}
 
@@ -211,6 +227,7 @@ export async function renderProfileCard() {
         <g transform="translate(440 0)"><text class="statValue">${depth} m</text><text y="28" class="statLabel">MAX DEPTH</text></g>
       </g>
       <text x="80" y="596" class="footer">Diving since ${since}</text>
+      ${insurance ? `<text x="450" y="596" class="footer">${xml(insurance)}</text>` : ''}
     </svg>`
 
   const sharp = (await import('sharp')).default

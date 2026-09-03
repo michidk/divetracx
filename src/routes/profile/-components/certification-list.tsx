@@ -1,9 +1,10 @@
-import { Link } from '@tanstack/react-router'
-import { Pencil, Plus, Repeat } from 'lucide-react'
+import { Link, useRouter } from '@tanstack/react-router'
+import { Pencil, Plus, Repeat, Star } from 'lucide-react'
 import { useState } from 'react'
 import { CertificationCard } from '@/components/certification-card'
 import { Button } from '@/components/ui/button'
 import { formatDiveDate, formatPersonName } from '@/modules/dives/format'
+import { setCertificationCardFeature } from '@/modules/profile/server/certifications'
 import type { getProfile } from '@/modules/profile/server/queries'
 
 type Certification = Awaited<ReturnType<typeof getProfile>>['certifications'][number]
@@ -44,6 +45,9 @@ export function CertificationList({
   certifications: Certification[]
 }) {
   const [flippedById, setFlippedById] = useState<Record<string, boolean>>({})
+  const [updatingFeaturedId, setUpdatingFeaturedId] = useState<string | null>(null)
+  const [featureError, setFeatureError] = useState<string | null>(null)
+  const router = useRouter()
   const flippable = certifications.filter((certification) => certification.scans[1])
   const allFlipped =
     flippable.length > 0 &&
@@ -56,6 +60,23 @@ export function CertificationList({
         flippable.map((certification) => [certification.id, nextFlipped]),
       ),
     )
+  }
+
+  async function setFeatured(certification: Certification, featured: boolean) {
+    setUpdatingFeaturedId(certification.id)
+    setFeatureError(null)
+    try {
+      await setCertificationCardFeature({
+        data: { certificationId: certification.id, featured },
+      })
+      await router.invalidate()
+    } catch (error) {
+      setFeatureError(
+        error instanceof Error ? error.message : 'Updating the card selection failed',
+      )
+    } finally {
+      setUpdatingFeaturedId(null)
+    }
   }
 
   return (
@@ -84,6 +105,14 @@ export function CertificationList({
           </Link>
         </div>
       </div>
+      <p className="mb-3 text-xs text-muted-foreground">
+        Star up to eight certifications to show them on your Divetracx card.
+      </p>
+      {featureError ? (
+        <p className="mb-3 text-sm text-red-600" aria-live="polite">
+          {featureError}
+        </p>
+      ) : null}
       {certifications.length === 0 ? (
         <p className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
           No certifications yet.
@@ -143,14 +172,36 @@ export function CertificationList({
                             ) : null}
                           </p>
                         </div>
-                        <Link
-                          to="/profile/certifications/$certificationId"
-                          params={{ certificationId: certification.id }}
-                          aria-label={`Edit ${certification.name}`}
-                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                        >
-                          <Pencil size={14} aria-hidden="true" />
-                        </Link>
+                        <div className="-my-2 flex shrink-0 items-center">
+                          <button
+                            type="button"
+                            aria-label={`${certification.featuredOnCard ? 'Remove' : 'Add'} ${certification.name} ${certification.featuredOnCard ? 'from' : 'to'} the Divetracx card`}
+                            aria-pressed={certification.featuredOnCard}
+                            disabled={updatingFeaturedId === certification.id}
+                            className="grid size-11 place-items-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-primary disabled:cursor-wait disabled:opacity-50"
+                            onClick={() =>
+                              setFeatured(certification, !certification.featuredOnCard)
+                            }
+                          >
+                            <Star
+                              size={18}
+                              className={
+                                certification.featuredOnCard
+                                  ? 'fill-primary text-primary'
+                                  : undefined
+                              }
+                              aria-hidden="true"
+                            />
+                          </button>
+                          <Link
+                            to="/profile/certifications/$certificationId"
+                            params={{ certificationId: certification.id }}
+                            aria-label={`Edit ${certification.name}`}
+                            className="grid size-11 place-items-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                          >
+                            <Pencil size={14} aria-hidden="true" />
+                          </Link>
+                        </div>
                       </div>
                     </li>
                   )

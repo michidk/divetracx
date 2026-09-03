@@ -19,6 +19,21 @@ function formatHours(seconds: number) {
 
 export function ProfilePage({ profile }: { profile: ProfileData }) {
   const { diver, certifications, agencyMemberships, logbook } = profile
+  const latestCertificationUpdate = certifications.reduce(
+    (latest, item) => (item.updatedAt > latest ? item.updatedAt : latest),
+    '',
+  )
+  const latestMembershipUpdate = agencyMemberships.reduce(
+    (latest, item) => (item.updatedAt > latest ? item.updatedAt : latest),
+    '',
+  )
+  const cardVersion = [
+    profile.profileImage?.id ?? 'no-profile-image',
+    certifications.length,
+    latestCertificationUpdate,
+    agencyMemberships.length,
+    latestMembershipUpdate,
+  ].join('|')
 
   return (
     <div className="space-y-7">
@@ -53,7 +68,7 @@ export function ProfilePage({ profile }: { profile: ProfileData }) {
         <StatCard icon={Award} label="Certifications" value={certifications.length} />
       </section>
 
-      <SkillCard imageVersion={profile.profileImage?.id ?? 'no-profile-image'} />
+      <SkillCard imageVersion={cardVersion} />
 
       <section>
         <div className="mb-3 flex items-center justify-between gap-4">

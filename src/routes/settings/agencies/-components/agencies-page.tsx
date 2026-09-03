@@ -20,7 +20,7 @@ function AgencyGrid({ agencies }: { agencies: Agency[] }) {
           key={agency.id}
           className="flex min-w-0 items-center gap-3 rounded-2xl border border-border bg-card p-3"
         >
-          <AgencyMark agency={agency} className="size-14 rounded-xl" />
+          <AgencyMark agency={agency} className="size-14" />
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{agency.name}</p>
             <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-muted-foreground">
@@ -167,7 +167,7 @@ export function AgenciesPage({ agencies }: { agencies: Agency[] }) {
                 key={agency.id}
                 className="flex min-w-0 items-center gap-3 rounded-2xl border border-border bg-card p-3"
               >
-                <AgencyMark agency={agency} className="size-14 rounded-xl" />
+                <AgencyMark agency={agency} className="size-14" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold">{agency.name}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">Custom agency</p>

@@ -106,7 +106,7 @@ function CertificationRoute() {
           agencyId: agencyOptions.map((agency) => ({
             value: agency.id,
             label: agency.fullName ? `${agency.name} · ${agency.fullName}` : agency.name,
-            leading: <AgencyMark agency={agency} className="size-8 rounded-lg" />,
+            leading: <AgencyMark agency={agency} className="size-8" />,
           })),
           instructorBuddyId: instructorOptions.map((buddy) => ({
             value: buddy.id,

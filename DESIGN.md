@@ -41,6 +41,15 @@ fixed categorical palette (`#0891b2`, `#7c3aed`, `#ea580c`, `#16a34a`,
 Certification cards use a `from-primary via-primary to-cyan-800` gradient as
 their card surface.
 
+Agency logos use a circular frame everywhere they appear. Profile-card agency
+badges show both the agency name and membership number and fall back to initials
+when a logo cannot be loaded.
+
+The profile certification list uses a star control to select up to eight
+certifications for the Divetracx card. The card shows only starred certifications;
+one to three starred items use one column, while four to eight use two columns.
+When an insurer is recorded, the card footer shows the insurer and optional plan.
+
 Body text must meet WCAG 2.2 AA contrast on its actual surface. Form-control
 outlines need at least 3:1 contrast with adjacent colors. There is currently a
 single light theme; do not add `dark:` utilities piecemeal — a dark theme is a

@@ -17,12 +17,20 @@ export const Route = createFileRoute('/profile/agencies/$agencyMembershipId/')({
     if (!agencyMembershipId.success) throw notFound()
     const agencyOptions = await getAgencies()
     if (agencyMembershipId.data === 'new')
-      return { agencyMembershipId: 'new' as const, membership: null, agencyOptions }
+      return {
+        agencyMembershipId: 'new' as const,
+        membership: null,
+        agencyOptions,
+      }
     const membership = await getAgencyMembership({
       data: { agencyMembershipId: agencyMembershipId.data },
     })
     if (!membership) throw notFound()
-    return { agencyMembershipId: agencyMembershipId.data, membership, agencyOptions }
+    return {
+      agencyMembershipId: agencyMembershipId.data,
+      membership,
+      agencyOptions,
+    }
   },
   head: ({ loaderData }) => ({
     meta: [
@@ -71,7 +79,7 @@ function AgencyMembershipRoute() {
           agencyId: agencyOptions.map((agency) => ({
             value: agency.id,
             label: agency.fullName ? `${agency.name} · ${agency.fullName}` : agency.name,
-            leading: <AgencyMark agency={agency} className="size-8 rounded-lg" />,
+            leading: <AgencyMark agency={agency} className="size-8" />,
           })),
         }}
         onSaved={() => router.navigate({ to: '/profile' })}

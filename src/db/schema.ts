@@ -215,6 +215,7 @@ export const certifications = pgTable(
     }),
     certificationNumber: text('certification_number'),
     certifiedAt: date('certified_at'),
+    featuredOnCard: boolean('featured_on_card').notNull().default(false),
     instructorBuddyId: uuid('instructor_buddy_id').references(() => buddies.id, {
       onDelete: 'set null',
     }),

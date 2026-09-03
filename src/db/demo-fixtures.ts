@@ -520,7 +520,7 @@ export async function seedDemoDatabase(database: DemoDatabase): Promise<void> {
   )
 
   const builtInAgencies = await database.select().from(schema.agencies)
-  const certificationAgency = builtInAgencies.find((agency) => agency.code === 'SSI')
+  const certificationAgency = builtInAgencies.find((agency) => agency.code === 'ssi')
   await database.insert(schema.certifications).values([
     {
       diverId,
@@ -528,6 +528,7 @@ export async function seedDemoDatabase(database: DemoDatabase): Promise<void> {
       organization: certificationAgency?.name ?? 'Demo Diving Association',
       agencyId: certificationAgency?.id,
       certifiedAt: dateDaysAgo(900),
+      featuredOnCard: true,
       sortOrder: 1,
     },
     {
@@ -536,9 +537,26 @@ export async function seedDemoDatabase(database: DemoDatabase): Promise<void> {
       organization: certificationAgency?.name ?? 'Demo Diving Association',
       agencyId: certificationAgency?.id,
       certifiedAt: dateDaysAgo(420),
+      featuredOnCard: true,
       sortOrder: 2,
     },
   ])
+  const demoMemberships = [
+    ['padi', 'DEMO-PADI-72'],
+    ['ssi', 'DEMO-SSI-28'],
+    ['sdi', 'DEMO-SDI-16'],
+    ['iantd', 'DEMO-IANTD-53'],
+  ] as const
+  await database.insert(schema.agencyMemberships).values(
+    demoMemberships.map(([code, memberNumber]) => ({
+      diverId,
+      agencyId: required(
+        builtInAgencies.find((agency) => agency.code === code),
+        `Demo agency ${code} was not found`,
+      ).id,
+      memberNumber,
+    })),
+  )
 
   const diveFixtures = [
     {

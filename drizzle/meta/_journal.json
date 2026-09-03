@@ -225,6 +225,13 @@
       "when": 1788436000000,
       "tag": "0031_mcp_oauth_server",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1788461602449,
+      "tag": "0032_bouncy_jack_power",
+      "breakpoints": true
     }
   ]
 }
