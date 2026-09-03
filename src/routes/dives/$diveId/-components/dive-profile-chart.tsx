@@ -337,6 +337,8 @@ function ProfileMagnifier({
   geometry: ReturnType<typeof createProfileGeometry>
   selectedPoint: PositionedDiveProfilePoint
 }) {
+  const gradientId = useId()
+  const ceilingGradientId = useId()
   const viewBox = createProfileMagnifierViewBox(selectedPoint, geometry.plotWidth)
   const showOnLeft = selectedPoint.x > PROFILE_CHART_VIEWBOX.width / 2
   const viewBoxScaleCompensation = viewBox.width / 360
@@ -360,6 +362,16 @@ function ProfileMagnifier({
         aria-label={`Magnified profile at ${formatElapsedTime(selectedPoint.elapsedSeconds)}`}
       >
         <title>Magnified dive profile around the selected time</title>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.3" />
+          </linearGradient>
+          <linearGradient id={ceilingGradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.06" />
+            <stop offset="100%" stopColor="#ef4444" stopOpacity="0.32" />
+          </linearGradient>
+        </defs>
         {geometry.depthTicks.map((tick) => (
           <line
             key={tick.depthMeters}
@@ -372,6 +384,10 @@ function ProfileMagnifier({
             vectorEffect="non-scaling-stroke"
           />
         ))}
+        <path d={geometry.depthAreaPath} fill={`url(#${gradientId})`} />
+        {geometry.ceilingAreaPath ? (
+          <path d={geometry.ceilingAreaPath} fill={`url(#${ceilingGradientId})`} />
+        ) : null}
         <path
           d={geometry.depthPath}
           fill="none"
