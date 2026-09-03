@@ -22,6 +22,8 @@ import {
   formatTemperature,
 } from '@/modules/dives/format'
 import type { getStatistics } from '@/modules/dives/server/stats'
+import { CertificationTimeline } from './certification-timeline'
+import { DepthTrend } from './depth-trend'
 import { DiveHeatmap } from './dive-heatmap'
 
 type StatisticsData = Awaited<ReturnType<typeof getStatistics>>
@@ -196,6 +198,11 @@ export function StatsPage({ data }: { data: StatisticsData }) {
       </section>
 
       <section>
+        <SectionHeading>Depth over time</SectionHeading>
+        <DepthTrend points={data.depthByMonth} />
+      </section>
+
+      <section>
         <SectionHeading>Gas &amp; conditions</SectionHeading>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
@@ -259,10 +266,15 @@ export function StatsPage({ data }: { data: StatisticsData }) {
           <SectionHeading>Dives per year</SectionHeading>
           <DiveHeatmap
             years={[...data.divesPerYear].reverse()}
-            divesPerDay={data.divesPerDay}
+            calendarDives={data.calendarDives}
           />
         </section>
       ) : null}
+
+      <section>
+        <SectionHeading>Certification timeline</SectionHeading>
+        <CertificationTimeline certifications={certifications} />
+      </section>
     </div>
   )
 }
