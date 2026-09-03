@@ -1,10 +1,10 @@
 import { Popover } from '@base-ui/react/popover'
 import { useRouter } from '@tanstack/react-router'
 import { format, isValid, parseISO } from 'date-fns'
-import { CalendarDays, Save, Star } from 'lucide-react'
+import { CalendarDays, Star } from 'lucide-react'
 import { useState } from 'react'
 import { DayPicker } from 'react-day-picker'
-import { Button } from '@/components/ui/button'
+import { SaveButton, useTransientSavedState } from '@/components/save-button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import {
@@ -322,16 +322,18 @@ export function EntityForm({
   const [values, setValues] = useState(() => initialEntityValues(entity, record))
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const { saved, clearSaved, markSaved } = useTransientSavedState()
   const sections = Array.from(new Set(definition.fields.map((field) => field.section)))
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSaving(true)
     setMessage(null)
+    clearSaved()
     try {
       const result = await saveRecord({ data: { entity, recordId, values } })
       await router.invalidate()
-      setMessage('Saved.')
+      markSaved()
       if (recordId === 'new') await onSaved?.(result.id)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Saving failed')
@@ -378,9 +380,9 @@ export function EntityForm({
         <p aria-live="polite" className="text-sm text-muted-foreground">
           {message}
         </p>
-        <Button type="submit" disabled={saving} className="px-6">
-          <Save size={16} aria-hidden="true" /> {saving ? 'Saving…' : 'Save'}
-        </Button>
+        <SaveButton type="submit" saving={saving} saved={saved} className="px-6">
+          Save
+        </SaveButton>
       </div>
     </form>
   )
