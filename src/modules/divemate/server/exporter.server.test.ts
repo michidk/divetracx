@@ -73,6 +73,8 @@ describe('canonical DiveMate export', () => {
             fullName: null,
             normalizedName: 'example agency',
             logoSrc: null,
+            websiteUrl: null,
+            loginUrl: null,
             darkLogo: false,
             builtIn: false,
             createdAt: now,

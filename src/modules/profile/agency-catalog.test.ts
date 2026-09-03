@@ -17,6 +17,18 @@ describe('dive agency catalog', () => {
     expect(new Set(agencyCatalog.map((agency) => agency.logoSrc)).size).toBe(
       agencyCatalog.length,
     )
+    expect(agencyCatalog.every((agency) => agency.websiteUrl && agency.loginUrl)).toBe(
+      true,
+    )
+    expect(
+      agencyCatalog
+        .filter((agency) => ['bsac', 'sdi', 'tdi'].includes(agency.code))
+        .map((agency) => agency.logoSrc),
+    ).toEqual([
+      '/agency-logos/bsac.svg',
+      '/agency-logos/sdi.svg',
+      '/agency-logos/tdi.svg',
+    ])
   })
 
   test('recognizes agency acronyms and full names', () => {

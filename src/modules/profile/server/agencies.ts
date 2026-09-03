@@ -5,8 +5,14 @@ import { createCustomAgency, deleteCustomAgency, loadAgencies } from './agencies
 export const getAgencies = createServerFn({ method: 'GET' }).handler(() => loadAgencies())
 
 export const addCustomAgency = createServerFn({ method: 'POST' })
-  .validator(z.object({ name: z.string().max(120) }))
-  .handler(({ data }) => createCustomAgency(data.name))
+  .validator(
+    z.object({
+      name: z.string().max(120),
+      websiteUrl: z.string().max(2_048).optional(),
+      loginUrl: z.string().max(2_048).optional(),
+    }),
+  )
+  .handler(({ data }) => createCustomAgency(data))
 
 export const removeCustomAgency = createServerFn({ method: 'POST' })
   .validator(z.object({ agencyId: z.string().uuid() }))

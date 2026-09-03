@@ -34,6 +34,7 @@ export function AgencyMark({
           className={cn(
             'absolute inset-0 size-full object-cover',
             agency.darkLogo ? 'bg-slate-900' : 'bg-white',
+            agency.code === 'cmas' && 'scale-[1.16]',
           )}
           loading="lazy"
           referrerPolicy="no-referrer"

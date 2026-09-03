@@ -150,6 +150,8 @@ export const agencies = pgTable(
     fullName: text('full_name'),
     normalizedName: text('normalized_name').notNull(),
     logoSrc: text('logo_src'),
+    websiteUrl: text('website_url'),
+    loginUrl: text('login_url'),
     darkLogo: boolean('dark_logo').notNull().default(false),
     builtIn: boolean('built_in').notNull().default(false),
     ...auditColumns,
