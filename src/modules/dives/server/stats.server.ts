@@ -7,6 +7,7 @@ import {
   certifications,
   diveBuddies,
   diveProfileSamples,
+  diveSites,
   dives,
   tanks,
 } from '@/db/schema'
@@ -37,7 +38,8 @@ export async function loadStatistics() {
         bestBuddies,
         certificationList,
         divesPerYear,
-        divesPerDay,
+        calendarDives,
+        depthByMonth,
       ] = await Promise.all([
         transaction
           .select({
@@ -151,6 +153,7 @@ export async function loadStatistics() {
             id: certifications.id,
             name: certifications.name,
             organization: certifications.organization,
+            certifiedAt: certifications.certifiedAt,
           })
           .from(certifications)
           .orderBy(asc(certifications.sortOrder), asc(certifications.certifiedAt)),
@@ -164,12 +167,28 @@ export async function loadStatistics() {
           .orderBy(sql`extract(year from ${dives.diveDate})`),
         transaction
           .select({
+            id: dives.id,
             date: dives.diveDate,
+            number: dives.number,
+            durationSeconds: dives.durationSeconds,
+            maximumDepthMeters: dives.maximumDepthMeters,
+            siteName: diveSites.name,
+          })
+          .from(dives)
+          .leftJoin(diveSites, eq(dives.siteId, diveSites.id))
+          .orderBy(asc(dives.diveDate), asc(dives.entryTime)),
+        transaction
+          .select({
+            month: sql<string>`to_char(${dives.diveDate}, 'YYYY-MM')`,
+            averageDepthMeters: sql<string | null>`avg(${dives.averageDepthMeters})`,
+            averageMaximumDepthMeters: sql<
+              string | null
+            >`avg(${dives.maximumDepthMeters})`,
             diveCount: count(),
           })
           .from(dives)
-          .groupBy(dives.diveDate)
-          .orderBy(asc(dives.diveDate)),
+          .groupBy(sql`to_char(${dives.diveDate}, 'YYYY-MM')`)
+          .orderBy(sql`to_char(${dives.diveDate}, 'YYYY-MM')`),
       ])
 
       const sacRow = sacRows[0]
@@ -193,7 +212,8 @@ export async function loadStatistics() {
         bestBuddy: bestBuddies[0] ?? null,
         certifications: certificationList,
         divesPerYear,
-        divesPerDay,
+        calendarDives,
+        depthByMonth,
       }
     },
     { isolationLevel: 'repeatable read', accessMode: 'read only' },
