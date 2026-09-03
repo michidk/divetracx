@@ -58,6 +58,26 @@ describe('createThumbnail', () => {
     expect(metadata.height).toBe(THUMBNAIL_PROFILES.certification.height)
   })
 
+  test('crops profile images to a square avatar', async () => {
+    const original = await sharp({
+      create: {
+        width: 1600,
+        height: 900,
+        channels: 3,
+        background: '#087f8c',
+      },
+    })
+      .jpeg()
+      .toBuffer()
+
+    const thumbnail = await createThumbnail(original, 'profile')
+    const metadata = await sharp(thumbnail).metadata()
+
+    expect(metadata.format).toBe('webp')
+    expect(metadata.width).toBe(THUMBNAIL_PROFILES.profile.width)
+    expect(metadata.height).toBe(THUMBNAIL_PROFILES.profile.height)
+  })
+
   test('uses stronger compression when WebP overhead exceeds a small original', async () => {
     const width = 400
     const height = 254
