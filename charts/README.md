@@ -101,6 +101,10 @@ helm install divetracx ./charts \
 Bundled PostgreSQL is intended for simple self-hosted installations. Prefer a
 managed database when backups and high availability matter.
 
+PostgreSQL major versions cannot reuse an older server's data files directly.
+Before upgrading a release with bundled PostgreSQL to version 18, back up the
+database and restore it into a fresh PostgreSQL 18 PVC (or use `pg_upgrade`).
+
 ## Validate
 
 ```bash
