@@ -403,7 +403,6 @@ export function DivePage({ dive }: { dive: DiveData }) {
             <dl className="mt-5 space-y-5">
               <Value label="Diver" value={diverName} />
               <Value label="Divemaster" value={dive.divemaster} />
-              <Value label="Legacy buddy note" value={dive.legacyBuddyText} />
               <Value
                 label="Buddies"
                 value={

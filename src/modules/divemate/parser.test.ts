@@ -180,7 +180,7 @@ describe('parseDiveMateDatabase', () => {
       maximumPpo2: '1.31',
       equipmentWeightKg: '12.4',
       decompressionDive: true,
-      legacyBuddyText: 'Legacy Buddy',
+      buddyName: 'Legacy Buddy',
     })
     expect(snapshot.divers[0]).toMatchObject({
       street: '1 Ocean Road',
