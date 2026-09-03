@@ -158,7 +158,7 @@ layouts for DiveMate and Garmin.
 
 ## OAuth-protected MCP
 
-Set `MCP_SERVER_URL` to enable the read-only MCP endpoint. Divetracx ships its
+Set `MCP_SERVER_URL` to bootstrap the scoped MCP endpoint. Divetracx ships its
 own OAuth 2.1 authorization server: connecting a client opens the normal
 Hodor-protected app, where you approve access with your existing owner session.
 It supports dynamic client registration, requires S256 PKCE and an exact
@@ -190,6 +190,11 @@ The MCP host must also be the normal Hodor-protected application host so the
 owner session can approve connections. For browser-based MCP clients,
 `MCP_ALLOWED_ORIGINS` adds an explicit Origin allowlist.
 
+After deployment, use **Settings → AI access** to pause or resume MCP, enable
+or disable each read, write, and delete tool, inspect granted client scopes,
+revoke clients, and review recent activity. Deployment configuration remains
+responsible only for the public URL and proxy/TLS boundary.
+
 Connect a client:
 
 ```bash
@@ -198,7 +203,8 @@ codex mcp login divetracx
 ```
 
 Tool results can contain private health, location, contact, and certification
-data, so the endpoint stays disabled unless `MCP_SERVER_URL` is configured.
+data. Write access is explicit on the OAuth consent screen, delete access is a
+separate scope, and both remain subject to the per-tool owner policy.
 
 ## Storage
 

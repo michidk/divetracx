@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
 import {
+  Bot,
   Building2,
   ChevronRight,
   Download,
@@ -28,6 +29,12 @@ export const Route = createFileRoute('/settings/')({
 })
 
 const sections = [
+  {
+    to: '/settings/mcp',
+    label: 'AI access',
+    description: 'Configure MCP tools, permissions, clients, and activity.',
+    icon: Bot,
+  },
   {
     to: '/settings/dive-types',
     label: 'Dive types',
@@ -184,7 +191,7 @@ function SettingsRoute() {
           and take your data with you anytime.
         </p>
       </header>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {sections.map((section) => (
           <CardLink key={section.to} to={section.to} className="p-6">
             <CardHeader className="flex-row items-center gap-2.5 p-0">

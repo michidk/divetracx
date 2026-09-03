@@ -34,6 +34,7 @@ import { Route as GearNewIndexRouteImport } from './routes/gear/new/index'
 import { Route as SettingsAgenciesIndexRouteImport } from './routes/settings/agencies/index'
 import { Route as SettingsDiveTypesIndexRouteImport } from './routes/settings/dive-types/index'
 import { Route as SettingsExportIndexRouteImport } from './routes/settings/export/index'
+import { Route as SettingsMcpIndexRouteImport } from './routes/settings/mcp/index'
 import { Route as SettingsSyncIndexRouteImport } from './routes/settings/sync/index'
 import { Route as SitesSiteIdIndexRouteImport } from './routes/sites/$siteId/index'
 import { Route as SitesNewIndexRouteImport } from './routes/sites/new/index'
@@ -171,6 +172,11 @@ const SettingsExportIndexRoute = SettingsExportIndexRouteImport.update({
   path: '/settings/export/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsMcpIndexRoute = SettingsMcpIndexRouteImport.update({
+  id: '/settings/mcp/',
+  path: '/settings/mcp/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsSyncIndexRoute = SettingsSyncIndexRouteImport.update({
   id: '/settings/sync/',
   path: '/settings/sync/',
@@ -257,6 +263,7 @@ export interface FileRoutesByFullPath {
   '/settings/agencies/': typeof SettingsAgenciesIndexRoute
   '/settings/dive-types/': typeof SettingsDiveTypesIndexRoute
   '/settings/export/': typeof SettingsExportIndexRoute
+  '/settings/mcp/': typeof SettingsMcpIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
   '/sites/$siteId/': typeof SitesSiteIdIndexRoute
   '/sites/new/': typeof SitesNewIndexRoute
@@ -295,6 +302,7 @@ export interface FileRoutesByTo {
   '/settings/agencies': typeof SettingsAgenciesIndexRoute
   '/settings/dive-types': typeof SettingsDiveTypesIndexRoute
   '/settings/export': typeof SettingsExportIndexRoute
+  '/settings/mcp': typeof SettingsMcpIndexRoute
   '/settings/sync': typeof SettingsSyncIndexRoute
   '/sites/$siteId': typeof SitesSiteIdIndexRoute
   '/sites/new': typeof SitesNewIndexRoute
@@ -334,6 +342,7 @@ export interface FileRoutesById {
   '/settings/agencies/': typeof SettingsAgenciesIndexRoute
   '/settings/dive-types/': typeof SettingsDiveTypesIndexRoute
   '/settings/export/': typeof SettingsExportIndexRoute
+  '/settings/mcp/': typeof SettingsMcpIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
   '/sites/$siteId/': typeof SitesSiteIdIndexRoute
   '/sites/new/': typeof SitesNewIndexRoute
@@ -374,6 +383,7 @@ export interface FileRouteTypes {
     | '/settings/agencies/'
     | '/settings/dive-types/'
     | '/settings/export/'
+    | '/settings/mcp/'
     | '/settings/sync/'
     | '/sites/$siteId/'
     | '/sites/new/'
@@ -412,6 +422,7 @@ export interface FileRouteTypes {
     | '/settings/agencies'
     | '/settings/dive-types'
     | '/settings/export'
+    | '/settings/mcp'
     | '/settings/sync'
     | '/sites/$siteId'
     | '/sites/new'
@@ -450,6 +461,7 @@ export interface FileRouteTypes {
     | '/settings/agencies/'
     | '/settings/dive-types/'
     | '/settings/export/'
+    | '/settings/mcp/'
     | '/settings/sync/'
     | '/sites/$siteId/'
     | '/sites/new/'
@@ -489,6 +501,7 @@ export interface RootRouteChildren {
   SettingsAgenciesIndexRoute: typeof SettingsAgenciesIndexRoute
   SettingsDiveTypesIndexRoute: typeof SettingsDiveTypesIndexRoute
   SettingsExportIndexRoute: typeof SettingsExportIndexRoute
+  SettingsMcpIndexRoute: typeof SettingsMcpIndexRoute
   SettingsSyncIndexRoute: typeof SettingsSyncIndexRoute
   SitesSiteIdIndexRoute: typeof SitesSiteIdIndexRoute
   SitesNewIndexRoute: typeof SitesNewIndexRoute
@@ -679,6 +692,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsExportIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/mcp/': {
+      id: '/settings/mcp/'
+      path: '/settings/mcp'
+      fullPath: '/settings/mcp/'
+      preLoaderRoute: typeof SettingsMcpIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/sync/': {
       id: '/settings/sync/'
       path: '/settings/sync'
@@ -785,6 +805,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsAgenciesIndexRoute: SettingsAgenciesIndexRoute,
   SettingsDiveTypesIndexRoute: SettingsDiveTypesIndexRoute,
   SettingsExportIndexRoute: SettingsExportIndexRoute,
+  SettingsMcpIndexRoute: SettingsMcpIndexRoute,
   SettingsSyncIndexRoute: SettingsSyncIndexRoute,
   SitesSiteIdIndexRoute: SitesSiteIdIndexRoute,
   SitesNewIndexRoute: SitesNewIndexRoute,

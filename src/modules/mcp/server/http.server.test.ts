@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { createHash, createHmac, randomUUID } from 'node:crypto'
 import { SignJWT } from 'jose'
+import { MCP_SCOPE_VALUES } from '@/modules/mcp/catalog'
 import { getOAuthSigningKey } from './auth.server'
 import type { McpConfig } from './config.server'
 import { MCP_READ_SCOPE } from './config.server'
@@ -121,6 +122,33 @@ function form(values: Record<string, string>) {
 }
 
 describe('remote MCP OAuth HTTP flow', () => {
+  test('owner policy can pause protocol and OAuth requests', async () => {
+    const store = new MemoryOAuthStore()
+    const handle = createMcpHttpHandler(
+      config,
+      store,
+      {
+        async fetch() {
+          return Response.json({ ok: true })
+        },
+      },
+      async () => ({ enabled: false, disabledTools: [] }),
+    )
+
+    const metadata = await handle(request('/.well-known/oauth-authorization-server'))
+    expect(metadata?.status).toBe(200)
+    const registration = await handle(
+      request('/oauth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      }),
+    )
+    expect(registration?.status).toBe(503)
+    const protocol = await handle(request('/api/mcp', { method: 'POST' }))
+    expect(protocol?.status).toBe(503)
+  })
+
   test('discovers, registers, authorizes, rotates, revokes, audits, and applies CORS', async () => {
     const store = new MemoryOAuthStore()
     const protocol = {
@@ -136,6 +164,7 @@ describe('remote MCP OAuth HTTP flow', () => {
       issuer: config.issuer.toString(),
       registration_endpoint: 'https://dives.example.com/oauth/register',
       code_challenge_methods_supported: ['S256'],
+      scopes_supported: MCP_SCOPE_VALUES,
     })
 
     const registration = await handle(
@@ -145,6 +174,7 @@ describe('remote MCP OAuth HTTP flow', () => {
         body: JSON.stringify({
           client_name: 'Codex',
           redirect_uris: ['http://127.0.0.1:1455/callback'],
+          scope: MCP_SCOPE_VALUES.join(' '),
         }),
       }),
     )
@@ -158,7 +188,7 @@ describe('remote MCP OAuth HTTP flow', () => {
       response_type: 'code',
       client_id: client.client_id,
       redirect_uri: 'http://127.0.0.1:9876/callback',
-      scope: MCP_READ_SCOPE,
+      scope: MCP_SCOPE_VALUES.join(' '),
       resource: config.serverUrl.toString(),
       code_challenge: pkce,
       code_challenge_method: 'S256',
@@ -176,7 +206,10 @@ describe('remote MCP OAuth HTTP flow', () => {
       }),
     )
     expect(consent?.status).toBe(200)
-    expect(await consent?.text()).toContain('Codex')
+    const consentBody = await consent?.text()
+    expect(consentBody).toContain('Codex')
+    expect(consentBody).toContain('Create and update')
+    expect(consentBody).toContain('Delete records')
 
     const approved = await handle(
       new Request(authorize, {
@@ -187,7 +220,10 @@ describe('remote MCP OAuth HTTP flow', () => {
           Origin: config.issuer.origin,
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: form({ decision: 'approve' }),
+        body: form({
+          decision: 'approve',
+          scope_divetracx_write: 'on',
+        }),
       }),
     )
     expect(approved?.status).toBe(302)
@@ -216,6 +252,10 @@ describe('remote MCP OAuth HTTP flow', () => {
       access_token: string
       refresh_token: string
     }
+    expect([...store.tokens.values()].at(-1)?.scopes).toEqual([
+      MCP_READ_SCOPE,
+      'divetracx:write',
+    ])
 
     const initialize = await handle(
       request('/api/mcp', {

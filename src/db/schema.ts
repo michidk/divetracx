@@ -654,3 +654,10 @@ export const mcpAuditEvents = pgTable(
   },
   (table) => [index('mcp_audit_events_created_at_index').on(table.createdAt)],
 )
+
+export const mcpSettings = pgTable('mcp_settings', {
+  id: text('id').primaryKey().default('instance'),
+  enabled: boolean('enabled').notNull().default(true),
+  disabledTools: jsonb('disabled_tools').$type<string[]>().notNull().default([]),
+  ...auditColumns,
+})

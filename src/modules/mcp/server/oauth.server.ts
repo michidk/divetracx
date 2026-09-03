@@ -17,6 +17,7 @@ import {
   type OAuthTokenRepository,
   type OAuthUserRepository,
 } from '@jmondi/oauth2-server'
+import { MCP_SCOPE_VALUES, type McpScope } from '@/modules/mcp/catalog'
 import { getOAuthSigningKey } from './auth.server'
 import type { McpConfig } from './config.server'
 import { MCP_READ_SCOPE } from './config.server'
@@ -27,19 +28,22 @@ import type {
 } from './oauth-store.server'
 
 const OWNER = { id: 'instance-owner' } as const
-const READ_SCOPE = { name: MCP_READ_SCOPE } as const
+const scopeEntity = (name: McpScope) => ({ name })
 
 function randomToken(bytes = 32) {
   return randomBytes(bytes).toString('base64url')
 }
 
-function clientEntity(row: NonNullable<Awaited<ReturnType<OAuthStore['getClient']>>>) {
+function clientEntity(
+  row: NonNullable<Awaited<ReturnType<OAuthStore['getClient']>>>,
+  supportedScopes: readonly McpScope[],
+) {
   return {
     id: row.id,
     name: row.name,
     redirectUris: row.redirectUris,
     allowedGrants: ['authorization_code', 'refresh_token'] as GrantIdentifier[],
-    scopes: [READ_SCOPE],
+    scopes: supportedScopes.map(scopeEntity),
     revokedAt: row.revokedAt,
   } satisfies OAuthClient
 }
@@ -47,12 +51,15 @@ function clientEntity(row: NonNullable<Awaited<ReturnType<OAuthStore['getClient'
 export class DivetracxOAuthRepositories
   implements OAuthClientRepository, OAuthScopeRepository, OAuthUserRepository
 {
-  constructor(readonly store: OAuthStore) {}
+  constructor(
+    readonly store: OAuthStore,
+    readonly supportedScopes: readonly McpScope[] = MCP_SCOPE_VALUES,
+  ) {}
 
   async getByIdentifier(clientId: string) {
     const row = await this.store.getClient(clientId)
     if (!row) throw OAuthException.invalidClient()
-    return clientEntity(row)
+    return clientEntity(row, this.supportedScopes)
   }
 
   async isClientValid(grant: GrantIdentifier, client: OAuthClient) {
@@ -61,15 +68,21 @@ export class DivetracxOAuthRepositories
   }
 
   async getAllByIdentifiers(names: string[]) {
-    return names.every((name) => name === MCP_READ_SCOPE) ? [READ_SCOPE] : []
+    const supported = new Set<string>(this.supportedScopes)
+    return names.every((name) => supported.has(name))
+      ? [...new Set(names)].map((name) => scopeEntity(name as McpScope))
+      : []
   }
 
   async finalize(scopes: OAuthScope[]) {
-    if (scopes.length === 0) return [READ_SCOPE]
-    if (scopes.some((scope) => scope.name !== MCP_READ_SCOPE)) {
-      throw OAuthException.invalidScope(MCP_READ_SCOPE)
+    const supported = new Set<string>(this.supportedScopes)
+    const names = scopes.length === 0 ? [MCP_READ_SCOPE] : scopes.map(({ name }) => name)
+    if (names.some((name) => !supported.has(name))) {
+      throw OAuthException.invalidScope(this.supportedScopes.join(' '))
     }
-    return [READ_SCOPE]
+    return [...new Set([MCP_READ_SCOPE, ...names])].map((name) =>
+      scopeEntity(name as McpScope),
+    )
   }
 
   async getUserByCredentials(identifier: string | number) {
@@ -230,8 +243,12 @@ export class DivetracxOAuthRepositories
 
 // TypeScript cannot overload the two repository methods with the same names, so
 // expose narrow adapters while keeping all persistence in one repository object.
-export function createOAuthServer(config: McpConfig, store: OAuthStore) {
-  const repositories = new DivetracxOAuthRepositories(store)
+export function createOAuthServer(
+  config: McpConfig,
+  store: OAuthStore,
+  supportedScopes: readonly McpScope[] = MCP_SCOPE_VALUES,
+) {
+  const repositories = new DivetracxOAuthRepositories(store, supportedScopes)
   const authCodeRepository: OAuthAuthCodeRepository = {
     issueAuthCode: repositories.issueAuthCode.bind(repositories),
     persist: repositories.persist.bind(repositories),

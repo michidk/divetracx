@@ -74,6 +74,10 @@ the resulting OAuth tokens are written to `GARMIN_TOKEN_DIRECTORY`.
 | `MCP_ALLOWED_ORIGINS` | — | No | Comma-separated Origin allowlist for browser-based MCP clients |
 | `HODOR_SECRET` | — | With MCP | Also used to derive the OAuth signing key; must be at least 32 characters |
 
+These variables establish the externally reachable OAuth boundary. Runtime
+access is configured in **Settings → AI access**, including the master switch,
+every individual tool, client revocation, granted scopes, and audit activity.
+
 ## Media storage
 
 | Variable | Default | Required | Description |

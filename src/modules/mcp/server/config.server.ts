@@ -1,8 +1,9 @@
 import '@tanstack/react-start/server-only'
 
 import { getServerEnv } from '@/env'
+import { MCP_SCOPE_VALUES } from '@/modules/mcp/catalog'
 
-export const MCP_READ_SCOPE = 'divetracx:read'
+export const MCP_READ_SCOPE = MCP_SCOPE_VALUES[0]
 
 export type McpConfig = {
   serverUrl: URL

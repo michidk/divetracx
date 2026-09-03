@@ -72,7 +72,8 @@ choice.
   and aggregate statistics.
 - 📤 **Your data, portable.** Export to DiveMate `.ddb`, UDDF 3.2.3, CSV, or
   versioned Divetracx JSON at any time.
-- 🤖 **Ask your agent.** An optional OAuth-protected, read-only MCP endpoint
+- 🤖 **Ask your agent.** An optional OAuth-protected MCP endpoint with
+  owner-controlled read, write, and delete tools
   lets your own AI tools search dives, load details, list sites, and read
   statistics.
 - 🔒 **Yours, end to end.** Self-hosted on your own PostgreSQL and your own
@@ -211,10 +212,16 @@ never overwrites a field you edited yourself.
 > [!NOTE]
 > Set `MCP_SERVER_URL` and this turns on. Everything else works without it.
 
-Divetracx exposes a read-only
+Divetracx exposes a scoped
 [Model Context Protocol](https://modelcontextprotocol.io) endpoint so your own
-AI tools can search dives, load bounded dive details, list sites, and read
-aggregate statistics. It ships its own OAuth 2.1 authorization server —
+AI tools can search and maintain dives, sites, buddies, gear, and your diver
+profile. Every tool can be switched on or off under **Settings → AI access**.
+Each connection then receives explicit `read`, `write`, and optional `delete`
+scopes on the consent screen. Existing clients, their active scopes, immediate
+revocation, and the last 100 authorization and tool events are managed in the
+same page.
+
+It ships its own OAuth 2.1 authorization server —
 dynamic client registration, mandatory S256 PKCE, refresh-token rotation with
 replay detection, hashed token storage, immediate revocation — and uses your
 existing Hodor owner session for consent, so no external identity provider is
@@ -226,7 +233,10 @@ codex mcp login divetracx
 ```
 
 Tool results can contain private health, location, contact, and certification
-data, so the endpoint stays disabled unless `MCP_SERVER_URL` is configured.
+data. Write tools use the same validation and canonical mutation services as
+the web UI; delete tools are separately scoped and marked destructive. The
+endpoint stays unavailable unless `MCP_SERVER_URL` is configured, and it can
+then be paused without deleting clients from **Settings → AI access**.
 Routing details are in [docs/deployment.md](docs/deployment.md#oauth-protected-mcp).
 
 ## 📸 Screenshots
@@ -366,7 +376,7 @@ migrations.
 src/routes/                 TanStack Router file routes and API endpoints
 src/components/             Shared application UI and shadcn/ui primitives
 src/modules/                Domain modules: dives, sites, gear, export, media, profile, …
-src/modules/mcp/            Read-only MCP tools and the built-in OAuth 2.1 server
+src/modules/mcp/            Scoped MCP tools, owner policy, and built-in OAuth 2.1 server
 src/modules/integrations/   Generic import service, runs, and provenance
 src/modules/divemate/       DiveMate .ddb reader, mapper, and writer
 src/modules/garmin/         Garmin FIT mapping and adapter client

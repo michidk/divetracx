@@ -7,11 +7,17 @@ import {
   responseToVanilla,
 } from '@jmondi/oauth2-server/vanilla'
 import { z } from 'zod'
+import {
+  MCP_SCOPE_DETAILS,
+  type McpScope,
+  scopesForEnabledTools,
+} from '@/modules/mcp/catalog'
 import { hasValidOwnerSession } from './auth.server'
 import type { McpConfig } from './config.server'
 import { MCP_READ_SCOPE } from './config.server'
 import { createOAuthServer } from './oauth.server'
 import type { OAuthStore } from './oauth-store.server'
+import { loadMcpPolicy, type McpPolicy } from './settings.server'
 
 const PUBLIC_OAUTH_PATHS = new Set([
   '/.well-known/oauth-authorization-server',
@@ -41,8 +47,17 @@ const registrationSchema = z.object({
     .optional()
     .default(['authorization_code', 'refresh_token']),
   response_types: z.array(z.literal('code')).min(1).optional().default(['code']),
-  scope: z.literal(MCP_READ_SCOPE).optional().default(MCP_READ_SCOPE),
+  scope: z.string().trim().max(500).optional().default(MCP_READ_SCOPE),
 })
+
+function parseScopes(value: string, supportedScopes: readonly McpScope[]) {
+  const supported = new Set<string>(supportedScopes)
+  const scopes = [...new Set(value.split(/\s+/).filter(Boolean))]
+  if (scopes.some((scope) => !supported.has(scope))) {
+    throw new Error('Unsupported OAuth scope')
+  }
+  return scopes.length > 0 ? (scopes as McpScope[]) : [MCP_READ_SCOPE]
+}
 
 function oauthUrl(config: McpConfig, path: string) {
   return new URL(path, config.issuer).toString()
@@ -121,10 +136,27 @@ function authorizationLoginRedirect(request: Request) {
   return Response.redirect(bridge, 302)
 }
 
-function consentPage(clientName: string, request: Request) {
+function scopeInputName(scope: McpScope) {
+  return `scope_${scope.replaceAll(':', '_')}`
+}
+
+function consentPage(clientName: string, request: Request, requestedScopes: McpScope[]) {
   const action = new URL(request.url)
+  const scopeRows = requestedScopes
+    .map((scope) => {
+      const details = MCP_SCOPE_DETAILS[scope]
+      const readOnly = scope === MCP_READ_SCOPE
+      return `<label><input type="checkbox" name="${scopeInputName(scope)}"${
+        readOnly ? ' checked disabled' : ''
+      }> <span><strong>${escapeHtml(details.label)}</strong><small>${escapeHtml(
+        details.description,
+      )}</small></span></label>${
+        readOnly ? `<input type="hidden" name="${scopeInputName(scope)}" value="on">` : ''
+      }`
+    })
+    .join('')
   return new Response(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Authorize MCP access</title><style>body{font:16px system-ui;max-width:42rem;margin:10vh auto;padding:1.5rem;color:#182126}main{border:1px solid #ccd5d8;border-radius:14px;padding:2rem}button{font:inherit;padding:.7rem 1rem;margin:.5rem .5rem 0 0;border-radius:8px;border:1px solid #667;background:#fff}.approve{background:#096b5b;color:#fff;border-color:#096b5b}</style></head><body><main><h1>Authorize dive-log access?</h1><p><strong>${escapeHtml(clientName)}</strong> is requesting read-only access to this Divetracx instance through MCP.</p><p>It can read dives, sites, profile samples, buddies, equipment, and statistics. You can revoke the connection later.</p><form method="post" action="${escapeHtml(action.pathname + action.search)}"><button class="approve" name="decision" value="approve">Authorize</button><button name="decision" value="deny">Deny</button></form></main></body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Authorize MCP access</title><style>body{font:16px system-ui;max-width:42rem;margin:8vh auto;padding:1.5rem;color:#102c31;background:#f4f8f8}main{border:1px solid #d3e1e2;border-radius:16px;padding:2rem;background:#fff}h1{margin-top:0}p{line-height:1.55;color:#425f64}label{display:flex;gap:.75rem;padding:1rem 0;border-top:1px solid #d3e1e2}label input{width:1.15rem;height:1.15rem;margin-top:.2rem}label span{display:grid;gap:.25rem}small{color:#597176;line-height:1.45}button{font:inherit;font-weight:600;padding:.7rem 1rem;margin:.75rem .5rem 0 0;border-radius:12px;border:1px solid #667;background:#fff}.approve{background:#087f8c;color:#fff;border-color:#087f8c}</style></head><body><main><h1>Authorize dive-log access?</h1><p><strong>${escapeHtml(clientName)}</strong> wants to connect to this Divetracx instance. Select the requested permissions you want to grant.</p><form method="post" action="${escapeHtml(action.pathname + action.search)}">${scopeRows}<p>Write and delete permissions are never selected automatically. You can revoke this client later in Settings → MCP.</p><button class="approve" name="decision" value="approve">Authorize</button><button name="decision" value="deny">Deny</button></form></main></body></html>`,
     {
       status: 200,
       headers: {
@@ -150,9 +182,11 @@ export function oauthPublicPaths() {
   return [...PUBLIC_OAUTH_PATHS]
 }
 
-export function createOAuthHttpHandler(config: McpConfig, store: OAuthStore) {
-  const oauth = createOAuthServer(config, store)
-
+export function createOAuthHttpHandler(
+  config: McpConfig,
+  store: OAuthStore,
+  policyLoader: () => Promise<McpPolicy> = loadMcpPolicy,
+) {
   return async function handleOAuthHttpRequest(
     request: Request,
   ): Promise<Response | null> {
@@ -160,6 +194,10 @@ export function createOAuthHttpHandler(config: McpConfig, store: OAuthStore) {
     if (!PUBLIC_OAUTH_PATHS.has(url.pathname) && url.pathname !== OWNER_BRIDGE_PATH) {
       return null
     }
+
+    const policy = await policyLoader()
+    const supportedScopes = scopesForEnabledTools(policy.disabledTools)
+    const oauth = createOAuthServer(config, store, supportedScopes)
 
     if (request.method === 'OPTIONS' && PUBLIC_OAUTH_PATHS.has(url.pathname)) {
       return new Response(null, {
@@ -181,7 +219,7 @@ export function createOAuthHttpHandler(config: McpConfig, store: OAuthStore) {
           token_endpoint: oauthUrl(config, '/oauth/token'),
           registration_endpoint: oauthUrl(config, '/oauth/register'),
           revocation_endpoint: oauthUrl(config, '/oauth/revoke'),
-          scopes_supported: [MCP_READ_SCOPE],
+          scopes_supported: supportedScopes,
           response_types_supported: ['code'],
           grant_types_supported: ['authorization_code', 'refresh_token'],
           code_challenge_methods_supported: ['S256'],
@@ -197,7 +235,7 @@ export function createOAuthHttpHandler(config: McpConfig, store: OAuthStore) {
         {
           resource: config.serverUrl.toString(),
           authorization_servers: [config.issuer.toString()],
-          scopes_supported: [MCP_READ_SCOPE],
+          scopes_supported: supportedScopes,
           bearer_methods_supported: ['header'],
           resource_name: 'Divetracx dive log',
         },
@@ -216,12 +254,23 @@ export function createOAuthHttpHandler(config: McpConfig, store: OAuthStore) {
       return Response.redirect(new URL(destination, config.issuer), 302)
     }
 
+    if (!policy.enabled) {
+      return json(
+        {
+          error: 'temporarily_unavailable',
+          error_description: 'MCP is paused by the owner',
+        },
+        { status: 503 },
+      )
+    }
+
     if (url.pathname === '/oauth/register' && request.method === 'POST') {
       try {
         const registrationBody = await request.text()
         if (Buffer.byteLength(registrationBody) > 32_768)
           return json({ error: 'invalid_client_metadata' }, { status: 413 })
         const registration = registrationSchema.parse(JSON.parse(registrationBody))
+        const registrationScopes = parseScopes(registration.scope, supportedScopes)
         if (!registration.grant_types.includes('authorization_code')) {
           return json(
             {
@@ -260,7 +309,7 @@ export function createOAuthHttpHandler(config: McpConfig, store: OAuthStore) {
             token_endpoint_auth_method: 'none',
             grant_types: ['authorization_code', 'refresh_token'],
             response_types: ['code'],
-            scope: MCP_READ_SCOPE,
+            scope: registrationScopes.join(' '),
           },
           { status: 201 },
         )
@@ -277,13 +326,30 @@ export function createOAuthHttpHandler(config: McpConfig, store: OAuthStore) {
         return authorizationLoginRedirect(request)
       }
       try {
-        const converted = await oauthRequest(request, config, 'query')
+        let authorizationRequest = request
+        if (request.method === 'POST') {
+          const formData = await request.clone().formData()
+          const requested = parseScopes(
+            url.searchParams.get('scope') ?? MCP_READ_SCOPE,
+            supportedScopes,
+          )
+          const selected = requested.filter(
+            (scope) =>
+              scope === MCP_READ_SCOPE || formData.get(scopeInputName(scope)) === 'on',
+          )
+          const selectedUrl = new URL(request.url)
+          selectedUrl.searchParams.set('scope', selected.join(' '))
+          authorizationRequest = new Request(selectedUrl, request)
+        }
+        const converted = await oauthRequest(authorizationRequest, config, 'query')
         const authorization = await oauth.server.validateAuthorizationRequest(converted)
         if (!authorization.redirectUri) {
           throw OAuthException.invalidParameter('redirect_uri')
         }
-        if (request.method === 'GET')
-          return consentPage(authorization.client.name, request)
+        if (request.method === 'GET') {
+          const requestedScopes = authorization.scopes.map(({ name }) => name as McpScope)
+          return consentPage(authorization.client.name, request, requestedScopes)
+        }
 
         const origin = request.headers.get('origin')
         if (origin && origin !== config.issuer.origin) {

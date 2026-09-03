@@ -1,7 +1,7 @@
 {
   "name": "divetracx",
   "version": "0.1.0",
-  "description": "Self-hosted dive log that imports from DiveMate and Garmin, exports to UDDF, CSV, and DiveMate, and exposes a read-only MCP endpoint",
+  "description": "Self-hosted dive log that imports from DiveMate and Garmin, exports open formats, and exposes a scoped MCP server",
   "license": "MIT",
   "private": true,
   "type": "module",

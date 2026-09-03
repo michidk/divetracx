@@ -110,7 +110,9 @@ database and restore it into a fresh PostgreSQL 18 PVC (or use `pg_upgrade`).
 The optional MCP endpoint includes an instance-wide OAuth 2.1 authorization
 server. It uses the existing Hodor owner session for consent, dynamic client
 registration, mandatory S256 PKCE, refresh rotation, and revocation. No external
-OIDC provider settings are required.
+OIDC provider settings are required. After deployment, the owner configures
+individual read, write, and delete tools, connected clients, and revocation in
+**Settings → AI access**.
 
 The MCP Ingress routes only the protocol endpoint and its OAuth discovery
 documents directly to the application, bypassing Hodor's interactive cookie

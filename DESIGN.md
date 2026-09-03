@@ -168,6 +168,12 @@ affordances.
 confirmation before deleting, and reports failures inline with
 `aria-live="polite"`. Never delete on the first click.
 
+The AI access settings page groups MCP tools into Read, Create and update, and
+Delete cards. Every tool has an independent switch, while the page-level MCP
+switch pauses the endpoint without discarding clients or history. Destructive
+tools and scopes use the destructive badge treatment; connected clients show
+their live scopes and require confirmation before revocation.
+
 ### Media
 
 `PictureGallery` is a `sm:grid-cols-2` grid of `aspect-[4/3]` images in
