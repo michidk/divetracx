@@ -5,6 +5,7 @@ import { CertificationCard } from '@/components/certification-card'
 import { DeleteRecordButton } from '@/components/delete-record-button'
 import { EntityForm } from '@/components/entity-form'
 import { formatPersonName } from '@/modules/dives/format'
+import { AgencyMark } from '@/modules/profile/components/agency-mark'
 import { getAgencies } from '@/modules/profile/server/agencies'
 import {
   getCertification,
@@ -105,6 +106,7 @@ function CertificationRoute() {
           agencyId: agencyOptions.map((agency) => ({
             value: agency.id,
             label: agency.fullName ? `${agency.name} · ${agency.fullName}` : agency.name,
+            leading: <AgencyMark agency={agency} className="size-8 rounded-lg" />,
           })),
           instructorBuddyId: instructorOptions.map((buddy) => ({
             value: buddy.id,

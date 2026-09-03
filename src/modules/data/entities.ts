@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { z } from 'zod'
 
 export const entityKeySchema = z.enum([
@@ -33,7 +34,7 @@ export interface EntityField {
   max?: number
   step?: string
   help?: string
-  options?: Array<{ value: string; label: string }>
+  options?: Array<{ value: string; label: string; leading?: ReactNode }>
 }
 
 export interface EntityDefinition {

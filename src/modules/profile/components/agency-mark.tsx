@@ -7,18 +7,23 @@ import {
 export function AgencyMark({
   agency,
   className,
+  decorative = false,
 }: {
   agency: AgencyDisplayRecord
   className?: string
+  decorative?: boolean
 }) {
+  const accessibilityProps = decorative
+    ? ({ 'aria-hidden': true } as const)
+    : ({ role: 'img', 'aria-label': `${agency.name} logo` } as const)
+
   return (
     <div
       className={cn(
         'relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-muted font-mono text-sm font-semibold text-primary ring-1 ring-border',
         className,
       )}
-      role="img"
-      aria-label={`${agency.name} logo`}
+      {...accessibilityProps}
     >
       <span aria-hidden="true">{agencyInitials(agency.name)}</span>
       {agency.logoSrc ? (
