@@ -883,7 +883,7 @@ function diveMateExternalRecords(
     externalId: source.externalId,
     rawPayload: source.sourcePayload,
     fileMetadata,
-    mapperVersion: 1,
+    mapperVersion: entityType === 'dive_type' ? 2 : 1,
   })
   return [
     ...snapshot.divers.map((item) => record('diver', item)),

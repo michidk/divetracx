@@ -19,6 +19,11 @@ export function hashExternalRecord(record: ExternalRecordInput) {
   const normalized = stableValue({
     rawPayload: record.rawPayload,
     fileMetadata: record.fileMetadata ?? null,
+    // Version 1 predates mapper-aware hashes. Omitting it preserves existing
+    // hashes while allowing later mapper versions to reprocess unchanged input.
+    ...(record.mapperVersion && record.mapperVersion > 1
+      ? { mapperVersion: record.mapperVersion }
+      : {}),
   })
   return createHash('sha256').update(JSON.stringify(normalized)).digest('hex')
 }
