@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
+import { DIVE_BUDDY_ROLE_VALUES } from '@/modules/dives/buddy-role'
 import { deleteDiveEntry, saveDiveEntry } from './mutations.server'
 
 const formText = z.string().max(10_000).default('')
@@ -39,13 +40,19 @@ export const diveEntryInputSchema = z.object({
     computer: formText,
     suit: formText,
     boat: formText,
-    divemaster: formText,
     notes: formText,
     siteId: formText,
     shopId: formText,
     diveTypeId: formText,
   }),
-  buddyIds: z.array(z.string().uuid()).default([]),
+  buddyAssignments: z
+    .array(
+      z.object({
+        buddyId: z.string().uuid(),
+        role: z.enum(DIVE_BUDDY_ROLE_VALUES),
+      }),
+    )
+    .default([]),
   equipmentIds: z.array(z.string().uuid()).default([]),
   tanks: z.array(tankInputSchema).default([]),
 })

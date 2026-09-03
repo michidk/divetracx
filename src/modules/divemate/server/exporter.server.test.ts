@@ -62,7 +62,7 @@ describe('canonical DiveMate export', () => {
     const now = new Date('2026-09-01T12:00:00Z')
     const snapshot = {
       format: 'divetracx-backup',
-      version: 14,
+      version: 15,
       exportedAt: now.toISOString(),
       data: {
         agencies: [
@@ -231,7 +231,6 @@ describe('canonical DiveMate export', () => {
             computer: 'Garmin Descent',
             suit: null,
             boat: null,
-            divemaster: null,
             notes: 'Imported through the canonical model',
             createdAt: now,
             updatedAt: now,
@@ -242,6 +241,7 @@ describe('canonical DiveMate export', () => {
             id: '12121212-1212-4212-8212-121212121212',
             diveId: '22222222-2222-2222-2222-222222222222',
             buddyId: '99999999-9999-9999-9999-999999999999',
+            role: 'instructor' as const,
           },
         ],
         diveEquipment: [
@@ -300,7 +300,8 @@ describe('canonical DiveMate export', () => {
       durationSeconds: 1800,
       maximumDepthMeters: '20',
       computer: 'Garmin Descent',
-      buddyName: 'Ada Instructor',
+      divemaster: 'Instructor: Ada Instructor',
+      buddyName: null,
     })
     expect(exported.dives[0]?.buddyExternalIds).toHaveLength(1)
     expect(exported.sites[0]?.name).toBe('Garmin site')

@@ -127,7 +127,6 @@ export async function saveDiveEntry(input: DiveEntryInput) {
     computer: text(dive.computer),
     suit: text(dive.suit),
     boat: text(dive.boat),
-    divemaster: text(dive.divemaster),
     notes: text(dive.notes),
     updatedAt: new Date(),
   }
@@ -160,11 +159,19 @@ export async function saveDiveEntry(input: DiveEntryInput) {
     }
 
     await transaction.delete(diveBuddies).where(eq(diveBuddies.diveId, diveRowId))
-    const buddyIds = Array.from(new Set(input.buddyIds))
-    if (buddyIds.length > 0) {
-      await transaction
-        .insert(diveBuddies)
-        .values(buddyIds.map((buddyId) => ({ diveId: diveRowId, buddyId })))
+    const buddyAssignments = [
+      ...new Map(
+        input.buddyAssignments.map((assignment) => [assignment.buddyId, assignment]),
+      ).values(),
+    ]
+    if (buddyAssignments.length > 0) {
+      await transaction.insert(diveBuddies).values(
+        buddyAssignments.map(({ buddyId, role }) => ({
+          diveId: diveRowId,
+          buddyId,
+          role,
+        })),
+      )
     }
 
     await transaction.delete(diveEquipment).where(eq(diveEquipment.diveId, diveRowId))

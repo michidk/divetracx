@@ -1,6 +1,7 @@
 import '@tanstack/react-start/server-only'
 
 import type { ExportSnapshot } from '@/modules/export/types'
+import { type DiveTeamMember, formatDiveMateDiveTeam } from '../dive-team'
 import { encodeDiveMateProfile } from '../export-profile'
 import { formatDiveMateInstructor } from '../instructor'
 import type { SqliteBinding, SqliteDatabase } from './sqlite.server'
@@ -113,6 +114,7 @@ export function rewriteDiveMateDatabase(
   const pictureIds = assignDiveMateIds(data.pictures)
   const buddyIdsByDive = new Map<string, number[]>()
   const buddyNamesByDive = new Map<string, string[]>()
+  const diveTeamByDive = new Map<string, DiveTeamMember[]>()
   for (const relation of data.diveBuddies) {
     const id = buddyIds.get(relation.buddyId)
     if (id) {
@@ -122,10 +124,15 @@ export function rewriteDiveMateDatabase(
       ])
     }
     const name = formatDiveMateInstructor(buddiesById.get(relation.buddyId))
-    if (name) {
+    if (name && relation.role === 'buddy') {
       buddyNamesByDive.set(relation.diveId, [
         ...(buddyNamesByDive.get(relation.diveId) ?? []),
         name,
+      ])
+    } else if (name && relation.role !== 'buddy') {
+      diveTeamByDive.set(relation.diveId, [
+        ...(diveTeamByDive.get(relation.diveId) ?? []),
+        { name, role: relation.role },
       ])
     }
   }
@@ -346,7 +353,7 @@ export function rewriteDiveMateDatabase(
             Computer: row.computer,
             Divesuit: row.suit,
             Boat: row.boat,
-            Divemaster: row.divemaster,
+            Divemaster: formatDiveMateDiveTeam(diveTeamByDive.get(row.id) ?? []),
             Buddy: buddyNamesByDive.get(row.id)?.[0] ?? null,
             Comments: row.notes,
             ProfileInt: profile.profileIntervalSeconds,

@@ -30,12 +30,14 @@ import { getServerEnv } from '@/env'
 import { createThumbnail, thumbnailPathFor } from '@/lib/server/thumbnail.server'
 import { getStorage } from '@/lib/storage'
 import type { StorageProvider } from '@/lib/storage/types'
+import type { DiveBuddyRole } from '@/modules/dives/buddy-role'
 import { performIncrementalImport } from '@/modules/integrations/server/import-service.server'
 import type {
   ExternalRecordInput,
   IntegrationConnector,
 } from '@/modules/integrations/types'
 import { resolveAgencyId } from '@/modules/profile/server/agencies.server'
+import { parseDiveMateDiveTeam } from '../dive-team'
 import {
   cleanDiveMateInstructorName,
   formatDiveMateInstructor,
@@ -678,7 +680,6 @@ async function applySnapshot(
       computer: item.computer,
       suit: item.suit,
       boat: item.boat,
-      divemaster: item.divemaster,
       notes: item.notes,
       updatedAt: new Date(),
     }
@@ -697,22 +698,27 @@ async function applySnapshot(
     if (oldBuddyLinks.length > 0)
       await tx.delete(diveBuddies).where(inArray(diveBuddies.id, oldBuddyLinks))
     await context.unlink('dive', item.externalId, ['dive_buddy'])
-    const importedBuddyIds = new Set(
+    const importedBuddyRoles = new Map<string, DiveBuddyRole>(
       item.buddyExternalIds
         .map((id) => buddyIds.get(id))
-        .filter((id): id is string => Boolean(id)),
+        .filter((id): id is string => Boolean(id))
+        .map((buddyId) => [buddyId, 'buddy' as const]),
     )
     const namedBuddyId = await resolveNamedBuddy(tx, buddyIdsByName, item.buddyName)
-    if (namedBuddyId) importedBuddyIds.add(namedBuddyId)
-    if (importedBuddyIds.size > 0) {
-      for (const buddyId of importedBuddyIds) {
+    if (namedBuddyId) importedBuddyRoles.set(namedBuddyId, 'buddy')
+    for (const member of parseDiveMateDiveTeam(item.divemaster)) {
+      const staffBuddyId = await resolveNamedBuddy(tx, buddyIdsByName, member.name)
+      if (staffBuddyId) importedBuddyRoles.set(staffBuddyId, member.role)
+    }
+    if (importedBuddyRoles.size > 0) {
+      for (const [buddyId, role] of importedBuddyRoles) {
         context.signal.throwIfAborted()
         const [association] = await tx
           .insert(diveBuddies)
-          .values({ diveId: row.id, buddyId })
+          .values({ diveId: row.id, buddyId, role })
           .onConflictDoUpdate({
             target: [diveBuddies.diveId, diveBuddies.buddyId],
-            set: { buddyId },
+            set: { role },
           })
           .returning({ id: diveBuddies.id })
         if (association)

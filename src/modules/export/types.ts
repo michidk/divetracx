@@ -23,7 +23,7 @@ import type {
 
 export interface ExportSnapshot {
   format: 'divetracx-backup'
-  version: 14
+  version: 15
   exportedAt: string
   data: {
     agencies: Array<typeof agencies.$inferSelect>

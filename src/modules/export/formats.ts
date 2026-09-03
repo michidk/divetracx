@@ -1,3 +1,4 @@
+import { formatDiveMateDiveTeam } from '@/modules/divemate/dive-team'
 import type { ExportSnapshot } from './types'
 
 const CSV_FORMULA_PREFIX = /^[\t\r\n ]*[=+\-@]/
@@ -87,11 +88,11 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
   const buddies = new Map(data.buddies.map((buddy) => [buddy.id, buddy]))
   const equipment = new Map(data.equipment.map((item) => [item.id, item]))
 
-  const buddyIdsByDive = new Map<string, string[]>()
+  const buddyRelationsByDive = new Map<string, ExportSnapshot['data']['diveBuddies']>()
   for (const relation of data.diveBuddies) {
-    const ids = buddyIdsByDive.get(relation.diveId) ?? []
-    ids.push(relation.buddyId)
-    buddyIdsByDive.set(relation.diveId, ids)
+    const relations = buddyRelationsByDive.get(relation.diveId) ?? []
+    relations.push(relation)
+    buddyRelationsByDive.set(relation.diveId, relations)
   }
 
   const equipmentIdsByDive = new Map<string, string[]>()
@@ -169,12 +170,23 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
     })
     .map((dive) => {
       const site = dive.siteId ? sites.get(dive.siteId) : undefined
-      const buddyNames = (buddyIdsByDive.get(dive.id) ?? [])
-        .map((id) => {
-          const buddy = buddies.get(id)
-          return buddy ? displayName(buddy, id) : id
+      const buddyRelations = buddyRelationsByDive.get(dive.id) ?? []
+      const buddyNames = buddyRelations
+        .filter((relation) => relation.role === 'buddy')
+        .map((relation) => {
+          const buddy = buddies.get(relation.buddyId)
+          return buddy ? displayName(buddy, relation.buddyId) : relation.buddyId
         })
         .join('; ')
+      const diveTeam = formatDiveMateDiveTeam(
+        buddyRelations.flatMap((relation) => {
+          if (relation.role === 'buddy') return []
+          const buddy = buddies.get(relation.buddyId)
+          return buddy
+            ? [{ name: displayName(buddy, relation.buddyId), role: relation.role }]
+            : []
+        }),
+      )
       const equipmentNames = (equipmentIdsByDive.get(dive.id) ?? [])
         .map((id) => {
           const item = equipment.get(id)
@@ -228,7 +240,7 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
         csvCell(dive.computer, true),
         csvCell(dive.suit, true),
         csvCell(dive.boat, true),
-        csvCell(dive.divemaster, true),
+        csvCell(diveTeam, true),
         csvCell(buddyNames, true),
         csvCell(equipmentNames, true),
         csvCell(tankNames, true),

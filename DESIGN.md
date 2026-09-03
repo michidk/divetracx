@@ -152,7 +152,9 @@ and highlight with `hover:bg-muted/50`. Empty lists render a centered
 
 `EntityForm` provides the field stack and inline star rating. Dive editors select
 existing taxonomy values; creating or renaming taxonomies belongs in Settings,
-not alongside the dive fields. Field labels are `text-sm font-medium`;
+not alongside the dive fields. The dive people picker is a searchable popover;
+selected people render as rows with a role select and remove action. New
+assignments default to Buddy. Field labels are `text-sm font-medium`;
 validation and server errors appear directly under the field in
 `text-sm text-red-600` with `aria-live="polite"`. Recorded dive profiles, import
 history, and external provenance are view-only and must not gain edit

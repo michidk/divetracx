@@ -16,6 +16,7 @@ import {
 import { PhotoManager } from '@/components/photo-manager'
 import { PictureGallery } from '@/components/picture-gallery'
 import { StatCard } from '@/components/stat-card'
+import { diveBuddyRoleLabel } from '@/modules/dives/buddy-role'
 import { entryTypeLabel, waterTypeLabel } from '@/modules/dives/codes'
 import {
   formatDiveDate,
@@ -402,21 +403,24 @@ export function DivePage({ dive }: { dive: DiveData }) {
             <h2 className="mt-4 text-lg font-semibold">People</h2>
             <dl className="mt-5 space-y-5">
               <Value label="Diver" value={diverName} />
-              <Value label="Divemaster" value={dive.divemaster} />
               <Value
-                label="Buddies"
+                label="Buddies and dive team"
                 value={
                   dive.buddies.length > 0 ? (
-                    <span className="flex flex-wrap gap-x-2 gap-y-1">
+                    <span className="flex flex-col gap-1.5">
                       {dive.buddies.map((buddy) => (
-                        <Link
-                          key={buddy.id}
-                          to="/buddies/$buddyId"
-                          params={{ buddyId: buddy.id }}
-                          className="text-primary hover:underline"
-                        >
-                          {formatPersonName(buddy)}
-                        </Link>
+                        <span key={buddy.id} className="flex items-baseline gap-2">
+                          <Link
+                            to="/buddies/$buddyId"
+                            params={{ buddyId: buddy.id }}
+                            className="text-primary hover:underline"
+                          >
+                            {formatPersonName(buddy)}
+                          </Link>
+                          <span className="text-xs font-normal text-muted-foreground">
+                            {diveBuddyRoleLabel(buddy.role)}
+                          </span>
+                        </span>
                       ))}
                     </span>
                   ) : (

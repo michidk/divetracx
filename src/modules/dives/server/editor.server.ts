@@ -100,7 +100,14 @@ export async function loadDiveEditor(diveId: string | null) {
   const nextNumber = nextNumberRow?.nextNumber ?? 1
 
   if (!diveId) {
-    return { dive: null, tanks: [], buddyIds: [], equipmentIds: [], nextNumber, options }
+    return {
+      dive: null,
+      tanks: [],
+      buddyAssignments: [],
+      equipmentIds: [],
+      nextNumber,
+      options,
+    }
   }
 
   const [dive] = await db.select().from(dives).where(eq(dives.id, diveId)).limit(1)
@@ -121,7 +128,7 @@ export async function loadDiveEditor(diveId: string | null) {
       .where(eq(tanks.diveId, diveId))
       .orderBy(sql`${tanks.sortOrder} nulls last`),
     db
-      .select({ id: diveBuddies.buddyId })
+      .select({ buddyId: diveBuddies.buddyId, role: diveBuddies.role })
       .from(diveBuddies)
       .where(eq(diveBuddies.diveId, diveId)),
     db
@@ -133,7 +140,7 @@ export async function loadDiveEditor(diveId: string | null) {
   return {
     dive,
     tanks: tankRows,
-    buddyIds: buddyRows.map((row) => row.id),
+    buddyAssignments: buddyRows,
     equipmentIds: equipmentRows.map((row) => row.id),
     nextNumber,
     options,

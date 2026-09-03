@@ -118,6 +118,12 @@ backup. The importer uses SQLite row IDs and content hashes for idempotent
 incremental detection. Images are copied to configured storage with immutable
 originals and generated WebP thumbnails.
 
+DiveMate buddy IDs import as buddies. Its legacy free-text `Divemaster` value
+imports as a linked person with the Divemaster role. Divetracx exports
+Divemaster, Instructor, and Guide assignments back into that field with role
+labels, so those richer assignments survive a Divetracx → DiveMate → Divetracx
+round trip.
+
 ```bash
 bun run sync:divemate                              # incremental, from the CLI
 bun run import:incremental --integration=divemate  # same thing, generic entry point
@@ -153,7 +159,7 @@ scripts and backups.
 | Format | Endpoint | Best for | What it contains |
 | --- | --- | --- | --- |
 | **DiveMate backup** `.ddb` | `/api/export/divemate` | Opening your whole logbook in DiveMate again | A DiveMate-compatible SQLite database rebuilt from canonical data, including Garmin-imported and hand-logged dives |
-| **Divetracx backup** `.json` | `/api/export/json` | Complete, lossless backups | Every table in the database as versioned JSON (`divetracx-backup`, currently version 14) |
+| **Divetracx backup** `.json` | `/api/export/json` | Complete, lossless backups | Every table in the database as versioned JSON (`divetracx-backup`, currently version 15) |
 | **Dive spreadsheet** `.csv` | `/api/export/csv` | Spreadsheets and data analysis | One joined row per dive: site, buddies, equipment, tanks, conditions, notes, and the full profile as inline samples |
 | **Universal dive log** `.uddf` | `/api/export/uddf` | Other logbook software | UDDF 3.2.3 with diver, sites, and dives including depth profiles |
 
@@ -180,9 +186,10 @@ ones in the same canonical model.
 
 - **Dives** — date, entry time, duration, surface interval, maximum and average
   depth, air and water temperature, weights, conditions (visibility, current,
-  waves, weather), suit, boat, dive computer, divemaster, shop, dive type,
-  rating, and notes. Attach buddies and gear, and add one or more **tanks**
-  with volume, start and end pressure, and O₂/He mix.
+  waves, weather), suit, boat, dive computer, shop, dive type, rating, and
+  notes. Search for people and assign each one as Buddy, Divemaster,
+  Instructor, or Guide; attach gear; and add one or more **tanks** with volume,
+  start and end pressure, and O₂/He mix.
 - **Dive sites** — name, water body, region, country, and notes, with a map
   where you click to pin the coordinates. Each site shows its dive count,
   deepest dive, and last visit.

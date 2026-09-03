@@ -15,9 +15,9 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { ENTRY_TYPE_OPTIONS, WATER_TYPE_OPTIONS } from '@/modules/dives/codes'
-import { formatPersonName } from '@/modules/dives/format'
 import { deleteDive, saveDive } from '@/modules/dives/server/mutations'
 import type { getDiveEditor } from '@/modules/dives/server/queries'
+import { BuddyPicker } from './buddy-picker'
 
 export type DiveEditorData = NonNullable<Awaited<ReturnType<typeof getDiveEditor>>>
 
@@ -67,7 +67,6 @@ function initialDiveState(data: DiveEditorData) {
     computer: dive?.computer ?? '',
     suit: dive?.suit ?? '',
     boat: dive?.boat ?? '',
-    divemaster: dive?.divemaster ?? '',
     notes: dive?.notes ?? '',
     siteId: dive?.siteId ?? '',
     shopId: dive?.shopId ?? '',
@@ -183,7 +182,7 @@ export function DiveEditor({
   const router = useRouter()
   const [dive, setDive] = useState(() => initialDiveState(data))
   const [tanks, setTanks] = useState(() => initialTanks(data))
-  const [buddyIds, setBuddyIds] = useState(() => new Set(data.buddyIds))
+  const [buddyAssignments, setBuddyAssignments] = useState(() => data.buddyAssignments)
   const [equipmentIds, setEquipmentIds] = useState(() => new Set(data.equipmentIds))
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -221,7 +220,7 @@ export function DiveEditor({
         data: {
           diveId,
           dive,
-          buddyIds: [...buddyIds],
+          buddyAssignments,
           equipmentIds: [...equipmentIds],
           tanks: tanks.map(({ key: _key, ...tank }) => tank),
         },
@@ -712,47 +711,12 @@ export function DiveEditor({
       </EditorSection>
 
       <EditorSection title="People">
-        <fieldset>
-          <legend className="text-sm font-semibold">Buddies</legend>
-          {data.options.buddies.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">
-              No buddies yet — add them under Buddies first.
-            </p>
-          ) : (
-            <div className="mt-3 grid gap-2 rounded-xl border border-border bg-background p-3 sm:grid-cols-2 lg:grid-cols-3">
-              {data.options.buddies.map((buddy) => (
-                <label
-                  key={buddy.id}
-                  htmlFor={`buddy-${buddy.id}`}
-                  className="flex min-h-10 items-center gap-3 rounded-lg px-2 text-sm hover:bg-muted"
-                >
-                  <Checkbox
-                    id={`buddy-${buddy.id}`}
-                    checked={buddyIds.has(buddy.id)}
-                    onCheckedChange={(checked) =>
-                      setBuddyIds((current) =>
-                        toggleId(current, buddy.id, checked === true),
-                      )
-                    }
-                  />
-                  <span className="truncate">{formatPersonName(buddy)}</span>
-                </label>
-              ))}
-            </div>
-          )}
-        </fieldset>
-        <div className="mt-5 grid gap-5 sm:grid-cols-2">
-          <Field label="Divemaster / guide">
-            {(id) => (
-              <Input
-                id={id}
-                type="text"
-                value={dive.divemaster}
-                onChange={(event) => update('divemaster', event.target.value)}
-                className="mt-2"
-              />
-            )}
-          </Field>
+        <BuddyPicker
+          options={data.options.buddies}
+          value={buddyAssignments}
+          onChange={setBuddyAssignments}
+        />
+        <div className="mt-5 max-w-md">
           <Field label="Boat">
             {(id) => (
               <Input

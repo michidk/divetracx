@@ -236,7 +236,6 @@ export async function loadDive(diveId: string) {
           computer: dives.computer,
           suit: dives.suit,
           boat: dives.boat,
-          divemaster: dives.divemaster,
           notes: dives.notes,
           updatedAt: dives.updatedAt,
           diver: {
@@ -279,6 +278,7 @@ export async function loadDive(diveId: string) {
           email: buddies.email,
           city: buddies.city,
           country: buddies.country,
+          role: diveBuddies.role,
         })
         .from(diveBuddies)
         .innerJoin(buddies, eq(diveBuddies.buddyId, buddies.id))

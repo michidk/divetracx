@@ -14,6 +14,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
+import { DIVE_BUDDY_ROLE_VALUES } from '@/modules/dives/buddy-role'
 
 const auditColumns = {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -21,6 +22,7 @@ const auditColumns = {
 }
 
 export const diveCaptureSource = pgEnum('dive_capture_source', ['manual', 'computer'])
+export const diveBuddyRole = pgEnum('dive_buddy_role', DIVE_BUDDY_ROLE_VALUES)
 
 export const divers = pgTable('divers', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -315,7 +317,6 @@ export const dives = pgTable(
     computer: text('computer'),
     suit: text('suit'),
     boat: text('boat'),
-    divemaster: text('divemaster'),
     notes: text('notes'),
     ...auditColumns,
   },
@@ -362,6 +363,7 @@ export const diveBuddies = pgTable(
     buddyId: uuid('buddy_id')
       .notNull()
       .references(() => buddies.id, { onDelete: 'cascade' }),
+    role: diveBuddyRole('role').notNull().default('buddy'),
   },
   (table) => [
     uniqueIndex('dive_buddies_dive_buddy_unique').on(table.diveId, table.buddyId),
