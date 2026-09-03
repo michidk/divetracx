@@ -20,9 +20,8 @@ export function AgencyMark({
   return (
     <div
       className={cn(
-        'relative grid size-16 shrink-0 place-items-center overflow-hidden bg-muted font-mono text-sm font-semibold text-primary ring-1 ring-border',
+        'relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-muted font-mono text-sm font-semibold text-primary ring-1 ring-border',
         className,
-        'rounded-full',
       )}
       {...accessibilityProps}
     >

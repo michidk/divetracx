@@ -149,7 +149,7 @@ async function agencyMembershipBadges(
       return `
         <g transform="translate(${80 + column * 155} ${468 + row * 54})">
           <rect width="145" height="44" rx="12" fill="#ffffff" fill-opacity="0.95" />
-          <circle cx="22" cy="22" r="17" fill="${membership.agency.darkLogo ? '#132833' : '#ffffff'}" stroke="#d3e1e2" />
+          <rect x="5" y="5" width="34" height="34" rx="8" fill="${membership.agency.darkLogo ? '#132833' : '#ffffff'}" stroke="#d3e1e2" />
           ${logoContent}
           <text x="47" y="18" class="membershipAgency">${xml(agencyName)}</text>
           <text x="47" y="34" class="membershipNumber">${xml(compact(membership.memberNumber, 12))}</text>
@@ -179,11 +179,25 @@ export async function renderProfileCard() {
   const skillHeading = certifications.length
     ? `${certifications.length} certification${certifications.length === 1 ? '' : 's'}`
     : 'No certifications added yet'
-  const insurance = diver?.insurance
-    ? `Insurance: ${compact(
-        [diver.insurance, diver.insuranceTariff].filter(Boolean).join(' · '),
-        58,
-      )}`
+  const insuranceDetails = diver
+    ? [
+        diver.insurance,
+        diver.insuranceTariff,
+        diver.insuranceNumber ? `Policy ${diver.insuranceNumber}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : ''
+  const insurance = insuranceDetails
+    ? `Insurance: ${compact(insuranceDetails, 74)}`
+    : null
+  const emergencyDetails = diver
+    ? [diver.emergencyContact, diver.emergencyPhone, diver.emergencyEmail]
+        .filter(Boolean)
+        .join(' · ')
+    : ''
+  const emergencyContact = emergencyDetails
+    ? `Emergency: ${compact(emergencyDetails, 74)}`
     : null
 
   const svg = `
@@ -199,7 +213,7 @@ export async function renderProfileCard() {
           <stop offset="1" stop-color="#0a4557" />
         </linearGradient>
         <clipPath id="avatar"><circle cx="230" cy="260" r="150" /></clipPath>
-        <clipPath id="agencyLogo" clipPathUnits="userSpaceOnUse"><circle cx="22" cy="22" r="16" /></clipPath>
+        <clipPath id="agencyLogo" clipPathUnits="userSpaceOnUse"><rect x="5" y="5" width="34" height="34" rx="8" /></clipPath>
         <clipPath id="skillLabel" clipPathUnits="userSpaceOnUse"><rect x="42" y="0" width="255" height="42" /></clipPath>
         <style>
           text { font-family: "DejaVu Sans", sans-serif; fill: #f3ffff; }
@@ -240,7 +254,8 @@ export async function renderProfileCard() {
         <g transform="translate(440 0)"><text class="statValue">${depth} m</text><text y="28" class="statLabel">MAX DEPTH</text></g>
       </g>
       <text x="80" y="596" class="footer">Diving since ${since}</text>
-      ${insurance ? `<text x="450" y="596" class="footer">${xml(insurance)}</text>` : ''}
+      ${emergencyContact ? `<text x="450" y="576" class="footer">${xml(emergencyContact)}</text>` : ''}
+      ${insurance ? `<text x="450" y="602" class="footer">${xml(insurance)}</text>` : ''}
     </svg>`
 
   const sharp = (await import('sharp')).default

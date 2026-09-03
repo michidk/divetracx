@@ -41,16 +41,18 @@ fixed categorical palette (`#0891b2`, `#7c3aed`, `#ea580c`, `#16a34a`,
 Certification cards use a `from-primary via-primary to-cyan-800` gradient as
 their card surface.
 
-Agency logos use a circular frame everywhere they appear. Profile-card agency
-badges show both the agency name and membership number and fall back to initials
-when a logo cannot be loaded.
+Agency logos use a rounded-rectangle frame everywhere they appear. Profile-card
+agency badges show both the agency name and membership number and fall back to
+initials when a logo cannot be loaded.
 
 The profile certification list uses a star control to select up to eight
 certifications for the Divetracx card. The card shows only starred certifications;
 one to three starred items use one column, while four to eight use two columns.
 Certification pill labels keep their full names and reduce their font size only
 as needed to fit the available width.
-When an insurer is recorded, the card footer shows the insurer and optional plan.
+When insurance details are recorded, the card footer shows the insurer, optional
+plan, and policy number. It also shows the diver's emergency-contact name, phone,
+and email when available.
 On desktop, the Divetracx card and certifications occupy the profile page's left
 column while the personal-details form occupies the right column.
 
