@@ -101,6 +101,41 @@ helm install divetracx ./charts \
 Bundled PostgreSQL is intended for simple self-hosted installations. Prefer a
 managed database when backups and high availability matter.
 
+## OAuth-protected MCP
+
+The optional MCP endpoint validates JWT access tokens from an external OIDC
+provider. Configure that provider with the public MCP URL as the token audience
+and grant the `divetracx:read` scope. It must publish discovery metadata and a
+JWKS endpoint; clients need authorization code with PKCE and either dynamic
+client registration or a pre-registered client.
+
+The MCP Ingress routes only the protocol endpoint and its OAuth discovery
+documents directly to the application, bypassing Hodor's interactive cookie
+gate. The MCP endpoint independently requires OAuth on every protocol request.
+
+```yaml
+mcp:
+  enabled: true
+  serverUrl: https://dives.example.com/api/mcp
+  oauth:
+    issuer: https://auth.example.com/application/o/divetracx/
+    audience: https://dives.example.com/api/mcp # optional; defaults to serverUrl
+    scope: divetracx:read
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+      - host: dives.example.com
+    tls:
+      - secretName: dives-tls
+        hosts:
+          - dives.example.com
+```
+
+Do not expose the dedicated MCP Service with unrestricted paths through an
+additional proxy. For browser-based MCP clients, `mcp.allowedOrigins` can add
+an explicit Origin allowlist; native clients normally omit the Origin header.
+
 ## Validate
 
 ```bash
