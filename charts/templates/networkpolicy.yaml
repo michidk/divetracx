@@ -16,4 +16,8 @@ spec:
     - ports:
         - protocol: TCP
           port: {{ ternary 8080 3000 .Values.hodor.enabled }}
+        {{- if and .Values.mcp.enabled .Values.hodor.enabled }}
+        - protocol: TCP
+          port: 3000
+        {{- end }}
 {{- end }}
