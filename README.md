@@ -10,7 +10,7 @@ layer.
 
 - Bun 1.3 and TypeScript 6
 - TanStack Start, TanStack Router, React 19, and Tailwind CSS 4
-- PostgreSQL 17, Drizzle ORM, and committed migrations
+- PostgreSQL 18, Drizzle ORM, and committed migrations
 - Garmin's official FIT JavaScript SDK
 - Local or S3-compatible attachment storage
 - Docker and Helm deployment with optional Hodor authentication
@@ -28,6 +28,10 @@ bun run dev
 Open <http://localhost:3000>. **Settings → Integrations** provides capability-
 driven DiveMate and Garmin controls. **Import history** reports discovered,
 new, changed, unchanged, and failed source records.
+
+PostgreSQL major versions cannot reuse an older server's data files directly.
+Before upgrading an existing Compose installation to PostgreSQL 18, back up the
+database and restore it into a fresh PostgreSQL 18 volume (or use `pg_upgrade`).
 
 Useful commands:
 
