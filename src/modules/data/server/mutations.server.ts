@@ -7,6 +7,8 @@ import {
   agencies,
   agencyMemberships,
   buddies,
+  buddyAgencyMemberships,
+  buddyCertifications,
   certifications,
   divers,
   diveSites,
@@ -185,8 +187,6 @@ async function saveBuddy(id: string, values: EditorValues) {
     state: optionalText(values, 'state'),
     country: optionalText(values, 'country'),
     minimumDives: optionalInteger(values, 'minimumDives', { min: 0 }),
-    certifications: optionalText(values, 'certifications'),
-    agencies: optionalText(values, 'agencies'),
     notes: optionalText(values, 'notes'),
     updatedAt: new Date(),
   }
@@ -244,7 +244,6 @@ async function saveCertification(id: string, values: EditorValues) {
     certificationNumber: optionalText(values, 'certificationNumber'),
     certifiedAt: optionalText(values, 'certifiedAt'),
     instructorBuddyId: optionalRecordId(values, 'instructorBuddyId'),
-    instructorNumber: optionalText(values, 'instructorNumber'),
     updatedAt: new Date(),
   }
   const [row] =
@@ -284,6 +283,66 @@ async function saveAgencyMembership(id: string, values: EditorValues) {
   return row.id
 }
 
+async function saveBuddyCertification(id: string, values: EditorValues) {
+  const agency = await requiredAgency(values)
+  const fields = {
+    agencyId: agency.id,
+    name: requiredText(values, 'name'),
+    updatedAt: new Date(),
+  }
+  const [row] =
+    id === 'new'
+      ? await getDb()
+          .insert(buddyCertifications)
+          .values({
+            ...fields,
+            buddyId: recordId(requiredText(values, 'buddyId')),
+          })
+          .returning({ id: buddyCertifications.id })
+      : await getDb()
+          .update(buddyCertifications)
+          .set(fields)
+          .where(eq(buddyCertifications.id, recordId(id)))
+          .returning({ id: buddyCertifications.id })
+  if (!row) throw new Error('Buddy certification was not found')
+  return row.id
+}
+
+async function saveBuddyAgencyMembership(id: string, values: EditorValues) {
+  const agency = await requiredAgency(values)
+  const fields = {
+    agencyId: agency.id,
+    memberNumber: requiredText(values, 'memberNumber'),
+    updatedAt: new Date(),
+  }
+  try {
+    const [row] =
+      id === 'new'
+        ? await getDb()
+            .insert(buddyAgencyMemberships)
+            .values({
+              ...fields,
+              buddyId: recordId(requiredText(values, 'buddyId')),
+            })
+            .returning({ id: buddyAgencyMemberships.id })
+        : await getDb()
+            .update(buddyAgencyMemberships)
+            .set(fields)
+            .where(eq(buddyAgencyMemberships.id, recordId(id)))
+            .returning({ id: buddyAgencyMemberships.id })
+    if (!row) throw new Error('Buddy agency membership was not found')
+    return row.id
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes('buddy_agency_memberships_buddy_agency_unique')
+    ) {
+      throw new Error('This buddy already has a number for that agency')
+    }
+    throw error
+  }
+}
+
 export type DeletableEntityKey = Exclude<EntityKey, 'divers'>
 
 const deletableEntities: Record<
@@ -295,6 +354,8 @@ const deletableEntities: Record<
       | typeof equipment
       | typeof certifications
       | typeof agencyMemberships
+      | typeof buddyCertifications
+      | typeof buddyAgencyMemberships
     canonicalType: string
   }
 > = {
@@ -305,6 +366,14 @@ const deletableEntities: Record<
   agencyMemberships: {
     table: agencyMemberships,
     canonicalType: 'agency_membership',
+  },
+  buddyCertifications: {
+    table: buddyCertifications,
+    canonicalType: 'buddy_certification',
+  },
+  buddyAgencyMemberships: {
+    table: buddyAgencyMemberships,
+    canonicalType: 'buddy_agency_membership',
   },
 }
 
@@ -368,5 +437,9 @@ export async function saveDataRecord(
       return saveCertification(id, values)
     case 'agencyMemberships':
       return saveAgencyMembership(id, values)
+    case 'buddyCertifications':
+      return saveBuddyCertification(id, values)
+    case 'buddyAgencyMemberships':
+      return saveBuddyAgencyMembership(id, values)
   }
 }

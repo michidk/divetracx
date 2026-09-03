@@ -75,7 +75,7 @@ describe.skipIf(!enabled)('DiveMate export integration', () => {
       divers: current.data.divers.length,
       sites: current.data.diveSites.length,
       buddies: current.data.buddies.length,
-      equipment: current.data.equipment.length,
+      equipment: current.data.equipment.length + current.data.equipmentSets.length,
       certifications: current.data.certifications.length,
       shops: current.data.shops.length,
       diveTypes: current.data.diveTypes.length,

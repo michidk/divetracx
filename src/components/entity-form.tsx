@@ -305,12 +305,14 @@ export function EntityForm({
   onSaved,
   renderSectionExtra,
   selectOptions,
+  fixedValues,
 }: {
   entity: EntityKey
   recordId: string
   record: Record<string, unknown> | null
   onSaved?: (id: string) => void | Promise<void>
   selectOptions?: Record<string, NonNullable<EntityField['options']>>
+  fixedValues?: EditorValues
   renderSectionExtra?: (
     section: string,
     values: EditorValues,
@@ -331,7 +333,9 @@ export function EntityForm({
     setMessage(null)
     clearSaved()
     try {
-      const result = await saveRecord({ data: { entity, recordId, values } })
+      const result = await saveRecord({
+        data: { entity, recordId, values: { ...values, ...fixedValues } },
+      })
       await router.invalidate()
       markSaved()
       if (recordId === 'new') await onSaved?.(result.id)

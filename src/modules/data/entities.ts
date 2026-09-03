@@ -8,6 +8,8 @@ export const entityKeySchema = z.enum([
   'equipment',
   'certifications',
   'agencyMemberships',
+  'buddyCertifications',
+  'buddyAgencyMemberships',
 ])
 
 export type EntityKey = z.infer<typeof entityKeySchema>
@@ -196,20 +198,11 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
         help: 'The number of dives this buddy is known to have completed at minimum.',
       },
       {
-        key: 'certifications',
-        label: 'Certifications',
+        key: 'notes',
+        label: 'Notes',
         kind: 'textarea',
-        section: 'Experience',
-        help: 'Optional free-text list; use a new line for each certification.',
+        section: 'Notes',
       },
-      {
-        key: 'agencies',
-        label: 'Agencies',
-        kind: 'textarea',
-        section: 'Experience',
-        help: 'Optional free-text list; use a new line for each agency.',
-      },
-      { key: 'notes', label: 'Notes', kind: 'textarea', section: 'Notes' },
     ],
   },
   equipment: {
@@ -296,12 +289,6 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
         section: 'Instructor',
         help: 'Instructors are people in your buddy list.',
       },
-      {
-        key: 'instructorNumber',
-        label: 'Instructor number',
-        kind: 'text',
-        section: 'Instructor',
-      },
     ],
   },
   agencyMemberships: {
@@ -322,6 +309,50 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
         label: 'Membership number',
         kind: 'text',
         section: 'Membership',
+        required: true,
+      },
+    ],
+  },
+  buddyCertifications: {
+    key: 'buddyCertifications',
+    singular: 'Buddy certification',
+    plural: 'Buddy certifications',
+    fields: [
+      {
+        key: 'agencyId',
+        label: 'Agency',
+        kind: 'select',
+        section: 'Certification',
+        required: true,
+        help: 'Add more agencies in Settings.',
+      },
+      {
+        key: 'name',
+        label: 'Certification name',
+        kind: 'text',
+        section: 'Certification',
+        required: true,
+      },
+    ],
+  },
+  buddyAgencyMemberships: {
+    key: 'buddyAgencyMemberships',
+    singular: 'Buddy agency membership',
+    plural: 'Buddy agency memberships',
+    fields: [
+      {
+        key: 'agencyId',
+        label: 'Agency',
+        kind: 'select',
+        section: 'Agency membership',
+        required: true,
+        help: 'Add more agencies in Settings.',
+      },
+      {
+        key: 'memberNumber',
+        label: 'Member or instructor number',
+        kind: 'text',
+        section: 'Agency membership',
         required: true,
       },
     ],

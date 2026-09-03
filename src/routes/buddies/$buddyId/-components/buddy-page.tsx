@@ -6,6 +6,7 @@ import { EntityForm } from '@/components/entity-form'
 import { Badge } from '@/components/ui/badge'
 import type { getBuddy } from '@/modules/buddies/server/queries'
 import { formatDiveDate, formatPersonName } from '@/modules/dives/format'
+import { BuddyCredentials } from './buddy-credentials'
 
 type BuddyDetail = NonNullable<Awaited<ReturnType<typeof getBuddy>>>
 
@@ -48,6 +49,12 @@ export function BuddyPage({ detail }: { detail: BuddyDetail }) {
           ) : null}
         </div>
       </header>
+
+      <BuddyCredentials
+        buddyId={buddy.id}
+        certifications={detail.certifications}
+        memberships={detail.agencyMemberships}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.9fr)]">
         <section className="overflow-hidden rounded-2xl border border-border bg-card">
