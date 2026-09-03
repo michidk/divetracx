@@ -83,12 +83,12 @@ export function CertificationCard({
             : `${name} card`
         }
         className={cn(
-          'group relative block aspect-[856/540] w-full transition-[transform,filter] duration-500 [transform-style:preserve-3d] hover:scale-[1.012] hover:drop-shadow-[0_18px_24px_rgba(15,23,42,0.24)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary',
+          'group relative block aspect-[856/540] w-full transition-transform duration-500 [transform-style:preserve-3d] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary',
           flipped && '[transform:rotateY(180deg)]',
           canFlip && 'cursor-pointer',
         )}
       >
-        <span className="absolute inset-0 overflow-hidden rounded-xl shadow-xl ring-1 ring-black/10 [backface-visibility:hidden]">
+        <span className="absolute inset-0 overflow-hidden rounded-xl shadow-md ring-1 ring-black/10 transition-shadow duration-300 [backface-visibility:hidden] group-hover:shadow-[0_6px_12px_-7px_rgba(15,23,42,0.35)]">
           {front}
           <span className="pointer-events-none absolute inset-y-[-25%] -left-1/2 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/45 to-transparent opacity-0 blur-sm transition-[left,opacity] duration-700 ease-out group-hover:left-[120%] group-hover:opacity-100" />
           {canFlip ? (
@@ -98,7 +98,7 @@ export function CertificationCard({
           ) : null}
         </span>
         {backSrc ? (
-          <span className="absolute inset-0 overflow-hidden rounded-xl shadow-xl ring-1 ring-black/10 [backface-visibility:hidden] [transform:rotateY(180deg)]">
+          <span className="absolute inset-0 overflow-hidden rounded-xl shadow-md ring-1 ring-black/10 transition-shadow duration-300 [backface-visibility:hidden] [transform:rotateY(180deg)] group-hover:shadow-[0_6px_12px_-7px_rgba(15,23,42,0.35)]">
             <img
               src={backSrc}
               alt={`${name} card, back`}
