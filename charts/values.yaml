@@ -189,7 +189,7 @@ postgresql:
   enabled: false
   image:
     repository: postgres
-    tag: "17.6-alpine"
+    tag: "17.11-alpine"
     pullPolicy: IfNotPresent
   service:
     port: 5432
