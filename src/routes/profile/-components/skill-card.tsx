@@ -27,13 +27,11 @@ export function SkillCard({ imageVersion }: { imageVersion: string }) {
           <Download size={15} aria-hidden="true" /> Download PNG
         </Button>
       </div>
-      <div className="overflow-hidden rounded-2xl border border-border bg-[#092d39] shadow-sm">
-        <img
-          src={previewUrl}
-          alt="Divetracx diver skill card preview"
-          className="block aspect-[1200/630] w-full"
-        />
-      </div>
+      <img
+        src={previewUrl}
+        alt="Divetracx diver skill card preview"
+        className="block aspect-[1200/630] w-full"
+      />
     </section>
   )
 }

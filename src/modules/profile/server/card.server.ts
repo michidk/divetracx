@@ -33,6 +33,18 @@ function formatHours(seconds: number) {
   )
 }
 
+function skillFontSize(label: string) {
+  const widthInEms = [...label].reduce((width, character) => {
+    if (/\s/.test(character)) return width + 0.3
+    if (/[MW@%&]/.test(character)) return width + 0.9
+    if (/[A-Z]/.test(character)) return width + 0.67
+    if (/[ilI1|.,'!:;]/.test(character)) return width + 0.3
+    return width + 0.56
+  }, 0)
+  if (widthInEms === 0) return 18
+  return Math.min(18, Math.floor((255 / widthInEms) * 0.94 * 10) / 10)
+}
+
 async function profileImageData(storagePath: string | null | undefined) {
   if (!storagePath) return null
   const storage = getStorage()
@@ -102,12 +114,13 @@ function certificationPills(
   const pills = visible.map((certification, index) => {
     const column = index % columns
     const row = Math.floor(index / columns)
-    const label = compact(certification.name, 20)
+    const label = certification.name.trim()
+    const fontSize = skillFontSize(label)
     return `
       <g transform="translate(${450 + column * 335} ${225 + row * 55})">
         <rect width="315" height="42" rx="21" fill="#ffffff" fill-opacity="0.1" stroke="#82d9dc" stroke-opacity="0.4" />
         <circle cx="23" cy="21" r="5" fill="#56d6d4" />
-        <text x="42" y="27" class="skill" clip-path="url(#skillLabel)">${xml(label)}</text>
+        <text x="42" y="27" class="skill" font-size="${fontSize}" clip-path="url(#skillLabel)">${xml(label)}</text>
       </g>`
   })
 
@@ -193,7 +206,7 @@ export async function renderProfileCard() {
           .brand { font-size: 22px; font-weight: 700; letter-spacing: 5px; }
           .name { font-size: 52px; font-weight: 700; letter-spacing: -1px; }
           .eyebrow { font-size: 16px; font-weight: 700; letter-spacing: 3px; fill: #8ce7e6; }
-          .skill { font-size: 18px; font-weight: 600; }
+          .skill { font-weight: 600; }
           .statValue { font-size: 31px; font-weight: 700; }
           .statLabel { font-size: 13px; font-weight: 700; letter-spacing: 2px; fill: #9edbdc; }
           .footer { font-size: 16px; fill: #c6eeee; }

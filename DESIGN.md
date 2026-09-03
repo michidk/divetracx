@@ -48,7 +48,11 @@ when a logo cannot be loaded.
 The profile certification list uses a star control to select up to eight
 certifications for the Divetracx card. The card shows only starred certifications;
 one to three starred items use one column, while four to eight use two columns.
+Certification pill labels keep their full names and reduce their font size only
+as needed to fit the available width.
 When an insurer is recorded, the card footer shows the insurer and optional plan.
+On desktop, the Divetracx card and certifications occupy the profile page's left
+column while the personal-details form occupies the right column.
 
 Body text must meet WCAG 2.2 AA contrast on its actual surface. Form-control
 outlines need at least 3:1 contrast with adjacent colors. There is currently a
@@ -127,6 +131,14 @@ aggregate numbers on Overview, Stats, and detail pages.
 `Badge` variants: `default`, `secondary`, `outline`, `warning`, `destructive`.
 Import statuses (discovered, new, changed, unchanged, failed) and integration
 capabilities map onto these; do not introduce ad-hoc pill styles.
+
+### Notifications
+
+Sonner provides app-wide transient notifications at the bottom right. Use an
+error toast for action failures whose inline location may be outside the current
+viewport; keep field-validation errors directly beneath their fields. Toasts
+must use plain-language titles and retain the actionable server message as their
+description.
 
 ### Record lists
 

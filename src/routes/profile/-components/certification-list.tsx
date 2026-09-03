@@ -1,6 +1,7 @@
 import { Link, useRouter } from '@tanstack/react-router'
 import { Pencil, Plus, Repeat, Star } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { CertificationCard } from '@/components/certification-card'
 import { Button } from '@/components/ui/button'
 import { formatDiveDate, formatPersonName } from '@/modules/dives/format'
@@ -46,7 +47,6 @@ export function CertificationList({
 }) {
   const [flippedById, setFlippedById] = useState<Record<string, boolean>>({})
   const [updatingFeaturedId, setUpdatingFeaturedId] = useState<string | null>(null)
-  const [featureError, setFeatureError] = useState<string | null>(null)
   const router = useRouter()
   const flippable = certifications.filter((certification) => certification.scans[1])
   const allFlipped =
@@ -64,16 +64,16 @@ export function CertificationList({
 
   async function setFeatured(certification: Certification, featured: boolean) {
     setUpdatingFeaturedId(certification.id)
-    setFeatureError(null)
     try {
       await setCertificationCardFeature({
         data: { certificationId: certification.id, featured },
       })
       await router.invalidate()
     } catch (error) {
-      setFeatureError(
-        error instanceof Error ? error.message : 'Updating the card selection failed',
-      )
+      toast.error('Card selection not changed', {
+        description:
+          error instanceof Error ? error.message : 'Updating the card selection failed',
+      })
     } finally {
       setUpdatingFeaturedId(null)
     }
@@ -108,11 +108,6 @@ export function CertificationList({
       <p className="mb-3 text-xs text-muted-foreground">
         Star up to eight certifications to show them on your Divetracx card.
       </p>
-      {featureError ? (
-        <p className="mb-3 text-sm text-red-600" aria-live="polite">
-          {featureError}
-        </p>
-      ) : null}
       {certifications.length === 0 ? (
         <p className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
           No certifications yet.

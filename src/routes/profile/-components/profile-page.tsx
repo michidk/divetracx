@@ -68,8 +68,6 @@ export function ProfilePage({ profile }: { profile: ProfileData }) {
         <StatCard icon={Award} label="Certifications" value={certifications.length} />
       </section>
 
-      <SkillCard imageVersion={cardVersion} />
-
       <section>
         <div className="mb-3 flex items-center justify-between gap-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -93,9 +91,12 @@ export function ProfilePage({ profile }: { profile: ProfileData }) {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.9fr)]">
-        <section>
-          <CertificationList certifications={certifications} />
-        </section>
+        <div className="space-y-7">
+          <SkillCard imageVersion={cardVersion} />
+          <section>
+            <CertificationList certifications={certifications} />
+          </section>
+        </div>
 
         <div>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
