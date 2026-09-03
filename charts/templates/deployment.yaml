@@ -1,0 +1,243 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "divetracx.fullname" . }}
+  labels:
+    {{- include "divetracx.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "divetracx.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "divetracx.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      serviceAccountName: {{ include "divetracx.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: divetracx
+          image: {{ include "divetracx.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.postgresql.existingSecret }}
+                  name: {{ .Values.postgresql.existingSecret }}
+                  key: {{ .Values.postgresql.existingSecretKey }}
+                  {{- else if .Values.postgresql.enabled }}
+                  name: {{ include "divetracx.postgresqlSecretName" . }}
+                  key: url
+                  {{- else }}
+                  name: {{ include "divetracx.dbSecretName" . }}
+                  key: url
+                  {{- end }}
+            - name: IMPORT_TIMEOUT_MS
+              value: {{ .Values.imports.timeoutMs | quote }}
+            {{- if .Values.divemate.googleDriveFolderId }}
+            - name: DIVEMATE_GOOGLE_DRIVE_FOLDER_ID
+              value: {{ .Values.divemate.googleDriveFolderId | quote }}
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /var/run/secrets/divetracx/google-credentials.json
+            - name: DIVEMATE_MAX_IMAGE_BYTES
+              value: {{ .Values.divemate.maxImageBytes | quote }}
+            - name: DIVEMATE_MAX_BACKUP_BYTES
+              value: {{ .Values.divemate.maxBackupBytes | quote }}
+            {{- end }}
+            {{- if or .Values.garmin.fullImportUrl .Values.garminAdapter.enabled }}
+            - name: GARMIN_ADAPTER_FULL_IMPORT_URL
+              value: {{ include "divetracx.garminAdapterFullImportUrl" . | quote }}
+            {{- end }}
+            {{- if or .Values.garmin.incrementalImportUrl .Values.garminAdapter.enabled }}
+            - name: GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL
+              value: {{ include "divetracx.garminAdapterIncrementalImportUrl" . | quote }}
+            {{- end }}
+            {{- if .Values.garmin.existingSecret }}
+            - name: GARMIN_ADAPTER_AUTHORIZATION
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.garmin.existingSecret }}
+                  key: {{ .Values.garmin.authorizationSecretKey }}
+            {{- end }}
+            - name: GARMIN_ADAPTER_TIMEOUT_MS
+              value: {{ .Values.garmin.timeoutMs | quote }}
+            - name: GARMIN_ADAPTER_MAX_RESPONSE_BYTES
+              value: {{ .Values.garmin.maxResponseBytes | quote }}
+            - name: GARMIN_MAX_FIT_BYTES
+              value: {{ .Values.garmin.maxFitBytes | quote }}
+{{- if and .Values.mcp.enabled (not .Values.hodor.enabled) }}
+{{- fail "hodor.enabled must be true when MCP is enabled because OAuth consent requires owner authentication" }}
+{{- end }}
+{{- if .Values.mcp.enabled }}
+            - name: MCP_SERVER_URL
+              value: {{ required "mcp.serverUrl is required when MCP is enabled" .Values.mcp.serverUrl | quote }}
+            - name: HODOR_SECRET
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.hodor.existingSecret }}
+                  name: {{ .Values.hodor.existingSecret }}
+                  key: {{ .Values.hodor.existingSecretSecretKey }}
+                  {{- else }}
+                  name: {{ include "divetracx.fullname" . }}-hodor
+                  key: secret
+                  {{- end }}
+            {{- if .Values.mcp.allowedOrigins }}
+            - name: MCP_ALLOWED_ORIGINS
+              value: {{ join "," .Values.mcp.allowedOrigins | quote }}
+            {{- end }}
+            {{- end }}
+            - name: STORAGE_PROVIDER
+              value: {{ .Values.storage.provider | quote }}
+            - name: STORAGE_URL
+              value: "/media"
+            {{- if eq .Values.storage.provider "local" }}
+            - name: STORAGE_PATH
+              value: {{ .Values.storage.local.path | quote }}
+            {{- else }}
+            - name: S3_BUCKET
+              value: {{ .Values.storage.s3.bucket | quote }}
+            - name: S3_REGION
+              value: {{ .Values.storage.s3.region | quote }}
+            {{- if .Values.storage.s3.endpoint }}
+            - name: S3_ENDPOINT
+              value: {{ .Values.storage.s3.endpoint | quote }}
+            {{- end }}
+            - name: S3_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.storage.s3.existingSecret }}
+                  key: {{ .Values.storage.s3.existingSecretAccessKeyIdKey }}
+            - name: S3_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.storage.s3.existingSecret }}
+                  key: {{ .Values.storage.s3.existingSecretSecretAccessKeyKey }}
+            {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: temporary
+              mountPath: /tmp
+            {{- if eq .Values.storage.provider "local" }}
+            - name: uploads
+              mountPath: {{ .Values.storage.local.path }}
+            {{- end }}
+            {{- if .Values.divemate.googleDriveFolderId }}
+            - name: google-credentials
+              mountPath: /var/run/secrets/divetracx
+              readOnly: true
+            {{- end }}
+        {{- if .Values.hodor.enabled }}
+        - name: hodor
+          {{- if .Values.hodor.image.digest }}
+          image: "{{ .Values.hodor.image.repository }}@{{ .Values.hodor.image.digest }}"
+          {{- else }}
+          image: "{{ .Values.hodor.image.repository }}:{{ required "hodor.image.tag or hodor.image.digest is required" .Values.hodor.image.tag }}"
+          {{- end }}
+          imagePullPolicy: {{ .Values.hodor.image.pullPolicy }}
+          ports:
+            - name: gate
+              containerPort: 8080
+          env:
+            - name: PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.hodor.existingSecret }}
+                  name: {{ .Values.hodor.existingSecret }}
+                  key: {{ .Values.hodor.existingSecretPasswordKey }}
+                  {{- else }}
+                  name: {{ include "divetracx.fullname" . }}-hodor
+                  key: password
+                  {{- end }}
+            - name: SECRET
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.hodor.existingSecret }}
+                  name: {{ .Values.hodor.existingSecret }}
+                  key: {{ .Values.hodor.existingSecretSecretKey }}
+                  {{- else }}
+                  name: {{ include "divetracx.fullname" . }}-hodor
+                  key: secret
+                  {{- end }}
+            - name: UPSTREAM
+              value: http://localhost:3000
+            - name: TITLE
+              value: {{ .Values.hodor.title | quote }}
+            - name: SESSION_TTL
+              value: {{ .Values.hodor.sessionTtl | quote }}
+            - name: SECURE_COOKIE
+              value: {{ or .Values.hodor.secureCookie (not (empty .Values.ingress.tls)) | quote }}
+            - name: LOG_FORMAT
+              value: {{ .Values.hodor.logFormat | quote }}
+          readinessProbe:
+            httpGet:
+              path: /_gate/health
+              port: gate
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /_gate/health
+              port: gate
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.hodor.resources | nindent 12 }}
+        {{- end }}
+      volumes:
+        - name: temporary
+          emptyDir: {}
+        {{- if eq .Values.storage.provider "local" }}
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: {{ include "divetracx.fullname" . }}-uploads
+        {{- end }}
+        {{- if .Values.divemate.googleDriveFolderId }}
+        - name: google-credentials
+          secret:
+            secretName: {{ required "divemate.existingSecret is required for Google Drive" .Values.divemate.existingSecret }}
+            items:
+              - key: {{ .Values.divemate.googleCredentialsSecretKey }}
+                path: google-credentials.json
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

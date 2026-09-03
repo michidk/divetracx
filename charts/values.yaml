@@ -1,0 +1,255 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/michidk/divetracx
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1001
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: divetracx.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+mcp:
+  enabled: false
+  # Public resource URL. The path must be /api/mcp.
+  serverUrl: ""
+  # Optional browser Origin allowlist. Non-browser MCP clients omit Origin.
+  allowedOrigins: []
+  service:
+    port: 80
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts: []
+    tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /api/health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /api/health
+    port: http
+  initialDelaySeconds: 3
+  periodSeconds: 5
+
+startupProbe:
+  httpGet:
+    path: /api/health
+    port: http
+  periodSeconds: 2
+  failureThreshold: 30
+
+terminationGracePeriodSeconds: 30
+
+migrations:
+  enabled: true
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  hook:
+    enabled: true
+  resources:
+    limits:
+      cpu: 250m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+imports:
+  # Overall deadline shared by manual, scheduled, and command-line imports.
+  timeoutMs: 900000
+
+sync:
+  # Enable after configuring the Google Drive folder and credential Secret.
+  enabled: false
+  schedule: "0 3 * * *"
+  timeZone: "Etc/UTC"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  backoffLimit: 2
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+divemate:
+  # Secret containing the Google service-account JSON credential.
+  existingSecret: ""
+  # Drive folder containing DiveMate.ddb, Media, and Cards.
+  googleDriveFolderId: ""
+  googleCredentialsSecretKey: "google-credentials.json"
+  maxBackupBytes: 52428800
+  maxImageBytes: 104857600
+
+garmin:
+  # Garmin Connect transport is exposed through a server-side adapter. Leave the
+  # URLs empty to use the bundled adapter deployment (garminAdapter.enabled).
+  fullImportUrl: ""
+  incrementalImportUrl: ""
+  # Secret holding the shared authorization value sent to and checked by the
+  # adapter (key below). Required for the bundled adapter and the sync CronJob.
+  existingSecret: ""
+  authorizationSecretKey: "authorization"
+  timeoutMs: 30000
+  maxResponseBytes: 104857600
+  maxFitBytes: 26214400
+  sync:
+    # Scheduled incremental Garmin import through the configured adapter.
+    enabled: false
+    schedule: "30 3 * * *"
+    timeZone: "Etc/UTC"
+    concurrencyPolicy: Forbid
+    startingDeadlineSeconds: 3600
+    successfulJobsHistoryLimit: 3
+    failedJobsHistoryLimit: 3
+    backoffLimit: 2
+    resources:
+      limits:
+        cpu: 500m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 128Mi
+
+garminAdapter:
+  # Bundled Garmin Connect adapter (unofficial consumer API, garth-style token
+  # persistence). Connect the Garmin account once from the Divetracx UI under
+  # Settings -> Integrations; tokens persist on the tokens volume.
+  enabled: false
+  port: 8787
+  domain: garmin.com
+  # Short-lived, in-memory continuation while the user enters a Garmin MFA code.
+  mfaChallengeTtlSeconds: 300
+  tokens:
+    size: 16Mi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+storage:
+  provider: local
+  local:
+    path: /data/uploads
+    size: 10Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+  s3:
+    bucket: ""
+    region: us-east-1
+    endpoint: ""
+    existingSecret: ""
+    existingSecretAccessKeyIdKey: access-key-id
+    existingSecretSecretAccessKeyKey: secret-access-key
+
+postgresql:
+  enabled: false
+  image:
+    repository: postgres
+    tag: "18.6-alpine"
+    pullPolicy: IfNotPresent
+  service:
+    port: 5432
+  auth:
+    database: divetracx
+    username: divetracx
+    password: ""
+  primary:
+    resources: {}
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: ""
+  external:
+    url: ""
+  existingSecret: ""
+  existingSecretKey: "url"
+
+hodor:
+  enabled: true
+  existingSecret: ""
+  password: ""
+  secret: ""
+  existingSecretPasswordKey: "password"
+  existingSecretSecretKey: "secret"
+  image:
+    repository: ghcr.io/michidk/hodor
+    tag: ""
+    digest: "sha256:7cdb5de7ee2c776ee6c2ae049e1b2050caa60288d7b3148e26117a5d6bba18b2"
+    pullPolicy: IfNotPresent
+  title: "Divetracx Login"
+  sessionTtl: "86400"
+  secureCookie: false
+  logFormat: compact
+  resources:
+    limits:
+      cpu: 100m
+      memory: 64Mi
+    requests:
+      cpu: 10m
+      memory: 32Mi
+
+networkPolicy:
+  enabled: true
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

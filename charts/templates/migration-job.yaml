@@ -1,0 +1,60 @@
+{{- if .Values.migrations.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "divetracx.fullname" . }}-migrations{{ if not .Values.migrations.hook.enabled }}-{{ .Release.Revision }}{{ end }}
+  labels:
+    {{- include "divetracx.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrations
+  {{- if .Values.migrations.hook.enabled }}
+  annotations:
+    "helm.sh/hook": {{ if .Values.postgresql.enabled }}post-install,pre-upgrade{{ else }}pre-install,pre-upgrade{{ end }}
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  {{- end }}
+spec:
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
+  {{- if and (not .Values.migrations.hook.enabled) .Values.migrations.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ .Values.migrations.ttlSecondsAfterFinished }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "divetracx.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrations
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migrate
+          image: {{ include "divetracx.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["bun", "run", "scripts/migrate.ts"]
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.postgresql.existingSecret }}
+                  name: {{ .Values.postgresql.existingSecret }}
+                  key: {{ .Values.postgresql.existingSecretKey }}
+                  {{- else if .Values.postgresql.enabled }}
+                  name: {{ include "divetracx.postgresqlSecretName" . }}
+                  key: url
+                  {{- else if .Values.migrations.hook.enabled }}
+                  name: {{ include "divetracx.migrationDbSecretName" . }}
+                  key: url
+                  {{- else }}
+                  name: {{ include "divetracx.dbSecretName" . }}
+                  key: url
+                  {{- end }}
+          resources:
+            {{- toYaml .Values.migrations.resources | nindent 12 }}
+{{- end }}

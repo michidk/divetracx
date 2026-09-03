@@ -1,0 +1,2 @@
+DROP INDEX "dive_profile_samples_dive_sample_index_unique";--> statement-breakpoint
+CREATE INDEX "dive_profile_samples_dive_sample_index" ON "dive_profile_samples" USING btree ("dive_id","sample_index");

@@ -1,0 +1,32 @@
+node_modules
+.DS_Store
+.env
+.env.*
+!.env.example
+.output
+.tanstack
+.nitro
+*.local
+
+# Agent/session artifacts
+/logs/
+.artifacts/
+.serena/
+.claude/
+.playwright-mcp/
+
+# Local data, secrets, and generated media (never publish)
+.secrets/
+/backups/
+/recovered-images/
+/rejected-candidates/
+/uploads/
+/output/
+/*.png
+/*.jpg
+/*.ddb
+/*.dump
+
+# Deployment
+.vercel
+.demo-build

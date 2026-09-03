@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Divetracx Helm values",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "replicaCount",
+    "image",
+    "serviceAccount",
+    "service",
+    "ingress",
+    "mcp",
+    "resources",
+    "migrations",
+    "imports",
+    "sync",
+    "divemate",
+    "garmin",
+    "storage",
+    "postgresql",
+    "hodor",
+    "networkPolicy"
+  ],
+  "properties": {
+    "replicaCount": { "type": "integer", "minimum": 1 },
+    "image": { "$ref": "#/definitions/image" },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "nameOverride": { "type": "string" },
+    "fullnameOverride": { "type": "string" },
+    "serviceAccount": { "type": "object" },
+    "podAnnotations": { "$ref": "#/definitions/stringMap" },
+    "podLabels": { "$ref": "#/definitions/stringMap" },
+    "podSecurityContext": { "type": "object" },
+    "securityContext": { "type": "object" },
+    "service": {
+      "type": "object",
+      "required": ["type", "port"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["ClusterIP", "NodePort", "LoadBalancer"]
+        },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "ingress": { "type": "object" },
+    "mcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "serverUrl", "allowedOrigins", "service", "ingress"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "serverUrl": { "type": "string" },
+        "allowedOrigins": {
+          "type": "array",
+          "items": { "type": "string", "format": "uri" }
+        },
+        "service": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["port"],
+          "properties": {
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+          }
+        },
+        "ingress": {
+          "type": "object",
+          "required": ["enabled", "className", "annotations", "hosts", "tls"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "className": { "type": "string" },
+            "annotations": { "$ref": "#/definitions/stringMap" },
+            "hosts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["host"],
+                "properties": {
+                  "host": { "type": "string", "minLength": 1 }
+                }
+              }
+            },
+            "tls": { "type": "array", "items": { "type": "object" } }
+          }
+        }
+      }
+    },
+    "resources": { "type": "object" },
+    "livenessProbe": { "type": "object" },
+    "readinessProbe": { "type": "object" },
+    "startupProbe": { "type": "object" },
+    "terminationGracePeriodSeconds": { "type": "integer", "minimum": 0 },
+    "migrations": {
+      "type": "object",
+      "required": ["enabled", "backoffLimit", "hook", "resources"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "backoffLimit": { "type": "integer", "minimum": 0 },
+        "ttlSecondsAfterFinished": { "type": "integer", "minimum": 0 },
+        "hook": { "type": "object" },
+        "resources": { "type": "object" }
+      }
+    },
+    "imports": {
+      "type": "object",
+      "required": ["timeoutMs"],
+      "properties": {
+        "timeoutMs": { "type": "integer", "minimum": 1000 }
+      }
+    },
+    "sync": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "schedule",
+        "timeZone",
+        "concurrencyPolicy",
+        "startingDeadlineSeconds",
+        "successfulJobsHistoryLimit",
+        "failedJobsHistoryLimit",
+        "backoffLimit",
+        "resources"
+      ],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "schedule": { "type": "string", "minLength": 1 },
+        "timeZone": { "type": "string" },
+        "concurrencyPolicy": {
+          "type": "string",
+          "enum": ["Allow", "Forbid", "Replace"]
+        },
+        "startingDeadlineSeconds": { "type": "integer", "minimum": 0 },
+        "successfulJobsHistoryLimit": { "type": "integer", "minimum": 0 },
+        "failedJobsHistoryLimit": { "type": "integer", "minimum": 0 },
+        "backoffLimit": { "type": "integer", "minimum": 0 },
+        "resources": { "type": "object" }
+      }
+    },
+    "divemate": {
+      "type": "object",
+      "required": [
+        "existingSecret",
+        "googleDriveFolderId",
+        "googleCredentialsSecretKey",
+        "maxBackupBytes",
+        "maxImageBytes"
+      ],
+      "properties": {
+        "existingSecret": { "type": "string" },
+        "googleDriveFolderId": { "type": "string" },
+        "googleCredentialsSecretKey": { "type": "string", "minLength": 1 },
+        "maxBackupBytes": { "type": "integer", "minimum": 1 },
+        "maxImageBytes": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "garmin": {
+      "type": "object",
+      "required": [
+        "fullImportUrl",
+        "incrementalImportUrl",
+        "existingSecret",
+        "authorizationSecretKey",
+        "timeoutMs",
+        "maxResponseBytes",
+        "maxFitBytes"
+      ],
+      "properties": {
+        "fullImportUrl": { "type": "string" },
+        "incrementalImportUrl": { "type": "string" },
+        "existingSecret": { "type": "string" },
+        "authorizationSecretKey": { "type": "string", "minLength": 1 },
+        "timeoutMs": { "type": "integer", "minimum": 1 },
+        "maxResponseBytes": { "type": "integer", "minimum": 1 },
+        "maxFitBytes": { "type": "integer", "minimum": 1 },
+        "sync": {
+          "type": "object",
+          "required": ["enabled", "schedule"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "schedule": { "type": "string", "minLength": 1 },
+            "timeZone": { "type": "string" },
+            "concurrencyPolicy": {
+              "type": "string",
+              "enum": ["Allow", "Forbid", "Replace"]
+            },
+            "startingDeadlineSeconds": { "type": "integer", "minimum": 0 },
+            "successfulJobsHistoryLimit": { "type": "integer", "minimum": 0 },
+            "failedJobsHistoryLimit": { "type": "integer", "minimum": 0 },
+            "backoffLimit": { "type": "integer", "minimum": 0 },
+            "resources": { "type": "object" }
+          }
+        }
+      }
+    },
+    "garminAdapter": {
+      "type": "object",
+      "required": ["enabled", "port", "domain", "mfaChallengeTtlSeconds", "tokens"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "domain": { "type": "string", "enum": ["garmin.com", "garmin.cn"] },
+        "mfaChallengeTtlSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 900
+        },
+        "tokens": {
+          "type": "object",
+          "required": ["size"],
+          "properties": {
+            "size": { "type": "string", "minLength": 1 },
+            "storageClass": { "type": "string" },
+            "accessMode": { "type": "string", "minLength": 1 }
+          }
+        },
+        "resources": { "type": "object" }
+      }
+    },
+    "storage": { "type": "object" },
+    "postgresql": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "image",
+        "service",
+        "auth",
+        "primary",
+        "external",
+        "existingSecret",
+        "existingSecretKey"
+      ],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "image": { "$ref": "#/definitions/image" },
+        "service": { "type": "object" },
+        "auth": { "type": "object" },
+        "primary": { "type": "object" },
+        "external": { "type": "object" },
+        "existingSecret": { "type": "string" },
+        "existingSecretKey": { "type": "string", "minLength": 1 }
+      }
+    },
+    "hodor": { "type": "object" },
+    "networkPolicy": { "type": "object" },
+    "nodeSelector": { "type": "object" },
+    "tolerations": { "type": "array", "items": { "type": "object" } },
+    "affinity": { "type": "object" }
+  },
+  "definitions": {
+    "image": {
+      "type": "object",
+      "required": ["repository", "pullPolicy", "tag"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "pullPolicy": {
+          "type": "string",
+          "enum": ["Always", "IfNotPresent", "Never"]
+        },
+        "tag": { "type": "string" }
+      }
+    },
+    "stringMap": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}

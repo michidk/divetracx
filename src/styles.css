@@ -1,0 +1,194 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  :root {
+    --background: #f4f8f8;
+    --foreground: #102c31;
+    --card: #ffffff;
+    --card-foreground: #102c31;
+    --primary: #087f8c;
+    --primary-foreground: #f5ffff;
+    --muted: #e9f1f1;
+    --muted-foreground: #597176;
+    --accent: #d9eeef;
+    --accent-foreground: #102c31;
+    --border: #d3e1e2;
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+    --warning: #d97706;
+    --warning-foreground: #92400e;
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    background:
+      radial-gradient(circle at 85% 0%, rgb(8 127 140 / 9%), transparent 28rem),
+      var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  a {
+    outline-offset: 3px;
+  }
+
+  button:focus-visible,
+  a:focus-visible {
+    outline: 2px solid var(--primary);
+  }
+}
+
+.divetracx-site-map .maplibregl-canvas {
+  filter: saturate(0.72) brightness(1.02) contrast(0.96);
+}
+
+.divetracx-site-map-frame:fullscreen,
+.divetracx-site-map-frame.maplibregl-pseudo-fullscreen {
+  width: 100vw;
+  height: 100dvh;
+  border: 0;
+  border-radius: 0;
+}
+
+.divetracx-site-map .maplibregl-ctrl-group {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  box-shadow: none;
+}
+
+.divetracx-site-map .maplibregl-ctrl-group button {
+  background-color: transparent;
+  opacity: 0.7;
+  transition:
+    background-color 150ms ease-out,
+    opacity 150ms ease-out;
+}
+
+.divetracx-site-map .maplibregl-ctrl-group button:hover,
+.divetracx-site-map .maplibregl-ctrl-group button:focus-visible {
+  background-color: var(--accent);
+  opacity: 1;
+}
+
+.divetracx-site-map-marker {
+  position: relative;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  transition: transform 150ms ease-out;
+}
+
+.divetracx-site-map-marker:hover,
+.divetracx-site-map-marker:focus-visible,
+.divetracx-site-map-marker[data-selected="true"] {
+  transform: scale(1.1);
+}
+
+.divetracx-site-map-marker[data-selected="true"] {
+  z-index: 3;
+}
+
+.divetracx-site-map-marker:focus-visible {
+  border-radius: 999px;
+  outline: 3px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.divetracx-site-map-marker-pin {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+  place-items: center;
+  border: 3px solid var(--card);
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 1px 5px rgb(16 44 49 / 28%);
+  color: var(--primary-foreground);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1;
+  transition:
+    background-color 150ms ease-out,
+    box-shadow 150ms ease-out,
+    width 150ms ease-out,
+    height 150ms ease-out;
+}
+
+.divetracx-site-map-marker-cluster {
+  width: 26px;
+  height: 26px;
+  box-shadow:
+    0 0 0 2px var(--card),
+    0 0 0 3px var(--primary);
+}
+
+.divetracx-site-map-marker[data-selected="true"] .divetracx-site-map-marker-pin {
+  width: 24px;
+  height: 24px;
+  background: #ea580c;
+  box-shadow:
+    0 0 0 2px var(--card),
+    0 0 0 4px #ea580c;
+}
+
+.divetracx-site-map-marker[data-selected="true"] .divetracx-site-map-marker-cluster {
+  width: 28px;
+  height: 28px;
+}
+
+.divetracx-site-map-inspector {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 200ms ease-in-out,
+    transform 200ms ease-in-out;
+}
+
+@starting-style {
+  .divetracx-site-map-inspector {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (max-width: 639px), (pointer: coarse) {
+  .maplibregl-map .maplibregl-ctrl-group button {
+    width: 44px;
+    height: 44px;
+  }
+}

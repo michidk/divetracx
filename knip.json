@@ -1,0 +1,18 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/routes/**/*.tsx",
+    "src/router.tsx",
+    "src/server.ts",
+    "src/start.ts",
+    "src/db/demo.ts",
+    "src/lib/server/media-handler.ts",
+    "src/lib/server/profile-card-handler.ts",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "scripts/**/*.ts"
+  ],
+  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.ts", "*.config.ts"],
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": ["axios-cookiejar-support", "tough-cookie"]
+}

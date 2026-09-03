@@ -1,0 +1,93 @@
+{{- if .Values.garmin.sync.enabled }}
+{{- if not (or .Values.garmin.incrementalImportUrl .Values.garminAdapter.enabled) }}
+{{- fail "garmin.sync.enabled requires garminAdapter.enabled or garmin.incrementalImportUrl" }}
+{{- end }}
+{{- if empty .Values.garmin.existingSecret }}
+{{- fail "garmin.sync.enabled requires garmin.existingSecret with the shared authorization value" }}
+{{- end }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "divetracx.fullname" . }}-garmin-sync
+  labels:
+    {{- include "divetracx.labels" . | nindent 4 }}
+    app.kubernetes.io/component: garmin-sync
+spec:
+  schedule: {{ .Values.garmin.sync.schedule | quote }}
+  {{- if .Values.garmin.sync.timeZone }}
+  timeZone: {{ .Values.garmin.sync.timeZone | quote }}
+  {{- end }}
+  concurrencyPolicy: {{ .Values.garmin.sync.concurrencyPolicy }}
+  startingDeadlineSeconds: {{ .Values.garmin.sync.startingDeadlineSeconds }}
+  successfulJobsHistoryLimit: {{ .Values.garmin.sync.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.garmin.sync.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: {{ div .Values.imports.timeoutMs 1000 }}
+      backoffLimit: {{ .Values.garmin.sync.backoffLimit }}
+      template:
+        metadata:
+          labels:
+            {{- include "divetracx.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: garmin-sync
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: sync
+              image: {{ include "divetracx.image" . | quote }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command:
+                - bun
+                - run
+                - scripts/import-integration.ts
+                - --integration=garmin
+                - --trigger=schedule
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      {{- if .Values.postgresql.existingSecret }}
+                      name: {{ .Values.postgresql.existingSecret }}
+                      key: {{ .Values.postgresql.existingSecretKey }}
+                      {{- else if .Values.postgresql.enabled }}
+                      name: {{ include "divetracx.postgresqlSecretName" . }}
+                      key: url
+                      {{- else }}
+                      name: {{ include "divetracx.dbSecretName" . }}
+                      key: url
+                      {{- end }}
+                - name: IMPORT_TIMEOUT_MS
+                  value: {{ .Values.imports.timeoutMs | quote }}
+                - name: GARMIN_ADAPTER_FULL_IMPORT_URL
+                  value: {{ include "divetracx.garminAdapterFullImportUrl" . | quote }}
+                - name: GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL
+                  value: {{ include "divetracx.garminAdapterIncrementalImportUrl" . | quote }}
+                - name: GARMIN_ADAPTER_AUTHORIZATION
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.garmin.existingSecret }}
+                      key: {{ .Values.garmin.authorizationSecretKey }}
+                - name: GARMIN_ADAPTER_TIMEOUT_MS
+                  value: {{ .Values.garmin.timeoutMs | quote }}
+                - name: GARMIN_ADAPTER_MAX_RESPONSE_BYTES
+                  value: {{ .Values.garmin.maxResponseBytes | quote }}
+                - name: GARMIN_MAX_FIT_BYTES
+                  value: {{ .Values.garmin.maxFitBytes | quote }}
+              resources:
+                {{- toYaml .Values.garmin.sync.resources | nindent 16 }}
+              volumeMounts:
+                - name: temporary
+                  mountPath: /tmp
+          volumes:
+            - name: temporary
+              emptyDir: {}
+{{- end }}
