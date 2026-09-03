@@ -44,20 +44,13 @@ export function ProfilePage({ profile }: { profile: ProfileData }) {
           icon={Waves}
           label="Logged dives"
           value={logbook.totalDives.toLocaleString()}
-          valueClassName="text-xl"
         />
         <StatCard
           icon={Clock3}
           label="Bottom time"
           value={`${formatHours(logbook.totalSeconds)} h`}
-          valueClassName="text-xl"
         />
-        <StatCard
-          icon={Award}
-          label="Certifications"
-          value={certifications.length}
-          valueClassName="text-xl"
-        />
+        <StatCard icon={Award} label="Certifications" value={certifications.length} />
       </section>
 
       <SkillCard imageVersion={profile.profileImage?.id ?? 'no-profile-image'} />
