@@ -23,7 +23,7 @@
         "garmin-connect-2fa": "1.6.3",
         "google-auth-library": "^11.0.2",
         "jose": "^6",
-        "lucide-react": "^0.577.0",
+        "lucide-react": "^1.0.0",
         "maplibre-gl": "^6.0.0",
         "postgres": "^3.4.9",
         "react": "^19.2.0",
@@ -713,7 +713,7 @@
 
     "lru-cache": ["lru-cache@5.1.1", "", { "dependencies": { "yallist": "^3.0.2" } }, "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w=="],
 
-    "lucide-react": ["lucide-react@0.577.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-4LjoFv2eEPwYDPg/CUdBJQSDfPyzXCRrVW1X7jrx/trgxnxkHFjnVZINbzvzxjN70dxychOfg+FTYwBiS3pQ5A=="],
+    "lucide-react": ["lucide-react@1.40.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-MaG+8WnOXkDWz9XeElj7TnQ890tTZUB0a36i03aRRCKGWE6e7jJpmdCvtxxuxcjjdqyN6m4sL6qlHVuSUDtYgg=="],
 
     "luxon": ["luxon@3.7.2", "", {}, "sha512-vtEhXh/gNjI9Yg1u4jX/0YVPMvxzHuGgCm6tC5kZyb08yjGWGnqAjGJvcXbqQR2P3MyMEFnRbpcdFS6PBcLqew=="],
 
