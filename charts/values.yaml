@@ -88,6 +88,10 @@ migrations:
       cpu: 50m
       memory: 64Mi
 
+imports:
+  # Overall deadline shared by manual, scheduled, and command-line imports.
+  timeoutMs: 900000
+
 sync:
   # Enable after configuring the Google Drive folder and credential Secret.
   enabled: false
@@ -147,14 +151,13 @@ garmin:
 
 garminAdapter:
   # Bundled Garmin Connect adapter (unofficial consumer API, garth-style token
-  # persistence). Log in once through its browser setup page, e.g.
-  # kubectl port-forward svc/<release>-garmin-adapter 8787:8787 and open
-  # http://localhost:8787 — tokens persist on the tokens volume. Add the
-  # optional key below to garmin.existingSecret to password-protect the page.
+  # persistence). Connect the Garmin account once from the Divetracx UI under
+  # Settings -> Integrations; tokens persist on the tokens volume.
   enabled: false
   port: 8787
   domain: garmin.com
-  uiPasswordSecretKey: "ui-password"
+  # Short-lived, in-memory continuation while the user enters a Garmin MFA code.
+  mfaChallengeTtlSeconds: 300
   tokens:
     size: 16Mi
     storageClass: ""

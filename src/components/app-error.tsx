@@ -6,41 +6,48 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getErrorDisplayState } from '@/lib/error-display'
 
 export function AppError({ error }: { error: Error }) {
+  return (
+    <AppShell>
+      <AppRouteError error={error} />
+    </AppShell>
+  )
+}
+
+/** Router-wide fallback for errors thrown by child routes during SSR. */
+export function AppRouteError({ error }: { error: Error }) {
   const router = useRouter()
   const errorState = getErrorDisplayState(error)
 
   return (
-    <AppShell>
-      <div className="flex min-h-[55vh] items-center justify-center">
-        <Card className="w-full max-w-lg shadow-xl shadow-primary/5">
-          <CardHeader className="items-center text-center">
-            <div className="mb-3 grid size-14 place-items-center rounded-2xl bg-destructive/10 text-destructive">
-              <AlertTriangle size={26} aria-hidden="true" />
-            </div>
-            <CardTitle className="text-xl">{errorState.title}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5 text-center" role="alert">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">{errorState.message}</p>
-              {errorState.hint ? <p className="text-sm">{errorState.hint}</p> : null}
-            </div>
+    <div className="flex min-h-[55vh] items-center justify-center">
+      <Card className="w-full max-w-lg shadow-xl shadow-primary/5">
+        <CardHeader className="items-center text-center">
+          <div className="mb-3 grid size-14 place-items-center rounded-2xl bg-destructive/10 text-destructive">
+            <AlertTriangle size={26} aria-hidden="true" />
+          </div>
+          <CardTitle className="text-xl">{errorState.title}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5 text-center" role="alert">
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">{errorState.message}</p>
+            {errorState.hint ? <p className="text-sm">{errorState.hint}</p> : null}
+          </div>
 
-            <div className="flex flex-col justify-center gap-2 sm:flex-row">
-              <Button variant="outline" onClick={() => void router.navigate({ to: '/' })}>
-                <Home size={16} aria-hidden="true" />
-                Go to overview
-              </Button>
-              <Button onClick={() => void router.invalidate()}>
-                <RefreshCw size={16} aria-hidden="true" />
-                Try again
-              </Button>
-            </div>
+          <div className="flex flex-col justify-center gap-2 sm:flex-row">
+            <Button variant="outline" onClick={() => void router.navigate({ to: '/' })}>
+              <Home size={16} aria-hidden="true" />
+              Go to overview
+            </Button>
+            <Button onClick={() => void router.invalidate()}>
+              <RefreshCw size={16} aria-hidden="true" />
+              Try again
+            </Button>
+          </div>
 
-            {import.meta.env.DEV ? <ErrorDetails error={error} /> : null}
-          </CardContent>
-        </Card>
-      </div>
-    </AppShell>
+          {import.meta.env.DEV ? <ErrorDetails error={error} /> : null}
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 

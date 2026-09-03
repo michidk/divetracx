@@ -4,17 +4,26 @@ import {
   CircleAlert,
   Database,
   Download,
+  Link2,
+  Link2Off,
   RefreshCw,
   ScrollText,
   ShieldAlert,
   UploadCloud,
 } from 'lucide-react'
-import { useState } from 'react'
+import { type FormEvent, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   loadDiveMateWriteBackStatus,
   runDiveMateWriteBack,
 } from '@/modules/divemate/server/writeback'
+import type { getGarminAccountStatus } from '@/modules/garmin/server/account'
+import {
+  completeGarminMfa,
+  connectGarmin,
+  disconnectGarmin,
+} from '@/modules/garmin/server/account'
 import type { getIntegrationStatus } from '@/modules/integrations/server/operations'
 import {
   runFullImport,
@@ -23,6 +32,198 @@ import {
 
 type Integrations = Awaited<ReturnType<typeof getIntegrationStatus>>
 type Integration = Integrations[number]
+type GarminAccount = Awaited<ReturnType<typeof getGarminAccountStatus>>
+
+function GarminAccountSection({ account }: { account: GarminAccount }) {
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [mfaCode, setMfaCode] = useState('')
+  const [mfaChallenge, setMfaChallenge] = useState<{
+    challengeId: string
+    expiresAt: string
+  } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+
+  if (!account.configured) return null
+
+  async function connect(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setBusy(true)
+    setMessage('')
+    try {
+      const result = await connectGarmin({ data: { email, password } })
+      if (result.mfaRequired) {
+        setMfaChallenge({
+          challengeId: result.challengeId,
+          expiresAt: result.expiresAt,
+        })
+        setPassword('')
+        setMessage('Garmin accepted your credentials. Enter the verification code.')
+        return
+      }
+      setMessage(
+        `Connected${result.displayName ? ` as ${result.displayName}` : ''}. Tokens are stored on the adapter; your password was not saved.`,
+      )
+      setEmail('')
+      setPassword('')
+      await router.invalidate()
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : 'Garmin account connection failed',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function verifyMfa(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!mfaChallenge) return
+    setBusy(true)
+    setMessage('')
+    try {
+      const result = await completeGarminMfa({
+        data: {
+          challengeId: mfaChallenge.challengeId,
+          code: mfaCode,
+        },
+      })
+      setMessage(
+        `Connected${result.displayName ? ` as ${result.displayName}` : ''}. Tokens are stored on the adapter; your password and verification code were not saved.`,
+      )
+      setEmail('')
+      setMfaCode('')
+      setMfaChallenge(null)
+      await router.invalidate()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Garmin verification failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function disconnect() {
+    if (
+      !window.confirm(
+        'Disconnect the Garmin account? The tokens stored on the adapter are deleted and scheduled imports will fail until an account is connected again.',
+      )
+    ) {
+      return
+    }
+    setBusy(true)
+    setMessage('')
+    try {
+      await disconnectGarmin()
+      setMessage('Garmin account disconnected.')
+      await router.invalidate()
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : 'Garmin account disconnect failed',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-5 border-t border-border pt-4">
+      <h3 className="text-sm font-semibold">Garmin account</h3>
+      {account.connected ? (
+        <div className="mt-2 space-y-3">
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Link2 className="text-emerald-600" size={16} aria-hidden="true" />
+            Connected
+            {account.tokensSavedAt
+              ? ` · tokens saved ${new Date(account.tokensSavedAt).toLocaleString()}`
+              : ''}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() => void disconnect()}
+          >
+            <Link2Off size={16} aria-hidden="true" />
+            {busy ? 'Disconnecting…' : 'Disconnect account'}
+          </Button>
+        </div>
+      ) : mfaChallenge ? (
+        <form className="mt-2 space-y-3" onSubmit={(event) => void verifyMfa(event)}>
+          <p className="text-sm leading-6 text-muted-foreground">
+            Enter the verification code Garmin sent you. This challenge expires at{' '}
+            {new Date(mfaChallenge.expiresAt).toLocaleTimeString()} and is discarded after
+            three failed attempts.
+          </p>
+          <Input
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="Verification code"
+            aria-label="Garmin verification code"
+            value={mfaCode}
+            onChange={(event) => setMfaCode(event.target.value)}
+            required
+            autoFocus
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={busy || !mfaCode.trim()}>
+              <Link2 size={16} aria-hidden="true" />
+              {busy ? 'Verifying…' : 'Verify and connect'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={() => {
+                setMfaChallenge(null)
+                setMfaCode('')
+                setMessage('')
+              }}
+            >
+              Start over
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <form className="mt-2 space-y-3" onSubmit={(event) => void connect(event)}>
+          <p className="text-sm leading-6 text-muted-foreground">
+            Sign in once with your Garmin Connect account. Only the resulting tokens are
+            stored on the adapter. If Garmin requests multi-factor authentication, you
+            will be prompted for the verification code next.
+          </p>
+          {account.error ? (
+            <p className="text-sm text-amber-700">{account.error}</p>
+          ) : null}
+          <Input
+            type="email"
+            autoComplete="username"
+            placeholder="Garmin Connect email"
+            aria-label="Garmin Connect email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+          />
+          <Input
+            type="password"
+            autoComplete="current-password"
+            placeholder="Password"
+            aria-label="Garmin Connect password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+          />
+          <Button type="submit" disabled={busy || !email || !password}>
+            <Link2 size={16} aria-hidden="true" />
+            {busy ? 'Connecting…' : 'Connect account'}
+          </Button>
+        </form>
+      )}
+      {message ? <p className="mt-3 text-sm">{message}</p> : null}
+    </div>
+  )
+}
 
 function capabilitySummary(integration: Integration) {
   const capabilities = integration.descriptor.capabilities
@@ -35,7 +236,13 @@ function capabilitySummary(integration: Integration) {
     .join(' · ')
 }
 
-export function SyncPage({ integrations }: { integrations: Integrations }) {
+export function SyncPage({
+  integrations,
+  garminAccount,
+}: {
+  integrations: Integrations
+  garminAccount: GarminAccount
+}) {
   const router = useRouter()
   const [running, setRunning] = useState<string | null>(null)
   const [messages, setMessages] = useState<Record<string, string>>({})
@@ -261,6 +468,7 @@ export function SyncPage({ integrations }: { integrations: Integrations }) {
                 </p>
               ) : null}
               {messages[key] ? <p className="mt-4 text-sm">{messages[key]}</p> : null}
+              {key === 'garmin' ? <GarminAccountSection account={garminAccount} /> : null}
               <div className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">
                 {integration.latestRun
                   ? `${integration.latestRun.mode} import · ${integration.latestRun.status} · ${integration.latestRun.startedAt.toLocaleString()}`

@@ -4,10 +4,11 @@ import { createHash } from 'node:crypto'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { eq, inArray } from 'drizzle-orm'
+import { asc, eq, inArray } from 'drizzle-orm'
 import type { DatabaseTransaction } from '@/db'
 import {
   buddies,
+  buddyAgencyMemberships,
   certifications,
   diveBuddies,
   diveEquipment,
@@ -35,6 +36,12 @@ import type {
   ExternalRecordInput,
   IntegrationConnector,
 } from '@/modules/integrations/types'
+import { resolveAgencyId } from '@/modules/profile/server/agencies.server'
+import {
+  cleanDiveMateInstructorName,
+  formatDiveMateInstructor,
+  normalizeDiveMateInstructorName,
+} from '../instructor'
 import { parseDiveMateDatabase } from '../parser'
 import type { DiveMateSnapshot, DiveMateSourceRecord } from '../types'
 import { findDriveFile, openGoogleDriveBackup } from './google-drive.server'
@@ -80,6 +87,7 @@ interface StoredDiveMateMedia {
 }
 
 interface SnapshotApplyContext {
+  signal: AbortSignal
   shouldApply(entityType: string, externalId: string): boolean
   canonicalId(
     entityType: string,
@@ -104,17 +112,62 @@ interface SnapshotApplyContext {
   ): Promise<void>
 }
 
+async function loadInstructorBuddyIndex(transaction: DatabaseTransaction) {
+  const rows = await transaction
+    .select({
+      id: buddies.id,
+      firstName: buddies.firstName,
+      lastName: buddies.lastName,
+    })
+    .from(buddies)
+    .orderBy(asc(buddies.createdAt), asc(buddies.id))
+  const index = new Map<string, string>()
+  for (const buddy of rows) {
+    const normalizedName = normalizeDiveMateInstructorName(
+      formatDiveMateInstructor(buddy),
+    )
+    if (normalizedName && !index.has(normalizedName)) {
+      index.set(normalizedName, buddy.id)
+    }
+  }
+  return index
+}
+
+async function resolveInstructorBuddy(
+  transaction: DatabaseTransaction,
+  index: Map<string, string>,
+  importedName: string | null,
+) {
+  const name = cleanDiveMateInstructorName(importedName)
+  const normalizedName = normalizeDiveMateInstructorName(name)
+  if (!name || !normalizedName) return null
+
+  const existingId = index.get(normalizedName)
+  if (existingId) return existingId
+
+  const [buddy] = await transaction
+    .insert(buddies)
+    .values({ firstName: name })
+    .returning({ id: buddies.id })
+  if (!buddy) throw new Error('DiveMate instructor could not be linked to a buddy')
+  index.set(normalizedName, buddy.id)
+  return buddy.id
+}
+
 async function storeImage(
   storage: StorageProvider,
   category: 'certifications' | 'pictures',
   externalId: string,
   bytes: Uint8Array,
   mimeType: string,
+  signal: AbortSignal,
 ): Promise<StoredImage> {
+  signal.throwIfAborted()
   const fingerprint = createHash('sha256').update(bytes).digest('hex')
   const extension = mimeType.split('/')[1] === 'jpeg' ? 'jpg' : mimeType.split('/')[1]
   const storagePath = `divemate/${category}/${externalId}/${fingerprint}.${extension}`
   if (!(await storage.exists(storagePath))) {
+    signal.throwIfAborted()
     await storage.upload(
       new Blob([Uint8Array.from(bytes)], { type: mimeType }),
       storagePath,
@@ -122,6 +175,7 @@ async function storeImage(
   }
   const thumbnailStoragePath = thumbnailPathFor(storagePath)
   if (!(await storage.exists(thumbnailStoragePath))) {
+    signal.throwIfAborted()
     const thumbnail = await createThumbnail(
       bytes,
       category === 'certifications' ? 'certification' : 'photo',
@@ -142,18 +196,20 @@ async function storeImage(
 
 async function storeSnapshotMedia(
   snapshot: DiveMateSnapshot,
+  signal: AbortSignal,
   externalImages?: ExternalImages,
 ): Promise<StoredDiveMateMedia> {
   const storage = getStorage()
   const storedPictures = new Map<string, StoredImage>()
   for (const picture of snapshot.pictures) {
+    signal.throwIfAborted()
     const external = externalImages?.pictures.get(picture.externalId)
     const bytes = picture.imageBytes ?? external?.bytes
     const mimeType = picture.mimeType ?? external?.mimeType
     if (!bytes || !mimeType) continue
     storedPictures.set(
       picture.externalId,
-      await storeImage(storage, 'pictures', picture.externalId, bytes, mimeType),
+      await storeImage(storage, 'pictures', picture.externalId, bytes, mimeType, signal),
     )
   }
   const storedCertificationScans = new Map<
@@ -161,6 +217,7 @@ async function storeSnapshotMedia(
     { scan1?: StoredImage; scan2?: StoredImage }
   >()
   for (const certification of snapshot.certifications) {
+    signal.throwIfAborted()
     const scans: { scan1?: StoredImage; scan2?: StoredImage } = {}
     const external = externalImages?.certificationScans.get(certification.externalId)
     const scan1Bytes = certification.scan1Bytes ?? external?.scan1?.bytes
@@ -174,6 +231,7 @@ async function storeSnapshotMedia(
         `${certification.externalId}/front`,
         scan1Bytes,
         scan1MimeType,
+        signal,
       )
     }
     if (scan2Bytes && scan2MimeType) {
@@ -183,6 +241,7 @@ async function storeSnapshotMedia(
         `${certification.externalId}/back`,
         scan2Bytes,
         scan2MimeType,
+        signal,
       )
     }
     if (scans.scan1 || scans.scan2)
@@ -201,6 +260,7 @@ async function applySnapshot(
   const storedCertificationScans = storedMedia.certificationScans
   const diverIds = new Map<string, string>()
   for (const item of snapshot.divers) {
+    context.signal.throwIfAborted()
     const existingId = context.canonicalId('diver', item.externalId, 'diver')
     if (!context.shouldApply('diver', item.externalId) && existingId) {
       diverIds.set(item.externalId, existingId)
@@ -240,6 +300,7 @@ async function applySnapshot(
 
   const siteIds = new Map<string, string>()
   for (const item of snapshot.sites) {
+    context.signal.throwIfAborted()
     const existingId = context.canonicalId('dive_site', item.externalId, 'dive_site')
     if (!context.shouldApply('dive_site', item.externalId) && existingId) {
       siteIds.set(item.externalId, existingId)
@@ -275,6 +336,7 @@ async function applySnapshot(
 
   const buddyIds = new Map<string, string>()
   for (const item of snapshot.buddies) {
+    context.signal.throwIfAborted()
     const existingId = context.canonicalId('buddy', item.externalId, 'buddy')
     if (!context.shouldApply('buddy', item.externalId) && existingId) {
       buddyIds.set(item.externalId, existingId)
@@ -306,8 +368,11 @@ async function applySnapshot(
     }
   }
 
+  const instructorBuddyIdsByName = await loadInstructorBuddyIndex(tx)
+
   const equipmentIds = new Map<string, string>()
   for (const item of snapshot.equipment.filter((candidate) => !candidate.isSet)) {
+    context.signal.throwIfAborted()
     const existingId = context.canonicalId('equipment', item.externalId, 'equipment')
     if (!context.shouldApply('equipment', item.externalId) && existingId) {
       equipmentIds.set(item.externalId, existingId)
@@ -345,6 +410,7 @@ async function applySnapshot(
   }
 
   for (const item of snapshot.equipment.filter((candidate) => candidate.isSet)) {
+    context.signal.throwIfAborted()
     const existingId = context.canonicalId(
       'equipment_set',
       item.externalId,
@@ -383,6 +449,7 @@ async function applySnapshot(
 
   const shopIds = new Map<string, string>()
   for (const item of snapshot.shops) {
+    context.signal.throwIfAborted()
     const existingId = context.canonicalId('shop', item.externalId, 'shop')
     if (!context.shouldApply('shop', item.externalId) && existingId) {
       shopIds.set(item.externalId, existingId)
@@ -404,6 +471,7 @@ async function applySnapshot(
 
   const diveTypeIds = new Map<string, string>()
   for (const item of snapshot.diveTypes) {
+    context.signal.throwIfAborted()
     const existingId = context.canonicalId('dive_type', item.externalId, 'dive_type')
     if (!context.shouldApply('dive_type', item.externalId) && existingId) {
       diveTypeIds.set(item.externalId, existingId)
@@ -428,6 +496,7 @@ async function applySnapshot(
   }
 
   for (const item of snapshot.certifications) {
+    context.signal.throwIfAborted()
     if (!context.shouldApply('certification', item.externalId)) continue
     const existingId = context.canonicalId(
       'certification',
@@ -435,17 +504,37 @@ async function applySnapshot(
       'certification',
     )
     const scans = storedCertificationScans.get(item.externalId)
+    const instructorBuddyId = await resolveInstructorBuddy(
+      tx,
+      instructorBuddyIdsByName,
+      item.instructorName,
+    )
+    const agencyId = await resolveAgencyId(tx, item.organization)
     const referenceValues = {
       diverId: item.diverExternalId ? (diverIds.get(item.diverExternalId) ?? null) : null,
       name: item.name,
       organization: item.organization,
+      agencyId,
       certificationNumber: item.certificationNumber,
       certifiedAt: item.certifiedAt,
-      instructorName: item.instructorName,
-      instructorNumber: item.instructorNumber,
+      instructorBuddyId,
       sortOrder: item.sortOrder,
       scan1Path: item.scan1Path,
       scan2Path: item.scan2Path,
+    }
+    if (instructorBuddyId && agencyId && item.instructorNumber) {
+      await tx
+        .insert(buddyAgencyMemberships)
+        .values({
+          buddyId: instructorBuddyId,
+          agencyId,
+          memberNumber: item.instructorNumber,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [buddyAgencyMemberships.buddyId, buddyAgencyMemberships.agencyId],
+          set: { memberNumber: item.instructorNumber, updatedAt: new Date() },
+        })
     }
     const values = {
       ...referenceValues,
@@ -477,12 +566,14 @@ async function applySnapshot(
   const diveIds = new Map<string, string>()
   const profileSamplesByDive = new Map<string, DiveMateSnapshot['profileSamples']>()
   for (const sample of snapshot.profileSamples) {
+    context.signal.throwIfAborted()
     const samples = profileSamplesByDive.get(sample.diveExternalId) ?? []
     samples.push(sample)
     profileSamplesByDive.set(sample.diveExternalId, samples)
   }
 
   for (const item of snapshot.dives) {
+    context.signal.throwIfAborted()
     const existingId = context.canonicalId('dive', item.externalId, 'dive')
     if (!context.shouldApply('dive', item.externalId) && existingId) {
       diveIds.set(item.externalId, existingId)
@@ -545,6 +636,7 @@ async function applySnapshot(
       .filter((id): id is string => Boolean(id))
     if (importedBuddyIds.length > 0) {
       for (const buddyId of importedBuddyIds) {
+        context.signal.throwIfAborted()
         const [association] = await tx
           .insert(diveBuddies)
           .values({ diveId: row.id, buddyId })
@@ -575,6 +667,7 @@ async function applySnapshot(
       .filter((id): id is string => Boolean(id))
     if (importedEquipmentIds.length > 0) {
       for (const equipmentId of importedEquipmentIds) {
+        context.signal.throwIfAborted()
         const [association] = await tx
           .insert(diveEquipment)
           .values({ diveId: row.id, equipmentId })
@@ -623,6 +716,7 @@ async function applySnapshot(
   }
 
   for (const item of snapshot.tanks) {
+    context.signal.throwIfAborted()
     if (!context.shouldApply('tank', item.externalId)) continue
     const diveId = diveIds.get(item.diveExternalId)
     if (!diveId) continue
@@ -653,6 +747,7 @@ async function applySnapshot(
   }
 
   for (const item of snapshot.pictures) {
+    context.signal.throwIfAborted()
     const stored = storedPictures.get(item.externalId)
     const existingId = context.canonicalId('picture', item.externalId, 'picture')
     if (!stored) {
@@ -718,6 +813,7 @@ async function loadGoogleDriveImages(
   snapshot: DiveMateSnapshot,
   drive: Awaited<ReturnType<typeof openGoogleDriveBackup>>,
   maximumImageBytes: number,
+  signal: AbortSignal,
 ): Promise<ExternalImages> {
   const downloaded = new Map<string, Promise<Uint8Array>>()
   const download = (file: (typeof drive.files)[number]) => {
@@ -729,6 +825,7 @@ async function loadGoogleDriveImages(
   }
   const pictures = new Map<string, { bytes: Uint8Array; mimeType: string }>()
   for (const picture of snapshot.pictures) {
+    signal.throwIfAborted()
     if (picture.imageBytes) continue
     const file = findDriveFile(drive.files, picture.path, 'Media')
     if (!file?.mimeType.startsWith('image/')) continue
@@ -740,6 +837,7 @@ async function loadGoogleDriveImages(
 
   const certificationScans: ExternalImages['certificationScans'] = new Map()
   for (const certification of snapshot.certifications) {
+    signal.throwIfAborted()
     const scans: NonNullable<ReturnType<ExternalImages['certificationScans']['get']>> = {}
     const scan1File = certification.scan1Bytes
       ? null
@@ -785,7 +883,7 @@ function diveMateExternalRecords(
     externalId: source.externalId,
     rawPayload: source.sourcePayload,
     fileMetadata,
-    mapperVersion: 1,
+    mapperVersion: entityType === 'dive_type' ? 2 : 1,
   })
   return [
     ...snapshot.divers.map((item) => record('diver', item)),
@@ -838,8 +936,9 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
       'pictures',
     ],
   },
-  async prepareImport() {
+  async prepareImport(context) {
     const environment = getServerEnv()
+    context.signal.throwIfAborted()
     if (!environment.DIVEMATE_GOOGLE_DRIVE_FOLDER_ID) {
       throw new Error('DIVEMATE_GOOGLE_DRIVE_FOLDER_ID is not configured')
     }
@@ -849,16 +948,25 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
       const drive = await openGoogleDriveBackup(
         environment.DIVEMATE_GOOGLE_DRIVE_FOLDER_ID,
         environment.DIVEMATE_MAX_BACKUP_BYTES,
+        context.signal,
       )
+      context.signal.throwIfAborted()
       const fingerprint = createHash('sha256').update(drive.database).digest('hex')
       await writeFile(databasePath, drive.database)
       const snapshot = await parseDiveMateDatabase(databasePath)
+      context.signal.throwIfAborted()
       const externalImages = await loadGoogleDriveImages(
         snapshot,
         drive,
         environment.DIVEMATE_MAX_IMAGE_BYTES,
+        context.signal,
       )
-      const storedMedia = await storeSnapshotMedia(snapshot, externalImages)
+      const storedMedia = await storeSnapshotMedia(
+        snapshot,
+        context.signal,
+        externalImages,
+      )
+      context.signal.throwIfAborted()
       const requiredTables = ['DBInfo', 'Logbook']
       const missingTables = requiredTables.filter(
         (table) => !snapshot.sourceTables.includes(table),
@@ -901,6 +1009,7 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
       context.prepared.data.snapshot,
       context.prepared.data.storedMedia,
       {
+        signal: context.signal,
         shouldApply: (entityType, externalId) =>
           context.findRecord(entityType, externalId).change !== 'unchanged',
         canonicalId: context.findCanonicalId,
@@ -926,6 +1035,7 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
     )
     const byEntity: Record<string, number> = {}
     for (const record of changedRecords) {
+      context.signal.throwIfAborted()
       byEntity[record.input.entityType] = (byEntity[record.input.entityType] ?? 0) + 1
     }
     byEntity.profileSamples = context.prepared.data.snapshot.profileSamples.filter(

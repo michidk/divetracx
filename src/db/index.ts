@@ -28,3 +28,35 @@ export async function closeDb() {
   client = undefined
   instance = undefined
 }
+
+export async function tryAcquireDbAdvisoryLock(
+  key: string,
+): Promise<(() => Promise<void>) | null> {
+  getDb()
+  if (!client) throw new Error('Database client is not initialized')
+
+  const connection = await client.reserve()
+  try {
+    const [result] = await connection<{ acquired: boolean }[]>`
+      select pg_try_advisory_lock(hashtext(${key})) as acquired
+    `
+    if (!result?.acquired) {
+      connection.release()
+      return null
+    }
+  } catch (error) {
+    connection.release()
+    throw error
+  }
+
+  let released = false
+  return async () => {
+    if (released) return
+    released = true
+    try {
+      await connection`select pg_advisory_unlock(hashtext(${key}))`
+    } finally {
+      connection.release()
+    }
+  }
+}

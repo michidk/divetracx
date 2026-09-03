@@ -11,6 +11,7 @@ import {
   Waves,
 } from 'lucide-react'
 import { diveTypeIcon } from '@/components/dive-type-icon'
+import { StatCard } from '@/components/stat-card'
 import type { getDashboard } from '@/modules/dives/server/queries'
 
 type DashboardData = Awaited<ReturnType<typeof getDashboard>>
@@ -91,15 +92,13 @@ export function OverviewPage({ data }: { data: DashboardData }) {
     <div className="space-y-10">
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {metrics.map((metric) => (
-          <article
+          <StatCard
             key={metric.label}
-            className="rounded-2xl border border-border bg-card p-6"
-          >
-            <metric.icon className="mb-6 text-primary" size={22} aria-hidden="true" />
-            <p className="text-sm font-medium text-muted-foreground">{metric.label}</p>
-            <p className="mt-1 text-3xl font-semibold tracking-tight">{metric.value}</p>
-            <p className="mt-3 text-xs text-muted-foreground">{metric.detail}</p>
-          </article>
+            icon={metric.icon}
+            label={metric.label}
+            value={metric.value}
+            detail={metric.detail}
+          />
         ))}
       </section>
 

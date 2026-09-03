@@ -68,18 +68,13 @@ spec:
               value: /data/garmin-tokens
             - name: GARMIN_DOMAIN
               value: {{ .Values.garminAdapter.domain | quote }}
+            - name: GARMIN_MFA_CHALLENGE_TTL_SECONDS
+              value: {{ .Values.garminAdapter.mfaChallengeTtlSeconds | quote }}
             - name: GARMIN_ADAPTER_AUTHORIZATION
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.garmin.existingSecret }}
                   key: {{ .Values.garmin.authorizationSecretKey }}
-            # Optional password protecting the browser setup UI (Basic auth).
-            - name: GARMIN_ADAPTER_UI_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.garmin.existingSecret }}
-                  key: {{ .Values.garminAdapter.uiPasswordSecretKey }}
-                  optional: true
           readinessProbe:
             httpGet:
               path: /healthz

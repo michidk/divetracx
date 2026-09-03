@@ -4,10 +4,23 @@ import { z } from 'zod'
 import { CertificationCard } from '@/components/certification-card'
 import { DeleteRecordButton } from '@/components/delete-record-button'
 import { EntityForm } from '@/components/entity-form'
-import { getCertification } from '@/modules/profile/server/queries'
+import { formatPersonName } from '@/modules/dives/format'
+import { AgencyMark } from '@/modules/profile/components/agency-mark'
+import { getAgencies } from '@/modules/profile/server/agencies'
+import {
+  getCertification,
+  getCertificationInstructorOptions,
+} from '@/modules/profile/server/queries'
 
 function mediaUrl(path: string) {
   return `/media/${path.split('/').map(encodeURIComponent).join('/')}`
+}
+
+function scanMediaUrl(
+  scan: { thumbnailStoragePath: string | null; storagePath: string | null } | undefined,
+) {
+  const path = scan?.thumbnailStoragePath ?? scan?.storagePath
+  return path ? mediaUrl(path) : null
 }
 
 const certificationIdSchema = z.union([z.string().uuid(), z.literal('new')])
@@ -16,14 +29,28 @@ export const Route = createFileRoute('/profile/certifications/$certificationId/'
   loader: async ({ params }) => {
     const certificationId = certificationIdSchema.safeParse(params.certificationId)
     if (!certificationId.success) throw notFound()
+    const [instructorOptions, agencyOptions] = await Promise.all([
+      getCertificationInstructorOptions(),
+      getAgencies(),
+    ])
     if (certificationId.data === 'new') {
-      return { certificationId: 'new' as const, detail: null }
+      return {
+        certificationId: 'new' as const,
+        detail: null,
+        instructorOptions,
+        agencyOptions,
+      }
     }
     const detail = await getCertification({
       data: { certificationId: certificationId.data },
     })
     if (!detail) throw notFound()
-    return { certificationId: certificationId.data, detail }
+    return {
+      certificationId: certificationId.data,
+      detail,
+      instructorOptions,
+      agencyOptions,
+    }
   },
   head: ({ loaderData }) => ({
     meta: [
@@ -38,7 +65,8 @@ export const Route = createFileRoute('/profile/certifications/$certificationId/'
 })
 
 function CertificationRoute() {
-  const { certificationId, detail } = Route.useLoaderData()
+  const { certificationId, detail, instructorOptions, agencyOptions } =
+    Route.useLoaderData()
   const router = useRouter()
   const isNew = certificationId === 'new'
 
@@ -62,19 +90,10 @@ function CertificationRoute() {
             name={detail.certification.name}
             organization={detail.certification.organization}
             certificationNumber={detail.certification.certificationNumber}
-            frontSrc={
-              detail.scans[0]?.storagePath ? mediaUrl(detail.scans[0].storagePath) : null
-            }
-            backSrc={
-              detail.scans[1]?.storagePath ? mediaUrl(detail.scans[1].storagePath) : null
-            }
+            frontSrc={scanMediaUrl(detail.scans[0])}
+            backSrc={scanMediaUrl(detail.scans[1])}
             className="mx-auto w-full max-w-md"
           />
-          {detail.scans.length > 1 ? (
-            <p className="mt-3 text-center text-xs text-muted-foreground">
-              Click the card to see the other side.
-            </p>
-          ) : null}
         </section>
       ) : null}
 
@@ -83,6 +102,17 @@ function CertificationRoute() {
         entity="certifications"
         recordId={certificationId}
         record={detail?.certification ?? null}
+        selectOptions={{
+          agencyId: agencyOptions.map((agency) => ({
+            value: agency.id,
+            label: agency.fullName ? `${agency.name} · ${agency.fullName}` : agency.name,
+            leading: <AgencyMark agency={agency} className="size-8 rounded-lg" />,
+          })),
+          instructorBuddyId: instructorOptions.map((buddy) => ({
+            value: buddy.id,
+            label: formatPersonName(buddy),
+          })),
+        }}
         onSaved={() => router.navigate({ to: '/profile' })}
       />
 

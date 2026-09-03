@@ -1,7 +1,7 @@
 import '@tanstack/react-start/server-only'
 
 import { unzipSync } from 'fflate'
-import { GarminConnect } from 'garmin-connect'
+import { GarminConnect } from 'garmin-connect-2fa'
 import {
   activityIdentity,
   activityStartEpochSeconds,
@@ -31,8 +31,8 @@ export interface GarminAdapterBatchSource {
 function createClient(environment: GarminAdapterEnvironment) {
   if (!hasStoredTokens(environment.GARMIN_TOKEN_DIRECTORY)) {
     throw new Error(
-      'The adapter is not connected to Garmin Connect yet. Open the adapter ' +
-        'page in a browser and log in first.',
+      'The adapter is not connected to Garmin Connect yet. Connect the Garmin ' +
+        'account in Divetracx under Settings → Integrations first.',
     )
   }
   const client = new GarminConnect(

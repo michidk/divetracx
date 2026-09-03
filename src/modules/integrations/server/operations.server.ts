@@ -6,9 +6,14 @@ import { importRuns, integrationState, integrations } from '@/db/schema'
 import { getServerEnv } from '@/env'
 import { getIntegrationConnector, listIntegrationConnectors } from '../registry.server'
 import type { ImportMode, ImportTrigger } from '../types'
-import { performFullImport, performIncrementalImport } from './import-service.server'
+import {
+  expireTimedOutImportRuns,
+  performFullImport,
+  performIncrementalImport,
+} from './import-service.server'
 
 export async function loadIntegrationStatus() {
+  await expireTimedOutImportRuns()
   const environment = getServerEnv()
   return Promise.all(
     listIntegrationConnectors().map(async (connector) => {
@@ -60,7 +65,7 @@ export async function loadIntegrationStatus() {
         configurationHint:
           connector.descriptor.key === 'divemate'
             ? 'Configure the Google Drive backup folder and server-side service account.'
-            : 'Configure the Garmin adapter URL and shared authorization secret, then log the adapter in to Garmin Connect.',
+            : 'Configure the Garmin adapter URL and shared authorization secret, then connect the Garmin Connect account below.',
         latestRun,
         stateUpdatedAt: storedState?.updatedAt ?? null,
       }
@@ -69,6 +74,7 @@ export async function loadIntegrationStatus() {
 }
 
 export async function loadImportLogs() {
+  await expireTimedOutImportRuns()
   return getDb()
     .select({
       id: importRuns.id,

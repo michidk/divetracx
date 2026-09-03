@@ -4,7 +4,11 @@ import { and, asc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { getDb } from '@/db'
 import {
+  agencies,
+  agencyMemberships,
   buddies,
+  buddyAgencyMemberships,
+  buddyCertifications,
   certifications,
   divers,
   diveSites,
@@ -78,7 +82,15 @@ function recordId(value: string) {
   return parsed.data
 }
 
-/** Personal logbook: new gear and certifications belong to the primary diver. */
+function optionalRecordId(values: EditorValues, key: string) {
+  const value = optionalText(values, key)
+  if (value === null) return null
+  const parsed = uuidSchema.safeParse(value)
+  if (!parsed.success) throw new Error(`${key} must reference an existing record`)
+  return parsed.data
+}
+
+/** Personal logbook records belong to the primary diver. */
 async function primaryDiverId() {
   const [diver] = await getDb()
     .select({ id: divers.id })
@@ -86,6 +98,18 @@ async function primaryDiverId() {
     .orderBy(asc(divers.createdAt))
     .limit(1)
   return diver?.id ?? null
+}
+
+async function requiredAgency(values: EditorValues) {
+  const agencyId = optionalRecordId(values, 'agencyId')
+  if (!agencyId) throw new Error('agencyId is required')
+  const [agency] = await getDb()
+    .select({ id: agencies.id, name: agencies.name })
+    .from(agencies)
+    .where(eq(agencies.id, agencyId))
+    .limit(1)
+  if (!agency) throw new Error('Select an existing agency')
+  return agency
 }
 
 async function saveSite(id: string, values: EditorValues) {
@@ -133,6 +157,9 @@ async function saveDiver(id: string, values: EditorValues) {
     emergencyPhone: optionalText(values, 'emergencyPhone'),
     emergencyEmail: optionalText(values, 'emergencyEmail'),
     insurance: optionalText(values, 'insurance'),
+    insuranceTariff: optionalText(values, 'insuranceTariff'),
+    insuranceNumber: optionalText(values, 'insuranceNumber'),
+    insuranceHotline: optionalText(values, 'insuranceHotline'),
     notes: optionalText(values, 'notes'),
     updatedAt: new Date(),
   }
@@ -159,6 +186,7 @@ async function saveBuddy(id: string, values: EditorValues) {
     city: optionalText(values, 'city'),
     state: optionalText(values, 'state'),
     country: optionalText(values, 'country'),
+    minimumDives: optionalInteger(values, 'minimumDives', { min: 0 }),
     notes: optionalText(values, 'notes'),
     updatedAt: new Date(),
   }
@@ -208,13 +236,14 @@ async function saveEquipment(id: string, values: EditorValues) {
 }
 
 async function saveCertification(id: string, values: EditorValues) {
+  const agency = await requiredAgency(values)
   const fields = {
     name: requiredText(values, 'name'),
-    organization: optionalText(values, 'organization'),
+    organization: agency.name,
+    agencyId: agency.id,
     certificationNumber: optionalText(values, 'certificationNumber'),
     certifiedAt: optionalText(values, 'certifiedAt'),
-    instructorName: optionalText(values, 'instructorName'),
-    instructorNumber: optionalText(values, 'instructorNumber'),
+    instructorBuddyId: optionalRecordId(values, 'instructorBuddyId'),
     updatedAt: new Date(),
   }
   const [row] =
@@ -232,12 +261,101 @@ async function saveCertification(id: string, values: EditorValues) {
   return row.id
 }
 
+async function saveAgencyMembership(id: string, values: EditorValues) {
+  const agency = await requiredAgency(values)
+  const fields = {
+    agencyId: agency.id,
+    memberNumber: requiredText(values, 'memberNumber'),
+    updatedAt: new Date(),
+  }
+  const [row] =
+    id === 'new'
+      ? await getDb()
+          .insert(agencyMemberships)
+          .values({ ...fields, diverId: await primaryDiverId() })
+          .returning({ id: agencyMemberships.id })
+      : await getDb()
+          .update(agencyMemberships)
+          .set(fields)
+          .where(eq(agencyMemberships.id, recordId(id)))
+          .returning({ id: agencyMemberships.id })
+  if (!row) throw new Error('Agency membership was not found')
+  return row.id
+}
+
+async function saveBuddyCertification(id: string, values: EditorValues) {
+  const agency = await requiredAgency(values)
+  const fields = {
+    agencyId: agency.id,
+    name: requiredText(values, 'name'),
+    updatedAt: new Date(),
+  }
+  const [row] =
+    id === 'new'
+      ? await getDb()
+          .insert(buddyCertifications)
+          .values({
+            ...fields,
+            buddyId: recordId(requiredText(values, 'buddyId')),
+          })
+          .returning({ id: buddyCertifications.id })
+      : await getDb()
+          .update(buddyCertifications)
+          .set(fields)
+          .where(eq(buddyCertifications.id, recordId(id)))
+          .returning({ id: buddyCertifications.id })
+  if (!row) throw new Error('Buddy certification was not found')
+  return row.id
+}
+
+async function saveBuddyAgencyMembership(id: string, values: EditorValues) {
+  const agency = await requiredAgency(values)
+  const fields = {
+    agencyId: agency.id,
+    memberNumber: requiredText(values, 'memberNumber'),
+    updatedAt: new Date(),
+  }
+  try {
+    const [row] =
+      id === 'new'
+        ? await getDb()
+            .insert(buddyAgencyMemberships)
+            .values({
+              ...fields,
+              buddyId: recordId(requiredText(values, 'buddyId')),
+            })
+            .returning({ id: buddyAgencyMemberships.id })
+        : await getDb()
+            .update(buddyAgencyMemberships)
+            .set(fields)
+            .where(eq(buddyAgencyMemberships.id, recordId(id)))
+            .returning({ id: buddyAgencyMemberships.id })
+    if (!row) throw new Error('Buddy agency membership was not found')
+    return row.id
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes('buddy_agency_memberships_buddy_agency_unique')
+    ) {
+      throw new Error('This buddy already has a number for that agency')
+    }
+    throw error
+  }
+}
+
 export type DeletableEntityKey = Exclude<EntityKey, 'divers'>
 
 const deletableEntities: Record<
   DeletableEntityKey,
   {
-    table: typeof diveSites | typeof buddies | typeof equipment | typeof certifications
+    table:
+      | typeof diveSites
+      | typeof buddies
+      | typeof equipment
+      | typeof certifications
+      | typeof agencyMemberships
+      | typeof buddyCertifications
+      | typeof buddyAgencyMemberships
     canonicalType: string
   }
 > = {
@@ -245,6 +363,18 @@ const deletableEntities: Record<
   buddies: { table: buddies, canonicalType: 'buddy' },
   equipment: { table: equipment, canonicalType: 'equipment' },
   certifications: { table: certifications, canonicalType: 'certification' },
+  agencyMemberships: {
+    table: agencyMemberships,
+    canonicalType: 'agency_membership',
+  },
+  buddyCertifications: {
+    table: buddyCertifications,
+    canonicalType: 'buddy_certification',
+  },
+  buddyAgencyMemberships: {
+    table: buddyAgencyMemberships,
+    canonicalType: 'buddy_agency_membership',
+  },
 }
 
 export async function deleteDataRecord(entity: DeletableEntityKey, id: string) {
@@ -305,5 +435,11 @@ export async function saveDataRecord(
       return saveEquipment(id, values)
     case 'certifications':
       return saveCertification(id, values)
+    case 'agencyMemberships':
+      return saveAgencyMembership(id, values)
+    case 'buddyCertifications':
+      return saveBuddyCertification(id, values)
+    case 'buddyAgencyMemberships':
+      return saveBuddyAgencyMembership(id, values)
   }
 }

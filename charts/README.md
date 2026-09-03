@@ -30,7 +30,10 @@ template for a manual canonical `.ddb` export.
 
 The CronJob uses `concurrencyPolicy: Forbid` by default and records its runs as
 `schedule`. The application receives the same Secret, so **Sync now** uses the
-same importer and records runs as `manual`.
+same importer and records runs as `manual`. All import entry points share a
+PostgreSQL-backed single-run lock. They time out after `imports.timeoutMs`
+(15 minutes by default), and scheduled Jobs use the same value as their hard
+Kubernetes deadline.
 
 ## Garmin adapter
 
@@ -53,19 +56,13 @@ garminAdapter:
   enabled: true
 ```
 
-After the first deployment, log the adapter in to Garmin Connect once through
-its browser setup page (the tokens land on the persistent volume and are
-refreshed automatically):
-
-```bash
-kubectl port-forward svc/divetracx-garmin-adapter 8787:8787
-# then open http://localhost:8787 and log in
-```
-
-To password-protect the setup page, add a `ui-password` key to the same Secret
-(the key name is configurable via `garminAdapter.uiPasswordSecretKey`); the
-page then requires it as HTTP Basic auth password. Accounts with multi-factor
-authentication are not supported by this login flow.
+After the first deployment, connect the Garmin account once from the Divetracx
+UI under Settings → Integrations. The application forwards the credentials
+server-to-server to the adapter, which stores only the resulting OAuth tokens
+on the persistent volume and refreshes them automatically. If Garmin requests
+multi-factor authentication, the UI asks for the verification code and resumes
+the same short-lived login challenge; passwords and verification codes are not
+persisted.
 To use an external adapter instead, leave `garminAdapter.enabled` off and set
 `garmin.fullImportUrl`/`garmin.incrementalImportUrl`.
 

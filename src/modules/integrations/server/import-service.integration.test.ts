@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { eq } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 import { closeDb, getDb } from '@/db'
 import {
   dives,
@@ -10,7 +10,12 @@ import {
   integrations,
 } from '@/db/schema'
 import type { ExternalRecordInput, IntegrationConnector } from '../types'
-import { performFullImport, performIncrementalImport } from './import-service.server'
+import {
+  expireTimedOutImportRuns,
+  ImportAlreadyRunningError,
+  performFullImport,
+  performIncrementalImport,
+} from './import-service.server'
 
 const enabled = process.env.RUN_IMPORT_INTEGRATION_TESTS === 'true'
 const INTEGRATION_KEY = 'test-import'
@@ -20,6 +25,8 @@ interface TestBatch {
   cursor: string
   failApply?: boolean
   failPrepare?: boolean
+  prepareStarted?: () => void
+  waitForPrepare?: (signal: AbortSignal) => Promise<void>
 }
 
 let batch: TestBatch = { records: [], cursor: '0' }
@@ -31,7 +38,9 @@ const connector: IntegrationConnector = {
     capabilities: { fullImport: true, incrementalImport: true, export: false },
     supportedEntities: ['dives'],
   },
-  async prepareImport() {
+  async prepareImport(context) {
+    batch.prepareStarted?.()
+    await batch.waitForPrepare?.(context.signal)
     if (batch.failPrepare) throw new Error('synthetic prepare failure')
     return {
       records: batch.records,
@@ -192,5 +201,89 @@ describe.skipIf(!enabled)('generic import service database contract', () => {
     await expect(performFullImport(connector, { trigger: 'schedule' })).rejects.toThrow(
       'Full imports must be initiated manually',
     )
+  })
+
+  test('allows only one import job to run at a time', async () => {
+    let notifyStarted: (() => void) | undefined
+    const started = new Promise<void>((resolve) => {
+      notifyStarted = resolve
+    })
+    let unblockPrepare: (() => void) | undefined
+    const blocked = new Promise<void>((resolve) => {
+      unblockPrepare = resolve
+    })
+    batch = {
+      records: [],
+      cursor: 'concurrency',
+      prepareStarted: () => notifyStarted?.(),
+      waitForPrepare: () => blocked,
+    }
+
+    const first = performIncrementalImport(connector, { trigger: 'manual' })
+    await started
+    await expect(
+      performIncrementalImport(connector, { trigger: 'schedule' }),
+    ).rejects.toBeInstanceOf(ImportAlreadyRunningError)
+    unblockPrepare?.()
+    await expect(first).resolves.toMatchObject({ status: 'succeeded' })
+  })
+
+  test('aborts and records imports that exceed the overall deadline', async () => {
+    const originalTimeout = process.env.IMPORT_TIMEOUT_MS
+    process.env.IMPORT_TIMEOUT_MS = '200'
+    batch = {
+      records: [],
+      cursor: 'timeout',
+      waitForPrepare: (signal) =>
+        new Promise((_, reject) => {
+          signal.throwIfAborted()
+          signal.addEventListener('abort', () => reject(signal.reason), { once: true })
+        }),
+    }
+
+    try {
+      await expect(
+        performIncrementalImport(connector, { trigger: 'manual' }),
+      ).rejects.toThrow('Synchronization timed out after 200ms')
+      const [latest] = await getDb()
+        .select({ status: importRuns.status, error: importRuns.error })
+        .from(importRuns)
+        .where(eq(importRuns.integrationKey, INTEGRATION_KEY))
+        .orderBy(desc(importRuns.startedAt))
+        .limit(1)
+      expect(latest).toEqual({
+        status: 'failed',
+        error: 'Synchronization timed out after 200ms',
+      })
+    } finally {
+      if (originalTimeout === undefined) delete process.env.IMPORT_TIMEOUT_MS
+      else process.env.IMPORT_TIMEOUT_MS = originalTimeout
+    }
+  })
+
+  test('marks abandoned running entries as timed out', async () => {
+    const now = new Date()
+    const [abandoned] = await getDb()
+      .insert(importRuns)
+      .values({
+        integrationKey: INTEGRATION_KEY,
+        mode: 'incremental',
+        trigger: 'schedule',
+        status: 'running',
+        startedAt: new Date(now.getTime() - 1_000),
+      })
+      .returning({ id: importRuns.id })
+    if (!abandoned) throw new Error('Could not create abandoned test run')
+
+    await expireTimedOutImportRuns(500, now)
+
+    const [expired] = await getDb()
+      .select({ status: importRuns.status, error: importRuns.error })
+      .from(importRuns)
+      .where(eq(importRuns.id, abandoned.id))
+    expect(expired).toEqual({
+      status: 'failed',
+      error: 'Synchronization timed out after 500ms',
+    })
   })
 })

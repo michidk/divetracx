@@ -1,10 +1,10 @@
 import '@tanstack/react-start/server-only'
 
 import { createHash } from 'node:crypto'
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { getDb } from '@/db'
-import { diveSites, dives, equipment, pictures } from '@/db/schema'
+import { divers, diveSites, dives, equipment, pictures } from '@/db/schema'
 import { createThumbnail, thumbnailPathFor } from '@/lib/server/thumbnail.server'
 import { getStorage } from '@/lib/storage'
 
@@ -17,7 +17,7 @@ const ALLOWED_IMAGE_TYPES: Record<string, string> = {
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 
 const uploadTargetSchema = z.object({
-  target: z.enum(['dive', 'site', 'gear']),
+  target: z.enum(['dive', 'site', 'gear', 'profile']),
   id: z.string().uuid(),
 })
 
@@ -25,7 +25,7 @@ function errorResponse(status: number, message: string) {
   return Response.json({ error: message }, { status })
 }
 
-async function targetExists(target: 'dive' | 'site' | 'gear', id: string) {
+async function targetExists(target: 'dive' | 'site' | 'gear' | 'profile', id: string) {
   const db = getDb()
   if (target === 'dive') {
     const [row] = await db
@@ -35,7 +35,7 @@ async function targetExists(target: 'dive' | 'site' | 'gear', id: string) {
       .limit(1)
     return Boolean(row)
   }
-  const table = target === 'site' ? diveSites : equipment
+  const table = target === 'site' ? diveSites : target === 'gear' ? equipment : divers
   const [row] = await db
     .select({ id: table.id })
     .from(table)
@@ -64,6 +64,9 @@ export async function handlePhotoUpload(request: Request): Promise<Response> {
 
   const files = formData.getAll('files').filter((entry) => entry instanceof File)
   if (files.length === 0) return errorResponse(400, 'No files were uploaded')
+  if (target === 'profile' && files.length > 1) {
+    return errorResponse(400, 'Choose one profile image')
+  }
 
   for (const file of files) {
     if (!ALLOWED_IMAGE_TYPES[file.type]) {
@@ -81,11 +84,17 @@ export async function handlePhotoUpload(request: Request): Promise<Response> {
       ? pictures.diveId
       : target === 'site'
         ? pictures.siteId
-        : pictures.equipmentId
+        : target === 'gear'
+          ? pictures.equipmentId
+          : pictures.diverId
   const [sort] = await db
     .select({ next: sql<number>`coalesce(max(${pictures.sortOrder}), 0) + 1` })
     .from(pictures)
-    .where(eq(targetColumn, id))
+    .where(
+      target === 'profile'
+        ? and(eq(targetColumn, id), eq(pictures.kind, 'profile'))
+        : eq(targetColumn, id),
+    )
   let sortOrder = sort?.next ?? 1
 
   let uploaded = 0
@@ -94,29 +103,63 @@ export async function handlePhotoUpload(request: Request): Promise<Response> {
     const bytes = new Uint8Array(arrayBuffer)
     const hash = createHash('sha256').update(bytes).digest('hex')
     const extension = ALLOWED_IMAGE_TYPES[file.type]
-    const basePath = `uploads/${target}s/${id}/${hash}`
+    const basePath = `uploads/${target === 'profile' ? 'profiles' : `${target}s`}/${id}/${hash}`
     const storagePath = `${basePath}.${extension}`
     const thumbnailStoragePath = thumbnailPathFor(storagePath)
 
-    const thumbnail = await createThumbnail(bytes, 'photo')
+    const thumbnail = await createThumbnail(
+      bytes,
+      target === 'profile' ? 'profile' : 'photo',
+    )
     await storage.upload(new Blob([arrayBuffer], { type: file.type }), storagePath)
     await storage.upload(
       new Blob([new Uint8Array(thumbnail).buffer], { type: 'image/webp' }),
       thumbnailStoragePath,
     )
 
-    await db.insert(pictures).values({
-      kind: 'photo',
-      diveId: target === 'dive' ? id : null,
-      siteId: target === 'site' ? id : null,
-      equipmentId: target === 'gear' ? id : null,
-      path: file.name || storagePath,
-      storagePath,
-      thumbnailStoragePath,
-      mimeType: file.type,
-      byteSize: bytes.byteLength,
-      sortOrder,
+    const previousProfilePictures =
+      target === 'profile'
+        ? await db
+            .select({
+              id: pictures.id,
+              storagePath: pictures.storagePath,
+              thumbnailStoragePath: pictures.thumbnailStoragePath,
+            })
+            .from(pictures)
+            .where(and(eq(pictures.diverId, id), eq(pictures.kind, 'profile')))
+        : []
+
+    await db.transaction(async (transaction) => {
+      if (target === 'profile') {
+        await transaction
+          .delete(pictures)
+          .where(and(eq(pictures.diverId, id), eq(pictures.kind, 'profile')))
+      }
+      await transaction.insert(pictures).values({
+        kind: target === 'profile' ? 'profile' : 'photo',
+        diveId: target === 'dive' ? id : null,
+        siteId: target === 'site' ? id : null,
+        equipmentId: target === 'gear' ? id : null,
+        diverId: target === 'profile' ? id : null,
+        path: file.name || storagePath,
+        storagePath,
+        thumbnailStoragePath,
+        mimeType: file.type,
+        byteSize: bytes.byteLength,
+        description: target === 'profile' ? 'Profile image' : null,
+        sortOrder,
+      })
     })
+
+    if (target === 'profile') {
+      const oldPaths = previousProfilePictures.flatMap((picture) =>
+        [picture.storagePath, picture.thumbnailStoragePath].filter(
+          (path): path is string =>
+            Boolean(path) && path !== storagePath && path !== thumbnailStoragePath,
+        ),
+      )
+      await Promise.allSettled(oldPaths.map((path) => storage.delete(path)))
+    }
     sortOrder += 1
     uploaded += 1
   }

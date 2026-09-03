@@ -103,6 +103,8 @@ async function createDiveMateExportFile() {
       snapshot.data.divers,
       snapshot.data.diveSites,
       snapshot.data.buddies,
+      snapshot.data.buddyCertifications,
+      snapshot.data.buddyAgencyMemberships,
       snapshot.data.equipment,
       snapshot.data.certifications,
       snapshot.data.shops,

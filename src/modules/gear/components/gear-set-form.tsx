@@ -1,7 +1,6 @@
 import { useRouter } from '@tanstack/react-router'
-import { Save } from 'lucide-react'
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { SaveButton, useTransientSavedState } from '@/components/save-button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -24,6 +23,7 @@ export function GearSetForm({
   const [equipmentIds, setEquipmentIds] = useState(() => new Set(data.equipmentIds))
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const { saved, clearSaved, markSaved } = useTransientSavedState()
 
   function toggleItem(id: string, checked: boolean) {
     setEquipmentIds((current) => {
@@ -38,6 +38,7 @@ export function GearSetForm({
     event.preventDefault()
     setSaving(true)
     setMessage(null)
+    clearSaved()
     try {
       const result = await saveGearSetRecord({
         data: {
@@ -49,7 +50,7 @@ export function GearSetForm({
         },
       })
       await router.invalidate()
-      setMessage('Saved.')
+      markSaved()
       await onSaved?.(result.id)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Saving failed')
@@ -130,14 +131,11 @@ export function GearSetForm({
       </fieldset>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={saving}>
-          <Save size={16} aria-hidden="true" /> {saving ? 'Saving…' : 'Save gear set'}
-        </Button>
+        <SaveButton type="submit" saving={saving} saved={saved}>
+          Save gear set
+        </SaveButton>
         {message ? (
-          <p
-            aria-live="polite"
-            className={`text-sm ${message === 'Saved.' ? 'text-muted-foreground' : 'text-red-600'}`}
-          >
+          <p aria-live="polite" className="text-sm text-red-600">
             {message}
           </p>
         ) : null}

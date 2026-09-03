@@ -2,6 +2,7 @@ import '@tanstack/react-start/server-only'
 
 import type { ExportSnapshot } from '@/modules/export/types'
 import { encodeDiveMateProfile } from '../export-profile'
+import { formatDiveMateInstructor } from '../instructor'
 import type { SqliteBinding, SqliteDatabase } from './sqlite.server'
 
 function binding(value: unknown): SqliteBinding {
@@ -93,6 +94,13 @@ export function rewriteDiveMateDatabase(
   snapshot: ExportSnapshot,
 ) {
   const data = snapshot.data
+  const buddiesById = new Map(data.buddies.map((buddy) => [buddy.id, buddy]))
+  const buddyAgencyNumbers = new Map(
+    data.buddyAgencyMemberships.map((membership) => [
+      `${membership.buddyId}:${membership.agencyId}`,
+      membership.memberNumber,
+    ]),
+  )
   const diverIds = assignDiveMateIds(data.divers)
   const siteIds = assignDiveMateIds(data.diveSites)
   const buddyIds = assignDiveMateIds(data.buddies)
@@ -277,8 +285,14 @@ export function rewriteDiveMateDatabase(
           Org: row.organization,
           Number: row.certificationNumber,
           CertDate: row.certifiedAt,
-          Instructor: row.instructorName,
-          InstructorNo: row.instructorNumber,
+          Instructor: formatDiveMateInstructor(
+            row.instructorBuddyId ? buddiesById.get(row.instructorBuddyId) : null,
+          ),
+          InstructorNo:
+            row.instructorBuddyId && row.agencyId
+              ? (buddyAgencyNumbers.get(`${row.instructorBuddyId}:${row.agencyId}`) ??
+                null)
+              : null,
           SortOrd: row.sortOrder,
           Scan1Path: row.scan1Path,
           Scan2Path: row.scan2Path,

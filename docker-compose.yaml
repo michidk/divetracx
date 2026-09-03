@@ -42,11 +42,10 @@ services:
     restart: unless-stopped
     environment:
       GARMIN_ADAPTER_AUTHORIZATION: ${GARMIN_ADAPTER_AUTHORIZATION:-}
-      GARMIN_ADAPTER_UI_PASSWORD: ${GARMIN_ADAPTER_UI_PASSWORD:-}
       GARMIN_TOKEN_DIRECTORY: /data/garmin-tokens
-    ports:
-      # Setup UI: open http://localhost:8788 to log in to Garmin Connect.
-      - "127.0.0.1:${GARMIN_ADAPTER_UI_PORT:-8788}:8787"
+      GARMIN_MFA_CHALLENGE_TTL_SECONDS: ${GARMIN_MFA_CHALLENGE_TTL_SECONDS:-300}
+    expose:
+      - "8787"
     volumes:
       - divetracx-garmin-tokens:/data/garmin-tokens
 
