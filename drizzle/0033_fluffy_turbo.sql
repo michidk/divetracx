@@ -1,0 +1,1 @@
+ALTER TABLE "buddies" ADD COLUMN "instructor" boolean DEFAULT false NOT NULL;

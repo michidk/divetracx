@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import type { getBuddies } from '@/modules/buddies/server/queries'
 import { formatDiveDate, formatPersonName } from '@/modules/dives/format'
 
@@ -51,8 +52,15 @@ export function BuddiesPage({ buddies }: { buddies: BuddiesData }) {
                   {initials(buddy)}
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate font-semibold">
-                    {formatPersonName(buddy)}
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-semibold">
+                      {formatPersonName(buddy)}
+                    </span>
+                    {buddy.instructor ? (
+                      <Badge variant="accent" className="shrink-0 rounded-lg px-2 py-0.5">
+                        Instructor
+                      </Badge>
+                    ) : null}
                   </span>
                   <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                     {[buddy.city, buddy.country].filter(Boolean).join(', ') ||

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Award, BadgeCheck, Pencil, Plus } from 'lucide-react'
+import { Award, Pencil, Plus } from 'lucide-react'
 import type { getBuddy } from '@/modules/buddies/server/queries'
 import { AgencyMark } from '@/modules/profile/components/agency-mark'
 
@@ -84,11 +84,6 @@ export function BuddyCredentials({
               <li key={membership.id}>
                 <article className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
                   <AgencyMark agency={membership.agency} className="size-11" />
-                  <BadgeCheck
-                    size={18}
-                    className="shrink-0 text-primary"
-                    aria-hidden="true"
-                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{membership.agency.name}</p>
                     <p className="truncate font-mono text-sm text-muted-foreground">

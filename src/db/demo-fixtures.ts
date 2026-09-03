@@ -446,7 +446,13 @@ export async function seedDemoDatabase(database: DemoDatabase): Promise<void> {
   const buddies = await database
     .insert(schema.buddies)
     .values([
-      { firstName: 'Maya', lastName: 'Reed', country: 'Sample Isles', minimumDives: 120 },
+      {
+        firstName: 'Maya',
+        lastName: 'Reed',
+        country: 'Sample Isles',
+        instructor: true,
+        minimumDives: 120,
+      },
       {
         firstName: 'Jonas',
         lastName: 'Vale',

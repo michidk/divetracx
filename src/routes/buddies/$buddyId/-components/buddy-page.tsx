@@ -33,6 +33,11 @@ export function BuddyPage({ detail }: { detail: BuddyDetail }) {
             'No contact details yet'}
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
+          {buddy.instructor ? (
+            <Badge variant="accent" className="rounded-lg px-2.5 py-1">
+              Instructor
+            </Badge>
+          ) : null}
           <Badge variant="secondary" className="rounded-lg px-2.5 py-1">
             <Waves size={13} aria-hidden="true" /> {dives.length}{' '}
             {dives.length === 1 ? 'dive together' : 'dives together'}

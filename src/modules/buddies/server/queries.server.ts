@@ -23,6 +23,7 @@ export async function loadBuddiesOverview() {
       email: buddies.email,
       city: buddies.city,
       country: buddies.country,
+      instructor: buddies.instructor,
       diveCount: sql<number>`count(${dives.id})::integer`,
       lastDiveDate: sql<string | null>`max(${dives.diveDate})`,
     })

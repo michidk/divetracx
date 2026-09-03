@@ -113,6 +113,7 @@ describe('canonical DiveMate export', () => {
             city: null,
             state: null,
             country: null,
+            instructor: true,
             minimumDives: null,
             notes: null,
             createdAt: now,

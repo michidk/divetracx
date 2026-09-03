@@ -189,6 +189,12 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
       { key: 'state', label: 'State / province', kind: 'text', section: 'Address' },
       { key: 'country', label: 'Country', kind: 'text', section: 'Address' },
       {
+        key: 'instructor',
+        label: 'Instructor',
+        kind: 'checkbox',
+        section: 'Experience',
+      },
+      {
         key: 'minimumDives',
         label: 'Minimum known dives',
         kind: 'number',

@@ -186,6 +186,7 @@ async function saveBuddy(id: string, values: EditorValues) {
     city: optionalText(values, 'city'),
     state: optionalText(values, 'state'),
     country: optionalText(values, 'country'),
+    instructor: values.instructor === true,
     minimumDives: optionalInteger(values, 'minimumDives', { min: 0 }),
     notes: optionalText(values, 'notes'),
     updatedAt: new Date(),

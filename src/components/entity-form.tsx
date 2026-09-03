@@ -110,6 +110,7 @@ function FieldControl({
       >
         <Checkbox
           id={inputId}
+          aria-label={field.label}
           checked={value === true}
           onCheckedChange={(checked) => onChange(checked === true)}
         />

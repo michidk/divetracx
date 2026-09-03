@@ -232,6 +232,13 @@
       "when": 1788461602449,
       "tag": "0032_bouncy_jack_power",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788465662844,
+      "tag": "0033_fluffy_turbo",
+      "breakpoints": true
     }
   ]
 }
