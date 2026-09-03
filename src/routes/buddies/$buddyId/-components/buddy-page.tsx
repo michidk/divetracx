@@ -18,12 +18,21 @@ export function BuddyPage({ detail }: { detail: BuddyDetail }) {
   return (
     <div className="space-y-7">
       <header>
-        <Link
-          to="/buddies"
-          className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary"
-        >
-          <ArrowLeft size={16} aria-hidden="true" /> All buddies
-        </Link>
+        <div className="flex items-start justify-between gap-4">
+          <Link
+            to="/buddies"
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary"
+          >
+            <ArrowLeft size={16} aria-hidden="true" /> All buddies
+          </Link>
+          <DeleteRecordButton
+            entity="buddies"
+            recordId={buddy.id}
+            label="Delete buddy"
+            confirmText={`Delete ${formatPersonName(buddy)}? They will be removed from ${dives.length} dives. A future full import may restore them.`}
+            onDeleted={() => navigate({ to: '/buddies' })}
+          />
+        </div>
         <h1 className="mt-3 text-balance text-4xl font-semibold tracking-tight md:text-5xl">
           {formatPersonName(buddy)}
         </h1>
@@ -74,15 +83,6 @@ export function BuddyPage({ detail }: { detail: BuddyDetail }) {
             Buddy details
           </h2>
           <EntityForm entity="buddies" recordId={buddy.id} record={buddy} />
-          <div className="mt-4">
-            <DeleteRecordButton
-              entity="buddies"
-              recordId={buddy.id}
-              label="Delete buddy"
-              confirmText={`Delete ${formatPersonName(buddy)}? They will be removed from ${dives.length} dives. A future full import may restore them.`}
-              onDeleted={() => navigate({ to: '/buddies' })}
-            />
-          </div>
         </div>
       </div>
     </div>
