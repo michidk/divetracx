@@ -39,6 +39,9 @@ export const divers = pgTable('divers', {
   emergencyPhone: text('emergency_phone'),
   emergencyEmail: text('emergency_email'),
   insurance: text('insurance'),
+  insuranceTariff: text('insurance_tariff'),
+  insuranceNumber: text('insurance_number'),
+  insuranceHotline: text('insurance_hotline'),
   notes: text('notes'),
   ...auditColumns,
 })
@@ -78,6 +81,7 @@ export const buddies = pgTable('buddies', {
   city: text('city'),
   state: text('state'),
   country: text('country'),
+  minimumDives: integer('minimum_dives'),
   notes: text('notes'),
   ...auditColumns,
 })
@@ -135,30 +139,119 @@ export const equipmentSetItems = pgTable(
   ],
 )
 
-export const certifications = pgTable('certifications', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  diverId: uuid('diver_id').references(() => divers.id, {
-    onDelete: 'set null',
-  }),
-  name: text('name').notNull(),
-  organization: text('organization'),
-  certificationNumber: text('certification_number'),
-  certifiedAt: date('certified_at'),
-  instructorName: text('instructor_name'),
-  instructorNumber: text('instructor_number'),
-  sortOrder: integer('sort_order'),
-  scan1Path: text('scan_1_path'),
-  scan2Path: text('scan_2_path'),
-  scan1StoragePath: text('scan_1_storage_path'),
-  scan1ThumbnailStoragePath: text('scan_1_thumbnail_storage_path'),
-  scan1MimeType: text('scan_1_mime_type'),
-  scan1ByteSize: integer('scan_1_byte_size'),
-  scan2StoragePath: text('scan_2_storage_path'),
-  scan2ThumbnailStoragePath: text('scan_2_thumbnail_storage_path'),
-  scan2MimeType: text('scan_2_mime_type'),
-  scan2ByteSize: integer('scan_2_byte_size'),
-  ...auditColumns,
-})
+export const agencies = pgTable(
+  'agencies',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    code: text('code'),
+    name: text('name').notNull(),
+    fullName: text('full_name'),
+    normalizedName: text('normalized_name').notNull(),
+    logoSrc: text('logo_src'),
+    websiteUrl: text('website_url'),
+    loginUrl: text('login_url'),
+    darkLogo: boolean('dark_logo').notNull().default(false),
+    builtIn: boolean('built_in').notNull().default(false),
+    ...auditColumns,
+  },
+  (table) => [
+    uniqueIndex('agencies_code_unique').on(table.code),
+    uniqueIndex('agencies_normalized_name_unique').on(table.normalizedName),
+  ],
+)
+
+export const buddyCertifications = pgTable(
+  'buddy_certifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    buddyId: uuid('buddy_id')
+      .notNull()
+      .references(() => buddies.id, { onDelete: 'cascade' }),
+    agencyId: uuid('agency_id')
+      .notNull()
+      .references(() => agencies.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    ...auditColumns,
+  },
+  (table) => [
+    index('buddy_certifications_buddy_id_index').on(table.buddyId),
+    index('buddy_certifications_agency_id_index').on(table.agencyId),
+  ],
+)
+
+export const buddyAgencyMemberships = pgTable(
+  'buddy_agency_memberships',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    buddyId: uuid('buddy_id')
+      .notNull()
+      .references(() => buddies.id, { onDelete: 'cascade' }),
+    agencyId: uuid('agency_id')
+      .notNull()
+      .references(() => agencies.id, { onDelete: 'restrict' }),
+    memberNumber: text('member_number').notNull(),
+    ...auditColumns,
+  },
+  (table) => [
+    uniqueIndex('buddy_agency_memberships_buddy_agency_unique').on(
+      table.buddyId,
+      table.agencyId,
+    ),
+    index('buddy_agency_memberships_agency_id_index').on(table.agencyId),
+  ],
+)
+
+export const certifications = pgTable(
+  'certifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    diverId: uuid('diver_id').references(() => divers.id, {
+      onDelete: 'set null',
+    }),
+    name: text('name').notNull(),
+    organization: text('organization'),
+    agencyId: uuid('agency_id').references(() => agencies.id, {
+      onDelete: 'restrict',
+    }),
+    certificationNumber: text('certification_number'),
+    certifiedAt: date('certified_at'),
+    instructorBuddyId: uuid('instructor_buddy_id').references(() => buddies.id, {
+      onDelete: 'set null',
+    }),
+    sortOrder: integer('sort_order'),
+    scan1Path: text('scan_1_path'),
+    scan2Path: text('scan_2_path'),
+    scan1StoragePath: text('scan_1_storage_path'),
+    scan1ThumbnailStoragePath: text('scan_1_thumbnail_storage_path'),
+    scan1MimeType: text('scan_1_mime_type'),
+    scan1ByteSize: integer('scan_1_byte_size'),
+    scan2StoragePath: text('scan_2_storage_path'),
+    scan2ThumbnailStoragePath: text('scan_2_thumbnail_storage_path'),
+    scan2MimeType: text('scan_2_mime_type'),
+    scan2ByteSize: integer('scan_2_byte_size'),
+    ...auditColumns,
+  },
+  (table) => [index('certifications_agency_id_index').on(table.agencyId)],
+)
+
+export const agencyMemberships = pgTable(
+  'agency_memberships',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    diverId: uuid('diver_id').references(() => divers.id, {
+      onDelete: 'set null',
+    }),
+    agencyId: uuid('agency_id')
+      .notNull()
+      .references(() => agencies.id, { onDelete: 'restrict' }),
+    memberNumber: text('member_number').notNull(),
+    ...auditColumns,
+  },
+  (table) => [
+    index('agency_memberships_diver_id_index').on(table.diverId),
+    index('agency_memberships_agency_id_index').on(table.agencyId),
+  ],
+)
 
 export const diveTypes = pgTable('dive_types', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -322,7 +415,7 @@ export const tanks = pgTable(
   (table) => [index('tanks_dive_id_index').on(table.diveId)],
 )
 
-export const pictureKind = pgEnum('picture_kind', ['photo', 'signature'])
+export const pictureKind = pgEnum('picture_kind', ['photo', 'signature', 'profile'])
 
 export const pictures = pgTable(
   'pictures',

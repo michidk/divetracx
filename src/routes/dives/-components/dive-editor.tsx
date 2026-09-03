@@ -1,7 +1,8 @@
 import { Link, useRouter } from '@tanstack/react-router'
-import { Plus, Save, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { useId, useState } from 'react'
 import { RatingInput } from '@/components/entity-form'
+import { SaveButton, useTransientSavedState } from '@/components/save-button'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -184,6 +185,7 @@ export function DiveEditor({
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const { saved, clearSaved, markSaved } = useTransientSavedState()
   const isNew = diveId === 'new'
 
   function update<Key extends keyof ReturnType<typeof initialDiveState>>(
@@ -210,6 +212,7 @@ export function DiveEditor({
     event.preventDefault()
     setSaving(true)
     setMessage(null)
+    clearSaved()
     try {
       const result = await saveDive({
         data: {
@@ -221,6 +224,8 @@ export function DiveEditor({
         },
       })
       await router.invalidate()
+      markSaved()
+      setSaving(false)
       await router.navigate({ to: '/dives/$diveId', params: { diveId: result.id } })
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not save the dive')
@@ -929,10 +934,9 @@ export function DiveEditor({
             {message}
           </p>
         </div>
-        <Button type="submit" disabled={saving} className="px-6">
-          <Save size={16} aria-hidden="true" />{' '}
-          {saving ? 'Saving…' : isNew ? 'Log dive' : 'Save dive'}
-        </Button>
+        <SaveButton type="submit" saving={saving} saved={saved} className="px-6">
+          {isNew ? 'Log dive' : 'Save dive'}
+        </SaveButton>
       </div>
     </form>
   )

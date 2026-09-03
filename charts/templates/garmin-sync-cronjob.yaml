@@ -23,6 +23,7 @@ spec:
   failedJobsHistoryLimit: {{ .Values.garmin.sync.failedJobsHistoryLimit }}
   jobTemplate:
     spec:
+      activeDeadlineSeconds: {{ div .Values.imports.timeoutMs 1000 }}
       backoffLimit: {{ .Values.garmin.sync.backoffLimit }}
       template:
         metadata:
@@ -64,6 +65,8 @@ spec:
                       name: {{ include "divetracx.dbSecretName" . }}
                       key: url
                       {{- end }}
+                - name: IMPORT_TIMEOUT_MS
+                  value: {{ .Values.imports.timeoutMs | quote }}
                 - name: GARMIN_ADAPTER_FULL_IMPORT_URL
                   value: {{ include "divetracx.garminAdapterFullImportUrl" . | quote }}
                 - name: GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL

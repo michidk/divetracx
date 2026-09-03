@@ -201,8 +201,9 @@ export function createGarminConnector(
     async prepareImport(context) {
       const batch =
         context.mode === 'full'
-          ? await client.fetchFull(context.state)
-          : await client.fetchIncremental(context.state)
+          ? await client.fetchFull(context.state, context.signal)
+          : await client.fetchIncremental(context.state, context.signal)
+      context.signal.throwIfAborted()
       const prepared = prepareBatch(batch)
       return {
         records: prepared.records,
@@ -247,6 +248,7 @@ export function createGarminConnector(
       const reservedDiveIds = new Set(linkedDives.map((row) => row.diveId))
 
       for (const record of context.records) {
+        context.signal.throwIfAborted()
         if (record.change === 'unchanged') {
           skipped += 1
           continue
@@ -347,6 +349,7 @@ export function createGarminConnector(
 
         if (insertSamples) {
           for (const [sampleIndex, sample] of mapped.profileSamples.entries()) {
+            context.signal.throwIfAborted()
             const [inserted] = await context.transaction
               .insert(diveProfileSamples)
               .values({
@@ -371,6 +374,7 @@ export function createGarminConnector(
         }
         if (insertTanks) {
           for (const gas of mapped.gases) {
+            context.signal.throwIfAborted()
             const [inserted] = await context.transaction
               .insert(tanks)
               .values({

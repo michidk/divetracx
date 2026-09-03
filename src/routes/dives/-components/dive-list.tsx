@@ -2,6 +2,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { ChevronRight, Plus, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { diveTypeIcon } from '@/components/dive-type-icon'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import {
   formatDiveDate,
@@ -122,11 +123,31 @@ export function DiveList({ list, search }: { list: DiveListData; search: string 
                 <span className="block truncate font-semibold">
                   {dive.siteName ?? 'Unknown site'}
                 </span>
-                <span className="mt-1 block truncate text-xs text-muted-foreground md:hidden">
-                  #{dive.number ?? '—'} · {formatDiveDate(dive.diveDate, 'medium')}
-                </span>
-                <span className="mt-1 hidden truncate text-xs text-muted-foreground md:block">
-                  {dive.country ?? 'Country not set'}
+                <span className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
+                  <span className="min-w-0 truncate text-xs text-muted-foreground">
+                    <span className="md:hidden">
+                      #{dive.number ?? '—'} · {formatDiveDate(dive.diveDate, 'medium')}
+                    </span>
+                    <span className="hidden md:inline">
+                      {dive.country ?? 'Country not set'}
+                    </span>
+                  </span>
+                  {dive.diveTypeName ? (
+                    <Badge
+                      variant="secondary"
+                      className="max-w-full truncate px-2 py-0.5 text-[0.6875rem] leading-4"
+                    >
+                      {dive.diveTypeName}
+                    </Badge>
+                  ) : null}
+                  {dive.decompressionDive ? (
+                    <Badge
+                      variant="destructive"
+                      className="px-2 py-0.5 text-[0.6875rem] font-bold leading-4 tracking-wide"
+                    >
+                      DECO
+                    </Badge>
+                  ) : null}
                 </span>
               </span>
               <span className="hidden text-sm md:block">

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { z } from 'zod'
 
 export const entityKeySchema = z.enum([
@@ -6,6 +7,9 @@ export const entityKeySchema = z.enum([
   'buddies',
   'equipment',
   'certifications',
+  'agencyMemberships',
+  'buddyCertifications',
+  'buddyAgencyMemberships',
 ])
 
 export type EntityKey = z.infer<typeof entityKeySchema>
@@ -21,6 +25,7 @@ export interface EntityField {
     | 'email'
     | 'tel'
     | 'date'
+    | 'date-picker'
     | 'number'
     | 'checkbox'
     | 'rating'
@@ -31,7 +36,7 @@ export interface EntityField {
   max?: number
   step?: string
   help?: string
-  options?: Array<{ value: string; label: string }>
+  options?: Array<{ value: string; label: string; leading?: ReactNode }>
 }
 
 export interface EntityDefinition {
@@ -106,8 +111,22 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
     fields: [
       { key: 'firstName', label: 'First name', kind: 'text', section: 'Personal' },
       { key: 'lastName', label: 'Last name', kind: 'text', section: 'Personal' },
-      { key: 'birthDate', label: 'Birth date', kind: 'date', section: 'Personal' },
-      { key: 'bloodGroup', label: 'Blood group', kind: 'text', section: 'Personal' },
+      {
+        key: 'birthDate',
+        label: 'Birth date',
+        kind: 'date-picker',
+        section: 'Personal',
+      },
+      {
+        key: 'bloodGroup',
+        label: 'Blood group',
+        kind: 'select',
+        section: 'Personal',
+        options: ['0-', '0+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'].map((group) => ({
+          value: group,
+          label: group,
+        })),
+      },
       { key: 'email', label: 'Email', kind: 'email', section: 'Contact' },
       { key: 'phone', label: 'Phone', kind: 'tel', section: 'Contact' },
       { key: 'street', label: 'Street', kind: 'text', section: 'Address' },
@@ -117,23 +136,41 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
       { key: 'country', label: 'Country', kind: 'text', section: 'Address' },
       {
         key: 'emergencyContact',
-        label: 'Emergency contact',
+        label: 'Contact',
         kind: 'text',
-        section: 'Emergency',
+        section: 'Emergency Contact',
       },
       {
         key: 'emergencyPhone',
-        label: 'Emergency phone',
+        label: 'Phone',
         kind: 'tel',
-        section: 'Emergency',
+        section: 'Emergency Contact',
       },
       {
         key: 'emergencyEmail',
-        label: 'Emergency email',
+        label: 'Email',
         kind: 'email',
-        section: 'Emergency',
+        section: 'Emergency Contact',
       },
-      { key: 'insurance', label: 'Insurance', kind: 'text', section: 'Emergency' },
+      { key: 'insurance', label: 'Insurer', kind: 'text', section: 'Insurance' },
+      {
+        key: 'insuranceTariff',
+        label: 'Plan',
+        kind: 'text',
+        section: 'Insurance',
+      },
+      {
+        key: 'insuranceNumber',
+        label: 'Policy number',
+        kind: 'text',
+        section: 'Insurance',
+      },
+      {
+        key: 'insuranceHotline',
+        label: 'Emergency hotline',
+        kind: 'tel',
+        section: 'Insurance',
+      },
       { key: 'notes', label: 'Notes', kind: 'textarea', section: 'Notes' },
     ],
   },
@@ -151,7 +188,21 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
       { key: 'city', label: 'City', kind: 'text', section: 'Address' },
       { key: 'state', label: 'State / province', kind: 'text', section: 'Address' },
       { key: 'country', label: 'Country', kind: 'text', section: 'Address' },
-      { key: 'notes', label: 'Notes', kind: 'textarea', section: 'Notes' },
+      {
+        key: 'minimumDives',
+        label: 'Minimum known dives',
+        kind: 'number',
+        section: 'Experience',
+        min: 0,
+        step: '1',
+        help: 'The number of dives this buddy is known to have completed at minimum.',
+      },
+      {
+        key: 'notes',
+        label: 'Notes',
+        kind: 'textarea',
+        section: 'Notes',
+      },
     ],
   },
   equipment: {
@@ -212,10 +263,12 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
         required: true,
       },
       {
-        key: 'organization',
-        label: 'Organization',
-        kind: 'text',
+        key: 'agencyId',
+        label: 'Agency',
+        kind: 'select',
         section: 'Certification',
+        required: true,
+        help: 'Add more agencies in Settings.',
       },
       {
         key: 'certificationNumber',
@@ -229,12 +282,78 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
         kind: 'date',
         section: 'Certification',
       },
-      { key: 'instructorName', label: 'Instructor', kind: 'text', section: 'Instructor' },
       {
-        key: 'instructorNumber',
-        label: 'Instructor number',
-        kind: 'text',
+        key: 'instructorBuddyId',
+        label: 'Instructor',
+        kind: 'select',
         section: 'Instructor',
+        help: 'Instructors are people in your buddy list.',
+      },
+    ],
+  },
+  agencyMemberships: {
+    key: 'agencyMemberships',
+    singular: 'Agency membership',
+    plural: 'Agency memberships',
+    fields: [
+      {
+        key: 'agencyId',
+        label: 'Agency',
+        kind: 'select',
+        section: 'Membership',
+        required: true,
+        help: 'Add more agencies in Settings.',
+      },
+      {
+        key: 'memberNumber',
+        label: 'Membership number',
+        kind: 'text',
+        section: 'Membership',
+        required: true,
+      },
+    ],
+  },
+  buddyCertifications: {
+    key: 'buddyCertifications',
+    singular: 'Buddy certification',
+    plural: 'Buddy certifications',
+    fields: [
+      {
+        key: 'agencyId',
+        label: 'Agency',
+        kind: 'select',
+        section: 'Certification',
+        required: true,
+        help: 'Add more agencies in Settings.',
+      },
+      {
+        key: 'name',
+        label: 'Certification name',
+        kind: 'text',
+        section: 'Certification',
+        required: true,
+      },
+    ],
+  },
+  buddyAgencyMemberships: {
+    key: 'buddyAgencyMemberships',
+    singular: 'Buddy agency membership',
+    plural: 'Buddy agency memberships',
+    fields: [
+      {
+        key: 'agencyId',
+        label: 'Agency',
+        kind: 'select',
+        section: 'Agency membership',
+        required: true,
+        help: 'Add more agencies in Settings.',
+      },
+      {
+        key: 'memberNumber',
+        label: 'Member or instructor number',
+        kind: 'text',
+        section: 'Agency membership',
+        required: true,
       },
     ],
   },

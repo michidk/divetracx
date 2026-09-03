@@ -13,6 +13,8 @@ const badgeVariants = cva(
         accent: 'bg-accent text-foreground',
         outline: 'border border-border text-foreground',
         warning: 'bg-warning/15 text-warning-foreground',
+        destructive:
+          'bg-destructive/10 text-destructive ring-1 ring-inset ring-destructive/25',
       },
     },
     defaultVariants: { variant: 'default' },

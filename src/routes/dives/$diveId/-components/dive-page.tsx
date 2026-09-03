@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { PhotoManager } from '@/components/photo-manager'
 import { PictureGallery } from '@/components/picture-gallery'
+import { StatCard } from '@/components/stat-card'
 import { entryTypeLabel, waterTypeLabel } from '@/modules/dives/codes'
 import {
   formatDiveDate,
@@ -40,26 +41,6 @@ function Value({ label, value }: { label: string; value: React.ReactNode }) {
   )
 }
 
-function Metric({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Clock3
-  label: string
-  value: string
-}) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-5">
-      <Icon className="text-primary" size={20} aria-hidden="true" />
-      <p className="mt-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 text-xl font-semibold">{value}</p>
-    </div>
-  )
-}
-
 function displayTankGas(tank: DiveData['tanks'][number]) {
   const oxygen = Number(tank.oxygenPercent ?? 21)
   const helium = Number(tank.heliumPercent ?? 0)
@@ -68,8 +49,11 @@ function displayTankGas(tank: DiveData['tanks'][number]) {
   return 'Air'
 }
 
-function heroMediaUrl(photo: { storagePath: string | null }) {
-  const path = photo.storagePath ?? ''
+function heroMediaUrl(photo: {
+  storagePath: string | null
+  thumbnailStoragePath: string | null
+}) {
+  const path = photo.thumbnailStoragePath ?? photo.storagePath ?? ''
   return `/media/${path.split('/').map(encodeURIComponent).join('/')}`
 }
 
@@ -165,22 +149,22 @@ export function DivePage({ dive }: { dive: DiveData }) {
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric
+        <StatCard
           icon={Clock3}
           label="Dive time"
           value={formatDuration(dive.durationSeconds)}
         />
-        <Metric
+        <StatCard
           icon={Gauge}
           label="Maximum depth"
           value={formatMeters(dive.maximumDepthMeters)}
         />
-        <Metric
+        <StatCard
           icon={Waves}
           label="Average depth"
           value={formatMeters(dive.averageDepthMeters)}
         />
-        <Metric
+        <StatCard
           icon={Snowflake}
           label="Water temperature"
           value={formatTemperature(dive.waterTemperatureCelsius)}

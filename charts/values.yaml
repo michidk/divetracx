@@ -88,6 +88,10 @@ migrations:
       cpu: 50m
       memory: 64Mi
 
+imports:
+  # Overall deadline shared by manual, scheduled, and command-line imports.
+  timeoutMs: 900000
+
 sync:
   # Enable after configuring the Google Drive folder and credential Secret.
   enabled: false

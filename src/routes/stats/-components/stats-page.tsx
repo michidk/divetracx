@@ -5,7 +5,6 @@ import {
   Clock3,
   Gauge,
   Hourglass,
-  type LucideIcon,
   Percent,
   Thermometer,
   Timer,
@@ -14,6 +13,7 @@ import {
   Weight,
   Wind,
 } from 'lucide-react'
+import { StatCard } from '@/components/stat-card'
 import {
   formatDiveDate,
   formatDuration,
@@ -22,6 +22,8 @@ import {
   formatTemperature,
 } from '@/modules/dives/format'
 import type { getStatistics } from '@/modules/dives/server/stats'
+import { CertificationTimeline } from './certification-timeline'
+import { DepthTrend } from './depth-trend'
 import { DiveHeatmap } from './dive-heatmap'
 
 type StatisticsData = Awaited<ReturnType<typeof getStatistics>>
@@ -35,29 +37,6 @@ function mixtureName(mixture: NonNullable<StatisticsData['preferredMixture']>) {
     return `TMX ${mixture.oxygenPercent}/${mixture.heliumPercent}`
   if (mixture.oxygenPercent === 21) return 'Air'
   return `EAN${mixture.oxygenPercent}`
-}
-
-function StatTile({
-  icon: Icon,
-  label,
-  value,
-  detail,
-}: {
-  icon: LucideIcon
-  label: string
-  value: string
-  detail?: string
-}) {
-  return (
-    <article className="rounded-2xl border border-border bg-card p-5">
-      <Icon className="text-primary" size={20} aria-hidden="true" />
-      <p className="mt-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight">{value}</p>
-      {detail ? <p className="mt-2 text-xs text-muted-foreground">{detail}</p> : null}
-    </article>
-  )
 }
 
 function SectionHeading({ children }: { children: string }) {
@@ -167,7 +146,7 @@ export function StatsPage({ data }: { data: StatisticsData }) {
       <section>
         <SectionHeading>Time underwater</SectionHeading>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatTile
+          <StatCard
             icon={Waves}
             label="Number of dives"
             value={summary.totalDives.toLocaleString()}
@@ -177,17 +156,17 @@ export function StatsPage({ data }: { data: StatisticsData }) {
                 : undefined
             }
           />
-          <StatTile
+          <StatCard
             icon={Clock3}
             label="Total dive time"
             value={formatDuration(summary.totalSeconds)}
           />
-          <StatTile
+          <StatCard
             icon={Hourglass}
             label="Longest dive"
             value={formatDuration(summary.longestSeconds)}
           />
-          <StatTile
+          <StatCard
             icon={Timer}
             label="Average dive time"
             value={formatDuration(summary.averageSeconds)}
@@ -198,18 +177,18 @@ export function StatsPage({ data }: { data: StatisticsData }) {
       <section>
         <SectionHeading>Depth</SectionHeading>
         <div className="grid gap-4 sm:grid-cols-3">
-          <StatTile
+          <StatCard
             icon={Anchor}
             label="Maximum reached depth"
             value={formatMeters(summary.maximumDepthMeters)}
           />
-          <StatTile
+          <StatCard
             icon={Gauge}
             label="Average max depth"
             value={formatMeters(summary.averageMaximumDepthMeters)}
             detail="Mean of each dive's deepest point"
           />
-          <StatTile
+          <StatCard
             icon={Gauge}
             label="Average depth"
             value={formatMeters(summary.averageDepthMeters)}
@@ -219,9 +198,14 @@ export function StatsPage({ data }: { data: StatisticsData }) {
       </section>
 
       <section>
+        <SectionHeading>Depth over time</SectionHeading>
+        <DepthTrend points={data.depthByMonth} />
+      </section>
+
+      <section>
         <SectionHeading>Gas &amp; conditions</SectionHeading>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatTile
+          <StatCard
             icon={Wind}
             label="Preferred mixture"
             value={preferredMixture ? mixtureName(preferredMixture) : '—'}
@@ -231,7 +215,7 @@ export function StatsPage({ data }: { data: StatisticsData }) {
                 : 'No tanks recorded yet'
             }
           />
-          <StatTile
+          <StatCard
             icon={Gauge}
             label="Average SAC consumption"
             value={sac.average ? `${Number(sac.average).toFixed(2)} L/min` : '—'}
@@ -241,7 +225,7 @@ export function StatsPage({ data }: { data: StatisticsData }) {
                 : 'Needs tank volumes and pressures'
             }
           />
-          <StatTile
+          <StatCard
             icon={Weight}
             label="Average weight"
             value={
@@ -250,7 +234,7 @@ export function StatsPage({ data }: { data: StatisticsData }) {
                 : '—'
             }
           />
-          <StatTile
+          <StatCard
             icon={Thermometer}
             label="Minimum temperature"
             value={formatTemperature(summary.minimumWaterTemperatureCelsius)}
@@ -262,13 +246,13 @@ export function StatsPage({ data }: { data: StatisticsData }) {
       <section>
         <SectionHeading>Decompression</SectionHeading>
         <div className="grid gap-4 sm:grid-cols-2">
-          <StatTile
+          <StatCard
             icon={Hourglass}
             label="Total time in deco"
             value={formatDuration(decoSeconds)}
             detail="Time under a deco ceiling across all profiles"
           />
-          <StatTile
+          <StatCard
             icon={Percent}
             label="Dives in deco"
             value={decoShare}
@@ -282,10 +266,15 @@ export function StatsPage({ data }: { data: StatisticsData }) {
           <SectionHeading>Dives per year</SectionHeading>
           <DiveHeatmap
             years={[...data.divesPerYear].reverse()}
-            divesPerDay={data.divesPerDay}
+            calendarDives={data.calendarDives}
           />
         </section>
       ) : null}
+
+      <section>
+        <SectionHeading>Certification timeline</SectionHeading>
+        <CertificationTimeline certifications={certifications} />
+      </section>
     </div>
   )
 }

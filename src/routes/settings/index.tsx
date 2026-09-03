@@ -1,5 +1,12 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
-import { ChevronRight, Download, ListOrdered, RefreshCw, ScrollText } from 'lucide-react'
+import {
+  Building2,
+  ChevronRight,
+  Download,
+  ListOrdered,
+  RefreshCw,
+  ScrollText,
+} from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { getNumberingStatus, renumberDives } from '@/modules/dives/server/maintenance'
@@ -11,6 +18,12 @@ export const Route = createFileRoute('/settings/')({
 })
 
 const sections = [
+  {
+    to: '/settings/agencies',
+    label: 'Agencies',
+    description: 'View built-in training agencies and add your own organizations.',
+    icon: Building2,
+  },
   {
     to: '/settings/sync',
     label: 'Integrations',
@@ -116,7 +129,7 @@ function SettingsRoute() {
           and take your data with you anytime.
         </p>
       </header>
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {sections.map((section) => (
           <Link
             key={section.to}

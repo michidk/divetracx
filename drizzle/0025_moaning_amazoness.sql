@@ -1,0 +1,1 @@
+ALTER TYPE "public"."picture_kind" ADD VALUE 'profile';
