@@ -82,8 +82,6 @@ export const buddies = pgTable('buddies', {
   state: text('state'),
   country: text('country'),
   minimumDives: integer('minimum_dives'),
-  certifications: text('certifications'),
-  agencies: text('agencies'),
   notes: text('notes'),
   ...auditColumns,
 })
@@ -162,6 +160,47 @@ export const agencies = pgTable(
   ],
 )
 
+export const buddyCertifications = pgTable(
+  'buddy_certifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    buddyId: uuid('buddy_id')
+      .notNull()
+      .references(() => buddies.id, { onDelete: 'cascade' }),
+    agencyId: uuid('agency_id')
+      .notNull()
+      .references(() => agencies.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    ...auditColumns,
+  },
+  (table) => [
+    index('buddy_certifications_buddy_id_index').on(table.buddyId),
+    index('buddy_certifications_agency_id_index').on(table.agencyId),
+  ],
+)
+
+export const buddyAgencyMemberships = pgTable(
+  'buddy_agency_memberships',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    buddyId: uuid('buddy_id')
+      .notNull()
+      .references(() => buddies.id, { onDelete: 'cascade' }),
+    agencyId: uuid('agency_id')
+      .notNull()
+      .references(() => agencies.id, { onDelete: 'restrict' }),
+    memberNumber: text('member_number').notNull(),
+    ...auditColumns,
+  },
+  (table) => [
+    uniqueIndex('buddy_agency_memberships_buddy_agency_unique').on(
+      table.buddyId,
+      table.agencyId,
+    ),
+    index('buddy_agency_memberships_agency_id_index').on(table.agencyId),
+  ],
+)
+
 export const certifications = pgTable(
   'certifications',
   {
@@ -179,7 +218,6 @@ export const certifications = pgTable(
     instructorBuddyId: uuid('instructor_buddy_id').references(() => buddies.id, {
       onDelete: 'set null',
     }),
-    instructorNumber: text('instructor_number'),
     sortOrder: integer('sort_order'),
     scan1Path: text('scan_1_path'),
     scan2Path: text('scan_2_path'),

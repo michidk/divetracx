@@ -62,7 +62,7 @@ describe('canonical DiveMate export', () => {
     const now = new Date('2026-09-01T12:00:00Z')
     const snapshot = {
       format: 'divetracx-backup',
-      version: 12,
+      version: 13,
       exportedAt: now.toISOString(),
       data: {
         agencies: [
@@ -114,9 +114,18 @@ describe('canonical DiveMate export', () => {
             state: null,
             country: null,
             minimumDives: null,
-            certifications: null,
-            agencies: null,
             notes: null,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ],
+        buddyCertifications: [],
+        buddyAgencyMemberships: [
+          {
+            id: 'abababab-abab-4bab-8bab-abababababab',
+            buddyId: '99999999-9999-9999-9999-999999999999',
+            agencyId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            memberNumber: 'INST-42',
             createdAt: now,
             updatedAt: now,
           },
@@ -170,7 +179,6 @@ describe('canonical DiveMate export', () => {
             certificationNumber: 'CERT-1',
             certifiedAt: '2026-08-01',
             instructorBuddyId: '99999999-9999-9999-9999-999999999999',
-            instructorNumber: 'INST-42',
             sortOrder: 1,
             scan1Path: null,
             scan2Path: null,

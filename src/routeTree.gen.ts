@@ -41,6 +41,8 @@ import { Route as GearSetsNewIndexRouteImport } from './routes/gear/sets/new/ind
 import { Route as ProfileAgenciesAgencyMembershipIdIndexRouteImport } from './routes/profile/agencies/$agencyMembershipId/index'
 import { Route as ProfileCertificationsCertificationIdIndexRouteImport } from './routes/profile/certifications/$certificationId/index'
 import { Route as SettingsSyncLogsIndexRouteImport } from './routes/settings/sync/logs/index'
+import { Route as BuddiesBuddyIdAgenciesBuddyAgencyMembershipIdIndexRouteImport } from './routes/buddies/$buddyId/agencies/$buddyAgencyMembershipId/index'
+import { Route as BuddiesBuddyIdCertificationsBuddyCertificationIdIndexRouteImport } from './routes/buddies/$buddyId/certifications/$buddyCertificationId/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -204,6 +206,18 @@ const SettingsSyncLogsIndexRoute = SettingsSyncLogsIndexRouteImport.update({
   path: '/settings/sync/logs/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BuddiesBuddyIdAgenciesBuddyAgencyMembershipIdIndexRoute =
+  BuddiesBuddyIdAgenciesBuddyAgencyMembershipIdIndexRouteImport.update({
+    id: '/buddies/$buddyId/agencies/$buddyAgencyMembershipId/',
+    path: '/buddies/$buddyId/agencies/$buddyAgencyMembershipId/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const BuddiesBuddyIdCertificationsBuddyCertificationIdIndexRoute =
+  BuddiesBuddyIdCertificationsBuddyCertificationIdIndexRouteImport.update({
+    id: '/buddies/$buddyId/certifications/$buddyCertificationId/',
+    path: '/buddies/$buddyId/certifications/$buddyCertificationId/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -238,6 +252,8 @@ export interface FileRoutesByFullPath {
   '/profile/agencies/$agencyMembershipId/': typeof ProfileAgenciesAgencyMembershipIdIndexRoute
   '/profile/certifications/$certificationId/': typeof ProfileCertificationsCertificationIdIndexRoute
   '/settings/sync/logs/': typeof SettingsSyncLogsIndexRoute
+  '/buddies/$buddyId/agencies/$buddyAgencyMembershipId/': typeof BuddiesBuddyIdAgenciesBuddyAgencyMembershipIdIndexRoute
+  '/buddies/$buddyId/certifications/$buddyCertificationId/': typeof BuddiesBuddyIdCertificationsBuddyCertificationIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -272,6 +288,8 @@ export interface FileRoutesByTo {
   '/profile/agencies/$agencyMembershipId': typeof ProfileAgenciesAgencyMembershipIdIndexRoute
   '/profile/certifications/$certificationId': typeof ProfileCertificationsCertificationIdIndexRoute
   '/settings/sync/logs': typeof SettingsSyncLogsIndexRoute
+  '/buddies/$buddyId/agencies/$buddyAgencyMembershipId': typeof BuddiesBuddyIdAgenciesBuddyAgencyMembershipIdIndexRoute
+  '/buddies/$buddyId/certifications/$buddyCertificationId': typeof BuddiesBuddyIdCertificationsBuddyCertificationIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -307,6 +325,8 @@ export interface FileRoutesById {
   '/profile/agencies/$agencyMembershipId/': typeof ProfileAgenciesAgencyMembershipIdIndexRoute
   '/profile/certifications/$certificationId/': typeof ProfileCertificationsCertificationIdIndexRoute
   '/settings/sync/logs/': typeof SettingsSyncLogsIndexRoute
+  '/buddies/$buddyId/agencies/$buddyAgencyMembershipId/': typeof BuddiesBuddyIdAgenciesBuddyAgencyMembershipIdIndexRoute
+  '/buddies/$buddyId/certifications/$buddyCertificationId/': typeof BuddiesBuddyIdCertificationsBuddyCertificationIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -343,6 +363,8 @@ export interface FileRouteTypes {
     | '/profile/agencies/$agencyMembershipId/'
     | '/profile/certifications/$certificationId/'
     | '/settings/sync/logs/'
+    | '/buddies/$buddyId/agencies/$buddyAgencyMembershipId/'
+    | '/buddies/$buddyId/certifications/$buddyCertificationId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -377,6 +399,8 @@ export interface FileRouteTypes {
     | '/profile/agencies/$agencyMembershipId'
     | '/profile/certifications/$certificationId'
     | '/settings/sync/logs'
+    | '/buddies/$buddyId/agencies/$buddyAgencyMembershipId'
+    | '/buddies/$buddyId/certifications/$buddyCertificationId'
   id:
     | '__root__'
     | '/'
@@ -411,6 +435,8 @@ export interface FileRouteTypes {
     | '/profile/agencies/$agencyMembershipId/'
     | '/profile/certifications/$certificationId/'
     | '/settings/sync/logs/'
+    | '/buddies/$buddyId/agencies/$buddyAgencyMembershipId/'
+    | '/buddies/$buddyId/certifications/$buddyCertificationId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -446,6 +472,8 @@ export interface RootRouteChildren {
   ProfileAgenciesAgencyMembershipIdIndexRoute: typeof ProfileAgenciesAgencyMembershipIdIndexRoute
   ProfileCertificationsCertificationIdIndexRoute: typeof ProfileCertificationsCertificationIdIndexRoute
   SettingsSyncLogsIndexRoute: typeof SettingsSyncLogsIndexRoute
+  BuddiesBuddyIdAgenciesBuddyAgencyMembershipIdIndexRoute: typeof BuddiesBuddyIdAgenciesBuddyAgencyMembershipIdIndexRoute
+  BuddiesBuddyIdCertificationsBuddyCertificationIdIndexRoute: typeof BuddiesBuddyIdCertificationsBuddyCertificationIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -674,6 +702,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsSyncLogsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/buddies/$buddyId/agencies/$buddyAgencyMembershipId/': {
+      id: '/buddies/$buddyId/agencies/$buddyAgencyMembershipId/'
+      path: '/buddies/$buddyId/agencies/$buddyAgencyMembershipId'
+      fullPath: '/buddies/$buddyId/agencies/$buddyAgencyMembershipId/'
+      preLoaderRoute: typeof BuddiesBuddyIdAgenciesBuddyAgencyMembershipIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/buddies/$buddyId/certifications/$buddyCertificationId/': {
+      id: '/buddies/$buddyId/certifications/$buddyCertificationId/'
+      path: '/buddies/$buddyId/certifications/$buddyCertificationId'
+      fullPath: '/buddies/$buddyId/certifications/$buddyCertificationId/'
+      preLoaderRoute: typeof BuddiesBuddyIdCertificationsBuddyCertificationIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -712,6 +754,10 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileCertificationsCertificationIdIndexRoute:
     ProfileCertificationsCertificationIdIndexRoute,
   SettingsSyncLogsIndexRoute: SettingsSyncLogsIndexRoute,
+  BuddiesBuddyIdAgenciesBuddyAgencyMembershipIdIndexRoute:
+    BuddiesBuddyIdAgenciesBuddyAgencyMembershipIdIndexRoute,
+  BuddiesBuddyIdCertificationsBuddyCertificationIdIndexRoute:
+    BuddiesBuddyIdCertificationsBuddyCertificationIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

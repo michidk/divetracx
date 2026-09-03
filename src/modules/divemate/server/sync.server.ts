@@ -8,6 +8,7 @@ import { asc, eq, inArray } from 'drizzle-orm'
 import type { DatabaseTransaction } from '@/db'
 import {
   buddies,
+  buddyAgencyMemberships,
   certifications,
   diveBuddies,
   diveEquipment,
@@ -517,10 +518,23 @@ async function applySnapshot(
       certificationNumber: item.certificationNumber,
       certifiedAt: item.certifiedAt,
       instructorBuddyId,
-      instructorNumber: item.instructorNumber,
       sortOrder: item.sortOrder,
       scan1Path: item.scan1Path,
       scan2Path: item.scan2Path,
+    }
+    if (instructorBuddyId && agencyId && item.instructorNumber) {
+      await tx
+        .insert(buddyAgencyMemberships)
+        .values({
+          buddyId: instructorBuddyId,
+          agencyId,
+          memberNumber: item.instructorNumber,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [buddyAgencyMemberships.buddyId, buddyAgencyMemberships.agencyId],
+          set: { memberNumber: item.instructorNumber, updatedAt: new Date() },
+        })
     }
     const values = {
       ...referenceValues,

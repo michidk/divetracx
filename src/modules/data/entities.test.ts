@@ -3,6 +3,8 @@ import { getTableColumns } from 'drizzle-orm'
 import {
   agencyMemberships,
   buddies,
+  buddyAgencyMemberships,
+  buddyCertifications,
   certifications,
   divers,
   diveSites,
@@ -17,6 +19,8 @@ const entityTables = {
   equipment,
   certifications,
   agencyMemberships,
+  buddyCertifications,
+  buddyAgencyMemberships,
 } as const
 
 const recordMetadataColumns = new Set(['id', 'createdAt', 'updatedAt'])
@@ -45,6 +49,8 @@ const managedElsewhereColumns: Record<keyof typeof entityTables, Set<string>> = 
     'scan2ByteSize',
   ]),
   agencyMemberships: new Set(['diverId']),
+  buddyCertifications: new Set(['buddyId']),
+  buddyAgencyMemberships: new Set(['buddyId']),
 }
 
 describe('taxonomy entity definitions', () => {
