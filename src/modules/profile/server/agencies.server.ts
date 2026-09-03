@@ -5,6 +5,7 @@ import type { DatabaseTransaction } from '@/db'
 import { getDb } from '@/db'
 import { agencies } from '@/db/schema'
 import { findAgencyByName, normalizedAgencyName } from '@/modules/profile/agency-catalog'
+import { normalizeAgencyUrl } from '@/modules/profile/agency-url'
 
 type AgencyDatabase = ReturnType<typeof getDb> | DatabaseTransaction
 
@@ -15,17 +16,32 @@ export async function loadAgencies(database: AgencyDatabase = getDb()) {
     .orderBy(desc(agencies.builtIn), asc(agencies.name))
 }
 
-export async function createCustomAgency(name: string) {
+export async function createCustomAgency({
+  name,
+  websiteUrl,
+  loginUrl,
+}: {
+  name: string
+  websiteUrl?: string
+  loginUrl?: string
+}) {
   const trimmedName = name.trim()
   if (!trimmedName) throw new Error('Agency name is required')
   if (trimmedName.length > 120) throw new Error('Agency name is too long')
   const catalogAgency = findAgencyByName(trimmedName)
   if (catalogAgency) throw new Error(`${catalogAgency.shortName} already exists`)
+  const normalizedWebsiteUrl = normalizeAgencyUrl(websiteUrl, 'Website URL')
+  const normalizedLoginUrl = normalizeAgencyUrl(loginUrl, 'Login URL')
 
   const normalizedName = normalizedAgencyName(trimmedName)
   const [created] = await getDb()
     .insert(agencies)
-    .values({ name: trimmedName, normalizedName })
+    .values({
+      name: trimmedName,
+      normalizedName,
+      websiteUrl: normalizedWebsiteUrl,
+      loginUrl: normalizedLoginUrl,
+    })
     .onConflictDoNothing({ target: agencies.normalizedName })
     .returning()
   if (created) return created

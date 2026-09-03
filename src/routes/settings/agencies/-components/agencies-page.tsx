@@ -43,6 +43,8 @@ function AgencyGrid({ agencies }: { agencies: Agency[] }) {
 export function AgenciesPage({ agencies }: { agencies: Agency[] }) {
   const router = useRouter()
   const [name, setName] = useState('')
+  const [websiteUrl, setWebsiteUrl] = useState('')
+  const [loginUrl, setLoginUrl] = useState('')
   const [saving, setSaving] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -54,8 +56,10 @@ export function AgenciesPage({ agencies }: { agencies: Agency[] }) {
     setSaving(true)
     setMessage(null)
     try {
-      await addCustomAgency({ data: { name } })
+      await addCustomAgency({ data: { name, websiteUrl, loginUrl } })
       setName('')
+      setWebsiteUrl('')
+      setLoginUrl('')
       await router.invalidate()
       setMessage('Agency added. It is now available in agency selectors.')
     } catch (error) {
@@ -101,8 +105,12 @@ export function AgenciesPage({ agencies }: { agencies: Agency[] }) {
 
       <section className="rounded-2xl border border-border bg-card p-5 md:p-6">
         <h2 className="font-semibold">Add a custom agency</h2>
-        <form onSubmit={(event) => void add(event)} className="mt-4 flex gap-3">
+        <form
+          onSubmit={(event) => void add(event)}
+          className="mt-4 grid gap-3 sm:grid-cols-2"
+        >
           <Input
+            className="sm:col-span-2"
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Agency or organization name"
@@ -110,9 +118,27 @@ export function AgenciesPage({ agencies }: { agencies: Agency[] }) {
             required
             maxLength={120}
           />
-          <Button type="submit" disabled={saving || !name.trim()}>
-            <Plus size={16} aria-hidden="true" /> {saving ? 'Adding…' : 'Add'}
-          </Button>
+          <Input
+            type="url"
+            value={websiteUrl}
+            onChange={(event) => setWebsiteUrl(event.target.value)}
+            placeholder="Website URL (optional)"
+            aria-label="Website URL"
+            maxLength={2_048}
+          />
+          <Input
+            type="url"
+            value={loginUrl}
+            onChange={(event) => setLoginUrl(event.target.value)}
+            placeholder="Member login URL (optional)"
+            aria-label="Member login URL"
+            maxLength={2_048}
+          />
+          <div className="flex justify-end sm:col-span-2">
+            <Button type="submit" disabled={saving || !name.trim()}>
+              <Plus size={16} aria-hidden="true" /> {saving ? 'Adding…' : 'Add'}
+            </Button>
+          </div>
         </form>
         <p aria-live="polite" className="mt-3 text-sm text-muted-foreground">
           {message}

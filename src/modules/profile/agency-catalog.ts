@@ -4,49 +4,64 @@ export const agencyCatalog = [
     shortName: 'PADI',
     name: 'Professional Association of Diving Instructors',
     logoSrc: 'https://depthlog.net/assets/agencies/padi_128x128.jpeg',
+    websiteUrl: 'https://www.padi.com/',
+    loginUrl: 'https://account.padi.com/',
   },
   {
     code: 'ssi',
     shortName: 'SSI',
     name: 'Scuba Schools International',
     logoSrc: 'https://depthlog.net/assets/agencies/ssi_128x128.jpeg',
+    websiteUrl: 'https://www.divessi.com/',
+    loginUrl: 'https://my.divessi.com/login',
   },
   {
     code: 'naui',
     shortName: 'NAUI',
     name: 'National Association of Underwater Instructors',
     logoSrc: 'https://depthlog.net/assets/agencies/naui_128x128.jpeg',
+    websiteUrl: 'https://www.naui.org/',
+    loginUrl: 'https://core.naui.org/signin/',
   },
   {
     code: 'cmas',
     shortName: 'CMAS',
     name: 'Confédération Mondiale des Activités Subaquatiques',
     logoSrc: 'https://depthlog.net/assets/agencies/cmas_128x128.jpeg',
+    websiteUrl: 'https://www.cmas.org/',
+    loginUrl: 'https://portal.cmas.org/',
   },
   {
     code: 'bsac',
     shortName: 'BSAC',
     name: 'British Sub-Aqua Club',
-    logoSrc: 'https://www.bsac.com/themes/bsac/gfx/logos/bsac-logo.png',
+    logoSrc: '/agency-logos/bsac.svg',
+    websiteUrl: 'https://www.bsac.com/',
+    loginUrl: 'https://www.bsac.com/my-bsac/',
   },
   {
     code: 'fipsas',
     shortName: 'FIPSAS',
     name: 'Federazione Italiana Pesca Sportiva e Attività Subacquee',
     logoSrc: 'https://fipsas.it/wp-content/uploads/2025/10/Logo-FIPSAS.png',
+    websiteUrl: 'https://fipsas.it/',
+    loginUrl: 'https://fipsas.it/tesseramento-e-affiliazioni/tesseramento/',
   },
   {
     code: 'sdi',
     shortName: 'SDI',
     name: 'Scuba Diving International',
-    logoSrc: 'https://www.scuba.com/blog/wp-content/uploads/2018/11/SDI.jpg',
+    logoSrc: '/agency-logos/sdi.svg',
+    websiteUrl: 'https://www.tdisdi.com/sdi/',
+    loginUrl: 'https://members.tdisdi.com/',
   },
   {
     code: 'tdi',
     shortName: 'TDI',
     name: 'Technical Diving International',
-    logoSrc:
-      'https://www.nicepng.com/png/full/38-387319_tdi-technical-diving-international-logo-technical-diving-international.png',
+    logoSrc: '/agency-logos/tdi.svg',
+    websiteUrl: 'https://www.tdisdi.com/tdi/',
+    loginUrl: 'https://members.tdisdi.com/',
   },
   {
     code: 'iantd',
@@ -54,6 +69,8 @@ export const agencyCatalog = [
     name: 'International Association of Nitrox and Technical Divers',
     logoSrc:
       'https://iantd.com/wp-content/uploads/2026/08/cropped-logo_trans-300x237.png',
+    websiteUrl: 'https://iantd.com/',
+    loginUrl: 'https://www.iantd-members.com/en',
     darkLogo: true,
   },
 ] as const
@@ -81,9 +98,12 @@ export function findAgencyByName(name: string | null | undefined) {
 }
 
 export interface AgencyDisplayRecord {
+  code?: string | null
   name: string
   fullName: string | null
   logoSrc: string | null
+  websiteUrl?: string | null
+  loginUrl?: string | null
   darkLogo: boolean
   builtIn: boolean
 }
