@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Pencil } from 'lucide-react'
+import { Globe2, LogIn, Pencil } from 'lucide-react'
 import { AgencyMark } from '@/modules/profile/components/agency-mark'
 import type { getProfile } from '@/modules/profile/server/queries'
 
@@ -18,17 +18,12 @@ export function AgencyMembershipList({
         const displayName = membership.agency.name
         return (
           <li key={membership.id}>
-            <article className="relative flex min-h-32 h-full items-end gap-4 overflow-hidden rounded-2xl border border-black/10 bg-card p-4 shadow-lg">
-              <AgencyMark
-                agency={membership.agency}
-                decorative
-                className="absolute inset-0 size-full rounded-none bg-gradient-to-br from-primary to-cyan-900 text-6xl text-white/20 ring-0"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/40" />
-              <div className="relative min-w-0 flex-1 text-white">
+            <article className="relative flex h-full items-center gap-4 rounded-2xl border border-border bg-card p-4">
+              <AgencyMark agency={membership.agency} />
+              <div className="min-w-0 flex-1 pr-24">
                 <p className="truncate font-semibold">{displayName}</p>
                 {membership.agency.fullName ? (
-                  <p className="mt-0.5 truncate text-xs text-white/75">
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
                     {membership.agency.fullName}
                   </p>
                 ) : null}
@@ -36,14 +31,38 @@ export function AgencyMembershipList({
                   {membership.memberNumber}
                 </p>
               </div>
-              <Link
-                to="/profile/agencies/$agencyMembershipId"
-                params={{ agencyMembershipId: membership.id }}
-                aria-label={`Edit ${displayName} membership`}
-                className="relative shrink-0 rounded-lg p-2 text-white/75 transition hover:bg-white/15 hover:text-white"
-              >
-                <Pencil size={15} aria-hidden="true" />
-              </Link>
+              <div className="absolute right-3 top-3 flex items-center gap-1">
+                {membership.agency.websiteUrl ? (
+                  <a
+                    href={membership.agency.websiteUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`Open ${displayName} website`}
+                    className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  >
+                    <Globe2 size={15} aria-hidden="true" />
+                  </a>
+                ) : null}
+                {membership.agency.loginUrl ? (
+                  <a
+                    href={membership.agency.loginUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`Open ${displayName} member login`}
+                    className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  >
+                    <LogIn size={15} aria-hidden="true" />
+                  </a>
+                ) : null}
+                <Link
+                  to="/profile/agencies/$agencyMembershipId"
+                  params={{ agencyMembershipId: membership.id }}
+                  aria-label={`Edit ${displayName} membership`}
+                  className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                >
+                  <Pencil size={15} aria-hidden="true" />
+                </Link>
+              </div>
             </article>
           </li>
         )
