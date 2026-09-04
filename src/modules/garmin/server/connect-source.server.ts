@@ -2,44 +2,42 @@ import '@tanstack/react-start/server-only'
 
 import { unzipSync } from 'fflate'
 import { GarminConnect } from 'garmin-connect-2fa'
+import { getServerEnv } from '@/env'
 import {
   activityIdentity,
   activityStartEpochSeconds,
   buildActivityDetails,
-  type GarminAdapterActivity,
-  type GarminAdapterBatch,
+  type GarminConnectActivity,
+  type GarminConnectBatch,
   isAfterWatermark,
   isDiveActivity,
   nextAdapterState,
   parseAdapterState,
-} from '../envelope'
-import {
-  type GarminAdapterEnvironment,
-  getGarminAdapterEnvironment,
-} from './environment.server'
-import { ensureTokenDirectory, hasStoredTokens } from './token-store.server'
+} from '../connect-envelope'
+import { loadGarminTokens, saveGarminTokens } from './credentials.server'
 
-export type GarminAdapterMode = 'full' | 'incremental'
+export type GarminConnectMode = 'full' | 'incremental'
 
-export interface GarminAdapterBatchSource {
+export interface GarminConnectBatchSource {
   fetchBatch(
-    mode: GarminAdapterMode,
+    mode: GarminConnectMode,
     state: Record<string, unknown>,
-  ): Promise<GarminAdapterBatch>
+  ): Promise<GarminConnectBatch>
 }
 
-function createClient(environment: GarminAdapterEnvironment) {
-  if (!hasStoredTokens(environment.GARMIN_TOKEN_DIRECTORY)) {
+async function createClient() {
+  const environment = getServerEnv()
+  const tokens = await loadGarminTokens()
+  if (!tokens) {
     throw new Error(
-      'The adapter is not connected to Garmin Connect yet. Connect the Garmin ' +
-        'account in Divetracx under Settings → Integrations first.',
+      'Garmin Connect is not connected yet. Connect the account in Settings → Integrations first.',
     )
   }
   const client = new GarminConnect(
     { username: '', password: '' },
     environment.GARMIN_DOMAIN,
   )
-  client.loadTokenByFile(environment.GARMIN_TOKEN_DIRECTORY)
+  client.loadToken(tokens.oauth1 as never, tokens.oauth2 as never)
   return client
 }
 
@@ -49,7 +47,11 @@ function toBytes(payload: unknown): Uint8Array {
   throw new Error('Garmin Connect returned an unexpected FIT download payload')
 }
 
-async function downloadOriginalFit(client: GarminConnect, activityId: string) {
+async function downloadOriginalFit(
+  client: GarminConnect,
+  activityId: string,
+  maximumFitBytes: number,
+) {
   const payload = await client.client.get<unknown>(
     `${client.client.url.DOWNLOAD_ZIP}${activityId}`,
     { responseType: 'arraybuffer' },
@@ -65,6 +67,9 @@ async function downloadOriginalFit(client: GarminConnect, activityId: string) {
   if (!bytes) {
     throw new Error(`Garmin activity ${activityId} FIT entry is empty`)
   }
+  if (bytes.byteLength > maximumFitBytes) {
+    throw new Error(`Garmin FIT payload exceeds ${maximumFitBytes} bytes`)
+  }
   return bytes
 }
 
@@ -76,22 +81,18 @@ interface CollectedActivity {
 
 /**
  * Fetches dive activities from Garmin Connect and converts them into the
- * transactional batch envelope the Divetracx Garmin connector consumes. The
- * unofficial consumer API lists activities newest-first; incremental mode stops
- * paging once a page ends below the stored watermark minus the overlap.
+ * transactional batch the Garmin connector consumes. The unofficial consumer
+ * API lists activities newest-first; incremental mode stops paging once a page
+ * ends below the stored watermark minus the overlap.
  */
-export class GarminConnectSource implements GarminAdapterBatchSource {
-  constructor(
-    private readonly environment: GarminAdapterEnvironment = getGarminAdapterEnvironment(),
-  ) {}
-
+export class GarminConnectSource implements GarminConnectBatchSource {
   async fetchBatch(
-    mode: GarminAdapterMode,
+    mode: GarminConnectMode,
     state: Record<string, unknown>,
-  ): Promise<GarminAdapterBatch> {
-    const environment = this.environment
+  ): Promise<GarminConnectBatch> {
+    const environment = getServerEnv()
     const watermark = parseAdapterState(state)
-    const client = createClient(environment)
+    const client = await createClient()
     const collected: CollectedActivity[] = []
     const seen = new Set<string>()
     let scanned = 0
@@ -134,9 +135,13 @@ export class GarminConnectSource implements GarminAdapterBatchSource {
       if (page.length < environment.GARMIN_ACTIVITY_PAGE_SIZE) break
     }
 
-    const activities: GarminAdapterActivity[] = []
+    const activities: GarminConnectActivity[] = []
     for (const item of collected) {
-      const fitBytes = await downloadOriginalFit(client, item.activityId)
+      const fitBytes = await downloadOriginalFit(
+        client,
+        item.activityId,
+        environment.GARMIN_MAX_FIT_BYTES,
+      )
       activities.push({
         activityDetails: buildActivityDetails(item.raw),
         fitBase64: Buffer.from(fitBytes).toString('base64'),
@@ -146,8 +151,11 @@ export class GarminConnectSource implements GarminAdapterBatchSource {
     }
 
     // Persist tokens that the client may have refreshed during the batch.
-    ensureTokenDirectory(environment.GARMIN_TOKEN_DIRECTORY)
-    client.exportTokenToFile(environment.GARMIN_TOKEN_DIRECTORY)
+    const tokens = client.exportToken()
+    await saveGarminTokens({
+      oauth1: tokens.oauth1 as unknown as Record<string, unknown>,
+      oauth2: tokens.oauth2 as unknown as Record<string, unknown>,
+    })
 
     return {
       activities,
@@ -156,6 +164,7 @@ export class GarminConnectSource implements GarminAdapterBatchSource {
         collected.map((item) => item.startEpochSeconds),
       ),
       sourceDescription: `Garmin Connect ${mode} activity sweep`,
+      complete: !truncated,
       diagnostics: {
         activitiesScanned: scanned,
         diveActivitiesSelected: collected.length,

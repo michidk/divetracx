@@ -267,6 +267,13 @@
       "when": 1788511482517,
       "tag": "0037_default_divemate_dive_types",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1788512247339,
+      "tag": "0038_clever_cannonball",
+      "breakpoints": true
     }
   ]
 }

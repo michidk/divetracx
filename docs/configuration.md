@@ -32,39 +32,20 @@ Viewer access to the folder is enough for imports and for using the backup as
 a schema template when exporting. Publishing an export back to Drive needs
 write access to the file.
 
-## Garmin (application side)
+## Garmin
 
-The application never talks to Garmin directly. It calls an adapter over HTTP
-and authenticates with a shared secret sent as the complete `Authorization`
-header.
+Garmin Connect runs directly in the application’s server process. Passwords and
+MFA verification codes are used only while connecting; the resulting OAuth
+tokens remain in the server-only database.
 
 | Variable | Default | Required | Description |
 | --- | --- | --- | --- |
-| `GARMIN_ADAPTER_FULL_IMPORT_URL` | — | For Garmin | Adapter endpoint for full imports |
-| `GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL` | — | For Garmin | Adapter endpoint for incremental imports |
-| `GARMIN_ADAPTER_AUTHORIZATION` | — | For Garmin | Full `Authorization` header value, e.g. `Bearer …` |
-| `GARMIN_ADAPTER_TIMEOUT_MS` | `30000` | No | Per-request adapter timeout |
-| `GARMIN_ADAPTER_MAX_RESPONSE_BYTES` | `104857600` | No | Largest accepted adapter response (100 MiB) |
+| `GARMIN_DOMAIN` | `garmin.com` | No | Garmin Connect domain (`garmin.cn` for China) |
+| `GARMIN_ACTIVITY_PAGE_SIZE` | `50` | No | Activities fetched per page |
+| `GARMIN_FULL_IMPORT_MAX_ACTIVITIES` | `2000` | No | Upper bound for a full import |
+| `GARMIN_INCREMENTAL_OVERLAP_SECONDS` | `3600` | No | Look-back window so late-synced activities are not missed |
+| `GARMIN_MFA_CHALLENGE_TTL_SECONDS` | `300` | No | How long a pending MFA login challenge stays valid |
 | `GARMIN_MAX_FIT_BYTES` | `26214400` | No | Largest accepted FIT file (25 MiB) |
-
-## Garmin adapter (adapter side)
-
-Read by `scripts/garmin-adapter.ts`, which Docker Compose starts under the
-`garmin` profile and the Helm chart deploys when `garminAdapter.enabled` is set.
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `GARMIN_ADAPTER_PORT` | `8787` | Listening port |
-| `GARMIN_ADAPTER_AUTHORIZATION` | — | Must match the application-side value; requests without it are rejected |
-| `GARMIN_TOKEN_DIRECTORY` | `/data/garmin-tokens` | Persistent directory for Garmin Connect OAuth tokens |
-| `GARMIN_DOMAIN` | `garmin.com` | Garmin Connect domain (`garmin.cn` for China) |
-| `GARMIN_ACTIVITY_PAGE_SIZE` | `50` | Activities fetched per page |
-| `GARMIN_FULL_IMPORT_MAX_ACTIVITIES` | `2000` | Upper bound for a full import |
-| `GARMIN_INCREMENTAL_OVERLAP_SECONDS` | `3600` | Look-back window so late-synced activities are not missed |
-| `GARMIN_MFA_CHALLENGE_TTL_SECONDS` | `300` | How long a pending MFA login challenge stays valid |
-
-Passwords and verification codes are forwarded once and never persisted; only
-the resulting OAuth tokens are written to `GARMIN_TOKEN_DIRECTORY`.
 
 ## Model Context Protocol
 

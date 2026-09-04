@@ -28,4 +28,28 @@ describe('Garmin connector contract', () => {
     expect(connector.export).toBeUndefined()
     expect(connector.descriptor.supportedEntities).toContain('profile_samples')
   })
+
+  test('marks a truncated full source as incomplete', async () => {
+    const truncated = createGarminConnector({
+      async fetchFull() {
+        return {
+          activities: [],
+          nextState: {},
+          sourceDescription: 'truncated Garmin Connect sweep',
+          complete: false,
+        }
+      },
+      async fetchIncremental() {
+        throw new Error('not used')
+      },
+    })
+
+    const prepared = await truncated.prepareImport({
+      mode: 'full',
+      state: {},
+      signal: new AbortController().signal,
+    })
+
+    expect(prepared.validation.complete).toBe(false)
+  })
 })

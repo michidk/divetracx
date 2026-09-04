@@ -35,41 +35,25 @@ PostgreSQL-backed single-run lock. They time out after `imports.timeoutMs`
 (15 minutes by default), and scheduled Jobs use the same value as their hard
 Kubernetes deadline.
 
-## Garmin adapter
+## Garmin
 
-Garmin transport goes through a server-side adapter so Garmin credentials never
-reach the browser. The chart can deploy the bundled adapter, which signs in to
-the Garmin Connect consumer API with tokens persisted on a small volume:
-
-```bash
-kubectl create secret generic divetracx-garmin \
-  --from-literal=authorization='Bearer replace-with-a-long-random-secret'
-```
+Garmin Connect runs in the Divetracx server process. No extra deployment,
+service, Secret, or token volume is needed. The client is server-only, so
+Garmin credentials never reach the browser.
 
 ```yaml
 garmin:
-  existingSecret: divetracx-garmin
-  authorizationSecretKey: authorization
   sync:
     enabled: true # daily incremental Garmin import CronJob
-garminAdapter:
-  enabled: true
 ```
 
 After the first deployment, connect the Garmin account once from the Divetracx
-UI under Settings → Integrations. The application forwards the credentials
-server-to-server to the adapter, which stores only the resulting OAuth tokens
-on the persistent volume and refreshes them automatically. If Garmin requests
+UI under Settings → Integrations. The application stores only the resulting
+OAuth tokens in PostgreSQL and refreshes them automatically. If Garmin requests
 multi-factor authentication, the UI asks for the verification code and resumes
 the same short-lived login challenge; passwords and verification codes are not
-persisted.
-To use an external adapter instead, leave `garminAdapter.enabled` off and set
-`garmin.fullImportUrl`/`garmin.incrementalImportUrl`.
-
-The Secret value is used as the complete `Authorization` header sent to the
-adapter and checked by the bundled adapter. The adapter returns Activity
-Details, base64 FIT data, and opaque next state. Garmin export is not
-supported.
+persisted. Upgrades from the former adapter deployment require one reconnect;
+its old token volume is intentionally not reused. Garmin export is not supported.
 
 ## Install with external PostgreSQL
 

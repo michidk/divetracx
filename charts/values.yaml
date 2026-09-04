@@ -133,19 +133,16 @@ divemate:
   maxImageBytes: 104857600
 
 garmin:
-  # Garmin Connect transport is exposed through a server-side adapter. Leave the
-  # URLs empty to use the bundled adapter deployment (garminAdapter.enabled).
-  fullImportUrl: ""
-  incrementalImportUrl: ""
-  # Secret holding the shared authorization value sent to and checked by the
-  # adapter (key below). Required for the bundled adapter and the sync CronJob.
-  existingSecret: ""
-  authorizationSecretKey: "authorization"
-  timeoutMs: 30000
-  maxResponseBytes: 104857600
+  # Garmin Connect runs inside the Divetracx server. OAuth tokens are stored in
+  # its server-only database, so no adapter, token volume, or shared secret is needed.
+  domain: garmin.com
+  activityPageSize: 50
+  fullImportMaxActivities: 2000
+  incrementalOverlapSeconds: 3600
+  mfaChallengeTtlSeconds: 300
   maxFitBytes: 26214400
   sync:
-    # Scheduled incremental Garmin import through the configured adapter.
+    # Scheduled incremental Garmin import through the main application.
     enabled: false
     schedule: "30 3 * * *"
     timeZone: "Etc/UTC"
@@ -161,28 +158,6 @@ garmin:
       requests:
         cpu: 50m
         memory: 128Mi
-
-garminAdapter:
-  # Bundled Garmin Connect adapter (unofficial consumer API, garth-style token
-  # persistence). Connect the Garmin account once from the Divetracx UI under
-  # Settings -> Integrations; tokens persist on the tokens volume.
-  enabled: false
-  port: 8787
-  domain: garmin.com
-  # Short-lived, in-memory continuation while the user enters a Garmin MFA code.
-  mfaChallengeTtlSeconds: 300
-  tokens:
-    size: 16Mi
-    storageClass: ""
-    accessMode: ReadWriteOnce
-  resources:
-    limits:
-      cpu: 250m
-      memory: 256Mi
-    requests:
-      cpu: 50m
-      memory: 128Mi
-
 storage:
   provider: local
   local:

@@ -46,9 +46,8 @@ gate in front of it.
 
 ## Docker Compose
 
-`docker-compose.yaml` includes PostgreSQL 18, the application, the optional
-Garmin adapter (behind the `garmin` profile), and Hodor. Only Hodor publishes
-a host port.
+`docker-compose.yaml` includes PostgreSQL 18, the application, and Hodor. Only
+Hodor publishes a host port.
 
 ```bash
 cp .env.example .env
@@ -71,25 +70,15 @@ incremental imports from **Settings → Integrations**, or schedule
 
 ### Enabling Garmin
 
-Set the three `GARMIN_ADAPTER_*` variables in `.env`, pointing at the bundled
-adapter:
+No Garmin-specific Docker configuration is required. Connect your account once
+from **Settings → Integrations**. Divetracx stores only the resulting OAuth
+tokens in PostgreSQL; passwords and verification codes are not persisted.
 
-```dotenv
-GARMIN_ADAPTER_FULL_IMPORT_URL=http://garmin-adapter:8787/import
-GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL=http://garmin-adapter:8787/import
-GARMIN_ADAPTER_AUTHORIZATION=Bearer replace-with-adapter-secret
-```
+If upgrading from a version with the separate Garmin adapter, reconnect once:
+the old adapter token volume is intentionally no longer used.
 
-Start the stack with the profile and connect your account once from
-**Settings → Integrations**:
-
-```bash
-docker compose --profile garmin up -d
-```
-
-Tokens persist on the `divetracx-garmin-tokens` volume. Schedule
-`docker compose exec app bun run import:incremental --integration=garmin` for
-unattended syncs.
+Schedule `docker compose exec app bun run import:incremental --integration=garmin`
+for unattended syncs.
 
 ### Upgrading PostgreSQL from an earlier major version
 
@@ -143,18 +132,16 @@ helm install divetracx ./charts \
 
 Prefer existing Kubernetes Secrets in production for the database URL
 (`postgresql.existingSecret`), Hodor credentials (`hodor.existingSecret`), S3
-keys (`storage.s3.existingSecret`), the DiveMate service account
-(`divemate.existingSecret`), and the Garmin adapter authorization
-(`garmin.existingSecret`).
+keys (`storage.s3.existingSecret`) and the DiveMate service account
+(`divemate.existingSecret`).
 
 A migration Job runs on every install and upgrade. `sync.enabled` adds a daily
-CronJob for incremental DiveMate imports, `garmin.sync.enabled` does the same
-for Garmin, and `garminAdapter.enabled` deploys the bundled adapter with a
-small token volume. All import entry points share a PostgreSQL-backed
-single-run lock and the `imports.timeoutMs` deadline.
+CronJob for incremental DiveMate imports, and `garmin.sync.enabled` does the
+same for Garmin. All import entry points share a PostgreSQL-backed single-run
+lock and the `imports.timeoutMs` deadline.
 
 See [charts/README.md](../charts/README.md) for every value, including Secret
-layouts for DiveMate and Garmin.
+layouts for DiveMate.
 
 ## OAuth-protected MCP
 

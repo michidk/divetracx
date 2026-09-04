@@ -91,7 +91,7 @@ new, changed, unchanged, and failed source records.
 | Source | Full import | Incremental sync | What comes across | How it connects |
 | --- | :---: | :---: | --- | --- |
 | **DiveMate** `.ddb` | ✅ | ✅ | Dives, profiles, tanks, sites, buddies, equipment, equipment sets, certifications with card images, shops, dive types, diver profile, pictures | Reads `DiveMate.ddb` plus its `Media` and `Cards` files from a Google Drive folder via a service account |
-| **Garmin** dive computers | ✅ | ✅ | Dives, profiles, tanks, gases | The bundled Garmin Connect adapter signs in with your account (MFA supported) and pulls FIT activities |
+| **Garmin** dive computers | ✅ | ✅ | Dives, profiles, tanks, gases | Divetracx signs in with your account (MFA supported) and pulls FIT activities |
 
 > [!NOTE]
 > **Not yet supported:** uploading a file from the browser, and importing UDDF,
@@ -135,11 +135,10 @@ bun run import:incremental --integration=divemate  # same thing, generic entry p
 <details>
 <summary><b>Garmin details</b></summary>
 
-The app never talks to Garmin directly; it calls a fail-closed adapter that
-Divetracx bundles (`bun run garmin:adapter`, or the `garmin` Compose profile).
-Connect your Garmin account once from **Settings → Integrations**: credentials
-are forwarded server-to-server, the adapter logs in (with MFA support) and
-keeps only the resulting OAuth tokens on a persistent volume.
+Garmin Connect runs directly in Divetracx’s server process. Connect your Garmin
+account once from **Settings → Integrations**; MFA is supported. Passwords and
+verification codes are used only for the login, while the resulting OAuth tokens
+are retained in Divetracx’s server-only database for later imports.
 
 Activities are reconciled against existing log entries by start time within
 45 minutes, so a computer-recorded profile attaches to the dive you already
@@ -308,8 +307,6 @@ docker compose up -d
 
 Open <http://localhost:3000>, sign in through Hodor, and either start logging
 dives or head to **Settings → Integrations** to connect DiveMate or Garmin.
-Add `--profile garmin` to `docker compose up` to start the bundled Garmin
-adapter.
 
 ## 🔧 Local development
 
@@ -351,7 +348,6 @@ migrations.
 | `bun run sync:divemate` | Run an incremental DiveMate import |
 | `bun run import:incremental --integration=garmin` | Run an incremental Garmin import |
 | `bun run export:divemate --output=backups/DiveMate.ddb` | Rebuild a DiveMate backup from canonical data |
-| `bun run garmin:adapter` | Start the bundled Garmin Connect adapter |
 | `bun run media:refresh-thumbnails` | Regenerate WebP thumbnails for stored pictures |
 
 </details>
@@ -376,11 +372,10 @@ src/modules/                Domain modules: dives, sites, gear, export, media, p
 src/modules/mcp/            Scoped MCP tools, owner policy, and built-in OAuth 2.1 server
 src/modules/integrations/   Generic import service, runs, and provenance
 src/modules/divemate/       DiveMate .ddb reader, mapper, and writer
-src/modules/garmin/         Garmin FIT mapping and adapter client
-src/modules/garmin-adapter/ Bundled Garmin Connect adapter service
+src/modules/garmin/         Garmin Connect client, FIT mapping, and import flow
 src/db/                     Drizzle schema and database connection
 drizzle/                    Committed migrations and metadata
-scripts/                    CLI entry points: migrate, seed, sync, export, adapter
+scripts/                    CLI entry points: migrate, seed, sync, and export
 charts/                     Helm chart
 ```
 

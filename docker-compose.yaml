@@ -24,11 +24,6 @@ services:
       STORAGE_PROVIDER: local
       STORAGE_PATH: /uploads
       STORAGE_URL: /media
-      # Set these in .env to enable Garmin imports through the bundled adapter
-      # (see the garmin-adapter service and .env.example).
-      GARMIN_ADAPTER_FULL_IMPORT_URL: ${GARMIN_ADAPTER_FULL_IMPORT_URL:-}
-      GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL: ${GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL:-}
-      GARMIN_ADAPTER_AUTHORIZATION: ${GARMIN_ADAPTER_AUTHORIZATION:-}
       # The built-in MCP authorization server uses the existing Hodor owner
       # session for consent and derives a separate OAuth signing key.
       MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-}
@@ -40,20 +35,6 @@ services:
         condition: service_healthy
     volumes:
       - divetracx-uploads:/uploads
-
-  garmin-adapter:
-    build: .
-    profiles: ["garmin"]
-    command: ["bun", "run", "scripts/garmin-adapter.ts"]
-    restart: unless-stopped
-    environment:
-      GARMIN_ADAPTER_AUTHORIZATION: ${GARMIN_ADAPTER_AUTHORIZATION:-}
-      GARMIN_TOKEN_DIRECTORY: /data/garmin-tokens
-      GARMIN_MFA_CHALLENGE_TTL_SECONDS: ${GARMIN_MFA_CHALLENGE_TTL_SECONDS:-300}
-    expose:
-      - "8787"
-    volumes:
-      - divetracx-garmin-tokens:/data/garmin-tokens
 
   hodor:
     image: ${HODOR_IMAGE:-ghcr.io/michidk/hodor@sha256:f251ea949368465930b7f0fe008e306f3b7ee4215a8da638758b0dc7dc19a180}
@@ -74,4 +55,3 @@ services:
 volumes:
   divetracx-postgres:
   divetracx-uploads:
-  divetracx-garmin-tokens:

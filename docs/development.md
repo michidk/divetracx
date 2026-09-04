@@ -80,7 +80,6 @@ expose are available as scripts, which is how the Helm CronJobs run them:
 bun run sync:divemate                               # incremental DiveMate import
 bun run import:incremental --integration=garmin     # incremental Garmin import
 bun run export:divemate --output=backups/DiveMate.ddb
-bun run garmin:adapter                              # start the bundled adapter
 ```
 
 Full imports are deliberately UI-only because they replace source-produced

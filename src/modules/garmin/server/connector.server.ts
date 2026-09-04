@@ -205,7 +205,7 @@ export function createGarminConnector(
         data: { activities: prepared.activities },
         nextState: batch.nextState,
         validation: {
-          complete: true,
+          complete: batch.complete ?? true,
           sourceDescription: batch.sourceDescription,
         },
         sourceFingerprint: prepared.fingerprint,

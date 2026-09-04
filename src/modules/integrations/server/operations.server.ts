@@ -52,20 +52,14 @@ export async function loadIntegrationStatus() {
               incrementalImport: Boolean(environment.DIVEMATE_GOOGLE_DRIVE_FOLDER_ID),
               export: Boolean(environment.DIVEMATE_GOOGLE_DRIVE_FOLDER_ID),
             }
-          : {
-              fullImport: Boolean(environment.GARMIN_ADAPTER_FULL_IMPORT_URL),
-              incrementalImport: Boolean(
-                environment.GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL,
-              ),
-              export: false,
-            }
+          : { fullImport: true, incrementalImport: true, export: false }
       return {
         descriptor: connector.descriptor,
         configured,
         configurationHint:
           connector.descriptor.key === 'divemate'
             ? 'Configure the Google Drive backup folder and server-side service account.'
-            : 'Configure the Garmin adapter URL and shared authorization secret, then connect the Garmin Connect account below.',
+            : 'Connect the Garmin Connect account below. Tokens stay in Divetracx’s server-only database.',
         latestRun,
         stateUpdatedAt: storedState?.updatedAt ?? null,
       }

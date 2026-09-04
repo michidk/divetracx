@@ -1,38 +1,19 @@
-import { afterEach, describe, expect, test } from 'bun:test'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import type { GarminAdapterEnvironment } from './environment.server'
+import { describe, expect, test } from 'bun:test'
 import {
   createGarminLoginManager,
   type GarminLoginDependencies,
+  type GarminLoginSettings,
   type ResumableGarminClient,
-} from './login.server'
+} from './login-manager.server'
 
-const temporaryDirectories: string[] = []
-
-afterEach(() => {
-  for (const directory of temporaryDirectories.splice(0)) {
-    rmSync(directory, { recursive: true, force: true })
-  }
-})
-
-function environment(tokenDirectory: string): GarminAdapterEnvironment {
-  return {
-    GARMIN_ADAPTER_PORT: 8787,
-    GARMIN_ADAPTER_AUTHORIZATION: 'Bearer adapter-secret',
-    GARMIN_TOKEN_DIRECTORY: tokenDirectory,
-    GARMIN_DOMAIN: 'garmin.com',
-    GARMIN_ACTIVITY_PAGE_SIZE: 50,
-    GARMIN_FULL_IMPORT_MAX_ACTIVITIES: 2_000,
-    GARMIN_INCREMENTAL_OVERLAP_SECONDS: 3_600,
-    GARMIN_MFA_CHALLENGE_TTL_SECONDS: 300,
-  }
+const environment: GarminLoginSettings = {
+  GARMIN_DOMAIN: 'garmin.com',
+  GARMIN_MFA_CHALLENGE_TTL_SECONDS: 300,
 }
 
 function fixture(options: { invalidMfa?: boolean } = {}) {
-  const tokenDirectory = mkdtempSync(join(tmpdir(), 'divetracx-garmin-login-'))
-  temporaryDirectories.push(tokenDirectory)
+  let connected = false
+  let tokensSavedAt: Date | null = null
   let now = new Date('2026-08-14T07:32:10Z')
   const calls: string[] = []
   const credentials = { username: 'diver@example.test', password: 'secret' }
@@ -55,10 +36,9 @@ function fixture(options: { invalidMfa?: boolean } = {}) {
       calls.push('profile')
       return Promise.resolve({ displayName: 'Diver Dan' })
     },
-    exportTokenToFile(directory) {
+    exportToken() {
       calls.push('persist')
-      writeFileSync(join(directory, 'oauth1_token.json'), '{}')
-      writeFileSync(join(directory, 'oauth2_token.json'), '{}')
+      return { oauth1: { token: 'oauth1' }, oauth2: { token: 'oauth2' } }
     },
   }
   const dependencies: GarminLoginDependencies = {
@@ -72,9 +52,20 @@ function fixture(options: { invalidMfa?: boolean } = {}) {
       credentials.password = ''
       calls.push('clear-credentials')
     },
+    async status() {
+      return { connected, tokensSavedAt }
+    },
+    async persistTokens() {
+      connected = true
+      tokensSavedAt = now
+    },
+    async clearTokens() {
+      connected = false
+      tokensSavedAt = null
+    },
   }
   return {
-    manager: createGarminLoginManager(environment(tokenDirectory), dependencies),
+    manager: createGarminLoginManager(environment, dependencies),
     calls,
     credentials,
     advance(milliseconds: number) {
@@ -97,7 +88,10 @@ describe('Garmin MFA login manager', () => {
 
     const completed = await manager.completeMfa('challenge-123', ' 654321 ')
     expect(completed).toEqual({ status: 'connected', displayName: 'Diver Dan' })
-    expect(manager.status().connected).toBe(true)
+    await expect(manager.status()).resolves.toEqual({
+      connected: true,
+      tokensSavedAt: new Date('2026-08-14T07:32:10Z'),
+    })
     expect(calls).toEqual([
       'login',
       'clear-credentials',

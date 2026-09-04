@@ -64,7 +64,7 @@ function GarminAccountSection({ account }: { account: GarminAccount }) {
         return
       }
       setMessage(
-        `Connected${result.displayName ? ` as ${result.displayName}` : ''}. Tokens are stored on the adapter; your password was not saved.`,
+        `Connected${result.displayName ? ` as ${result.displayName}` : ''}. Tokens are stored by Divetracx; your password was not saved.`,
       )
       setEmail('')
       setPassword('')
@@ -91,7 +91,7 @@ function GarminAccountSection({ account }: { account: GarminAccount }) {
         },
       })
       setMessage(
-        `Connected${result.displayName ? ` as ${result.displayName}` : ''}. Tokens are stored on the adapter; your password and verification code were not saved.`,
+        `Connected${result.displayName ? ` as ${result.displayName}` : ''}. Tokens are stored by Divetracx; your password and verification code were not saved.`,
       )
       setEmail('')
       setMfaCode('')
@@ -107,7 +107,7 @@ function GarminAccountSection({ account }: { account: GarminAccount }) {
   async function disconnect() {
     if (
       !window.confirm(
-        'Disconnect the Garmin account? The tokens stored on the adapter are deleted and scheduled imports will fail until an account is connected again.',
+        'Disconnect the Garmin account? The tokens stored by Divetracx are deleted and scheduled imports will fail until an account is connected again.',
       )
     ) {
       return
@@ -190,8 +190,8 @@ function GarminAccountSection({ account }: { account: GarminAccount }) {
         <form className="mt-2 space-y-3" onSubmit={(event) => void connect(event)}>
           <p className="text-sm leading-6 text-muted-foreground">
             Sign in once with your Garmin Connect account. Only the resulting tokens are
-            stored on the adapter. If Garmin requests multi-factor authentication, you
-            will be prompted for the verification code next.
+            stored by Divetracx. If Garmin requests multi-factor authentication, you will
+            be prompted for the verification code next.
           </p>
           {account.error ? (
             <p className="text-sm text-amber-700">{account.error}</p>
@@ -384,6 +384,7 @@ export function SyncPage({
           const incrementalRunning = running === `${key}:incremental`
           const fullRunning = running === `${key}:full`
           const driveExportRunning = running === `${key}:drive-export`
+          const garminConnected = key !== 'garmin' || garminAccount.connected
           return (
             <article key={key} className="rounded-2xl border border-border bg-card p-6">
               <div className="flex items-start justify-between gap-4">
@@ -416,7 +417,11 @@ export function SyncPage({
               <div className="mt-6 flex flex-wrap gap-3">
                 <Button
                   type="button"
-                  disabled={!integration.configured.incrementalImport || running !== null}
+                  disabled={
+                    !integration.configured.incrementalImport ||
+                    !garminConnected ||
+                    running !== null
+                  }
                   onClick={() => void incrementalImport(integration)}
                 >
                   <RefreshCw
@@ -429,7 +434,11 @@ export function SyncPage({
                 <Button
                   type="button"
                   variant="destructive"
-                  disabled={!integration.configured.fullImport || running !== null}
+                  disabled={
+                    !integration.configured.fullImport ||
+                    !garminConnected ||
+                    running !== null
+                  }
                   onClick={() => void fullImport(integration)}
                 >
                   <ShieldAlert size={16} aria-hidden="true" />
@@ -465,6 +474,11 @@ export function SyncPage({
               !integration.configured.incrementalImport ? (
                 <p className="mt-4 text-sm text-amber-700">
                   Not configured on this server.
+                </p>
+              ) : null}
+              {key === 'garmin' && !garminAccount.connected ? (
+                <p className="mt-4 text-sm text-amber-700">
+                  Connect a Garmin account to enable imports.
                 </p>
               ) : null}
               {messages[key] ? <p className="mt-4 text-sm">{messages[key]}</p> : null}

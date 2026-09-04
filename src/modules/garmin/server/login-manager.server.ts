@@ -2,31 +2,28 @@ import '@tanstack/react-start/server-only'
 
 import { randomUUID } from 'node:crypto'
 import { GarminConnect } from 'garmin-connect-2fa'
+import { getServerEnv } from '@/env'
 import {
-  type GarminAdapterEnvironment,
-  getGarminAdapterEnvironment,
-} from './environment.server'
-import {
-  clearStoredTokens,
-  ensureTokenDirectory,
-  hasStoredTokens,
-  storedTokensSavedAt,
-} from './token-store.server'
+  clearGarminTokens,
+  type GarminTokens,
+  loadGarminTokenStatus,
+  saveGarminTokens,
+} from './credentials.server'
 
-export interface GarminAdapterLoginStatus {
+export interface GarminLoginStatus {
   connected: boolean
   tokensSavedAt: Date | null
 }
 
-export type GarminAdapterLoginResult =
+export type GarminLoginResult =
   | { status: 'connected'; displayName: string | null }
   | { status: 'mfa-required'; challengeId: string; expiresAt: Date }
 
-export interface GarminAdapterLoginManager {
-  status(): GarminAdapterLoginStatus
-  login(email: string, password: string): Promise<GarminAdapterLoginResult>
-  completeMfa(challengeId: string, code: string): Promise<GarminAdapterLoginResult>
-  logout(): void
+export interface GarminLoginManager {
+  status(): Promise<GarminLoginStatus>
+  login(email: string, password: string): Promise<GarminLoginResult>
+  completeMfa(challengeId: string, code: string): Promise<GarminLoginResult>
+  logout(): Promise<void>
 }
 
 export interface ResumableGarminClient {
@@ -41,18 +38,26 @@ export interface ResumableGarminClient {
     csrfToken: string,
   ): Promise<unknown>
   getUserProfile(): Promise<{ displayName?: string | null }>
-  exportTokenToFile(directory: string): void
+  exportToken(): GarminTokens
 }
 
 export interface GarminLoginDependencies {
   createClient(
     email: string,
     password: string,
-    domain: GarminAdapterEnvironment['GARMIN_DOMAIN'],
+    domain: 'garmin.com' | 'garmin.cn',
   ): ResumableGarminClient
   createChallengeId(): string
   now(): Date
   clearCredentials(client: ResumableGarminClient): void
+  status(): Promise<GarminLoginStatus>
+  persistTokens(tokens: GarminTokens): Promise<void>
+  clearTokens(): Promise<void>
+}
+
+export interface GarminLoginSettings {
+  GARMIN_DOMAIN: 'garmin.com' | 'garmin.cn'
+  GARMIN_MFA_CHALLENGE_TTL_SECONDS: number
 }
 
 interface PendingChallenge {
@@ -87,6 +92,9 @@ const defaultDependencies: GarminLoginDependencies = {
       mutable.credentials.password = ''
     }
   },
+  status: loadGarminTokenStatus,
+  persistTokens: saveGarminTokens,
+  clearTokens: clearGarminTokens,
 }
 
 function isMfaChallenge(error: unknown) {
@@ -98,9 +106,9 @@ function isMfaChallenge(error: unknown) {
  * opaque short-lived challenge ID survive while the user enters an MFA code.
  */
 export function createGarminLoginManager(
-  environment: GarminAdapterEnvironment = getGarminAdapterEnvironment(),
+  environment: GarminLoginSettings = getServerEnv(),
   dependencies: GarminLoginDependencies = defaultDependencies,
-): GarminAdapterLoginManager {
+): GarminLoginManager {
   const pending = new Map<string, PendingChallenge>()
 
   function pruneExpiredChallenges() {
@@ -113,8 +121,7 @@ export function createGarminLoginManager(
   async function persistConnectedClient(client: ResumableGarminClient) {
     dependencies.clearCredentials(client)
     const profile = await client.getUserProfile().catch(() => null)
-    ensureTokenDirectory(environment.GARMIN_TOKEN_DIRECTORY)
-    client.exportTokenToFile(environment.GARMIN_TOKEN_DIRECTORY)
+    await dependencies.persistTokens(client.exportToken())
     return {
       status: 'connected' as const,
       displayName: profile?.displayName ?? null,
@@ -122,12 +129,9 @@ export function createGarminLoginManager(
   }
 
   return {
-    status() {
+    async status() {
       pruneExpiredChallenges()
-      return {
-        connected: hasStoredTokens(environment.GARMIN_TOKEN_DIRECTORY),
-        tokensSavedAt: storedTokensSavedAt(environment.GARMIN_TOKEN_DIRECTORY),
-      }
+      return dependencies.status()
     },
     async login(email, password) {
       pending.clear()
@@ -181,9 +185,9 @@ export function createGarminLoginManager(
       pending.delete(challengeId)
       return persistConnectedClient(challenge.client)
     },
-    logout() {
+    async logout() {
       pending.clear()
-      clearStoredTokens(environment.GARMIN_TOKEN_DIRECTORY)
+      await dependencies.clearTokens()
     },
   }
 }

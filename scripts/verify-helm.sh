@@ -25,9 +25,6 @@ external_values=(
   --set divemate.existingSecret=divetracx-divemate
   --set divemate.googleDriveFolderId=example-folder-id
   --set sync.enabled=true
-  --set garmin.fullImportUrl=https://garmin-adapter.example.test/import
-  --set garmin.incrementalImportUrl=https://garmin-adapter.example.test/import
-  --set garmin.existingSecret=divetracx-garmin
   --set garmin.sync.enabled=true
   --set mcp.enabled=true
   --set mcp.ingress.enabled=true
@@ -41,8 +38,6 @@ bundled_values=(
   --set divemate.existingSecret=divetracx-divemate
   --set divemate.googleDriveFolderId=example-folder-id
   --set sync.enabled=true
-  --set garminAdapter.enabled=true
-  --set garmin.existingSecret=divetracx-garmin
   --set garmin.sync.enabled=true
 )
 

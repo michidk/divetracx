@@ -1,6 +1,6 @@
 /**
- * Pure mapping between raw Garmin Connect activity list JSON and the Divetracx
- * Garmin adapter envelope consumed by src/modules/garmin/server.
+ * Pure mapping between raw Garmin Connect activity list JSON and the
+ * transaction-ready Garmin batch consumed by the main application server.
  */
 
 export const GARMIN_DIVE_ACTIVITY_TYPE_KEYS = new Set([
@@ -14,21 +14,22 @@ export const GARMIN_DIVE_ACTIVITY_TYPE_KEYS = new Set([
   'dynamic_apnea',
 ])
 
-export interface GarminAdapterState {
+export interface GarminConnectState {
   lastActivityStartSeconds: number | null
 }
 
-export interface GarminAdapterActivity {
+export interface GarminConnectActivity {
   activityDetails: Record<string, unknown>
   fitBase64: string
   fitFileName: string
   fitContentType: string
 }
 
-export interface GarminAdapterBatch {
-  activities: GarminAdapterActivity[]
+export interface GarminConnectBatch {
+  activities: GarminConnectActivity[]
   nextState: Record<string, unknown>
   sourceDescription: string
+  complete: boolean
   diagnostics: Record<string, unknown>
 }
 
@@ -111,13 +112,13 @@ export function buildActivityDetails(
   }
 }
 
-export function parseAdapterState(state: Record<string, unknown>): GarminAdapterState {
+export function parseAdapterState(state: Record<string, unknown>): GarminConnectState {
   const value = numberValue(state.lastActivityStartSeconds)
   return { lastActivityStartSeconds: value }
 }
 
 export function nextAdapterState(
-  previous: GarminAdapterState,
+  previous: GarminConnectState,
   activityStartSeconds: Array<number | null>,
 ): Record<string, unknown> {
   const observed = activityStartSeconds.filter((value): value is number => value !== null)
@@ -137,7 +138,7 @@ export function nextAdapterState(
  */
 export function isAfterWatermark(
   startEpochSeconds: number | null,
-  watermark: GarminAdapterState,
+  watermark: GarminConnectState,
   overlapSeconds: number,
 ): boolean {
   if (startEpochSeconds === null) return true

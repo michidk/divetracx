@@ -24,15 +24,24 @@ export function getServerEnv() {
         .positive()
         .default(100 * 1024 * 1024),
       GOOGLE_APPLICATION_CREDENTIALS: z.string().trim().min(1).optional(),
-      GARMIN_ADAPTER_FULL_IMPORT_URL: z.url().optional(),
-      GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL: z.url().optional(),
-      GARMIN_ADAPTER_AUTHORIZATION: z.string().trim().min(1).optional(),
-      GARMIN_ADAPTER_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
-      GARMIN_ADAPTER_MAX_RESPONSE_BYTES: z.coerce
+      GARMIN_DOMAIN: z.enum(['garmin.com', 'garmin.cn']).default('garmin.com'),
+      GARMIN_ACTIVITY_PAGE_SIZE: z.coerce.number().int().positive().max(200).default(50),
+      GARMIN_FULL_IMPORT_MAX_ACTIVITIES: z.coerce
         .number()
         .int()
         .positive()
-        .default(100 * 1024 * 1024),
+        .default(2_000),
+      GARMIN_INCREMENTAL_OVERLAP_SECONDS: z.coerce
+        .number()
+        .int()
+        .nonnegative()
+        .default(3_600),
+      GARMIN_MFA_CHALLENGE_TTL_SECONDS: z.coerce
+        .number()
+        .int()
+        .positive()
+        .max(900)
+        .default(300),
       GARMIN_MAX_FIT_BYTES: z.coerce
         .number()
         .int()
@@ -56,12 +65,11 @@ export function getServerEnv() {
       DIVEMATE_MAX_BACKUP_BYTES: process.env.DIVEMATE_MAX_BACKUP_BYTES,
       DIVEMATE_MAX_IMAGE_BYTES: process.env.DIVEMATE_MAX_IMAGE_BYTES,
       GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-      GARMIN_ADAPTER_FULL_IMPORT_URL: process.env.GARMIN_ADAPTER_FULL_IMPORT_URL,
-      GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL:
-        process.env.GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL,
-      GARMIN_ADAPTER_AUTHORIZATION: process.env.GARMIN_ADAPTER_AUTHORIZATION,
-      GARMIN_ADAPTER_TIMEOUT_MS: process.env.GARMIN_ADAPTER_TIMEOUT_MS,
-      GARMIN_ADAPTER_MAX_RESPONSE_BYTES: process.env.GARMIN_ADAPTER_MAX_RESPONSE_BYTES,
+      GARMIN_DOMAIN: process.env.GARMIN_DOMAIN,
+      GARMIN_ACTIVITY_PAGE_SIZE: process.env.GARMIN_ACTIVITY_PAGE_SIZE,
+      GARMIN_FULL_IMPORT_MAX_ACTIVITIES: process.env.GARMIN_FULL_IMPORT_MAX_ACTIVITIES,
+      GARMIN_INCREMENTAL_OVERLAP_SECONDS: process.env.GARMIN_INCREMENTAL_OVERLAP_SECONDS,
+      GARMIN_MFA_CHALLENGE_TTL_SECONDS: process.env.GARMIN_MFA_CHALLENGE_TTL_SECONDS,
       GARMIN_MAX_FIT_BYTES: process.env.GARMIN_MAX_FIT_BYTES,
       MCP_ALLOWED_ORIGINS: process.env.MCP_ALLOWED_ORIGINS,
       HODOR_SECRET: process.env.HODOR_SECRET,

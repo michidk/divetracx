@@ -67,25 +67,16 @@ spec:
             - name: DIVEMATE_MAX_BACKUP_BYTES
               value: {{ .Values.divemate.maxBackupBytes | quote }}
             {{- end }}
-            {{- if or .Values.garmin.fullImportUrl .Values.garminAdapter.enabled }}
-            - name: GARMIN_ADAPTER_FULL_IMPORT_URL
-              value: {{ include "divetracx.garminAdapterFullImportUrl" . | quote }}
-            {{- end }}
-            {{- if or .Values.garmin.incrementalImportUrl .Values.garminAdapter.enabled }}
-            - name: GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL
-              value: {{ include "divetracx.garminAdapterIncrementalImportUrl" . | quote }}
-            {{- end }}
-            {{- if .Values.garmin.existingSecret }}
-            - name: GARMIN_ADAPTER_AUTHORIZATION
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.garmin.existingSecret }}
-                  key: {{ .Values.garmin.authorizationSecretKey }}
-            {{- end }}
-            - name: GARMIN_ADAPTER_TIMEOUT_MS
-              value: {{ .Values.garmin.timeoutMs | quote }}
-            - name: GARMIN_ADAPTER_MAX_RESPONSE_BYTES
-              value: {{ .Values.garmin.maxResponseBytes | quote }}
+            - name: GARMIN_DOMAIN
+              value: {{ .Values.garmin.domain | quote }}
+            - name: GARMIN_ACTIVITY_PAGE_SIZE
+              value: {{ .Values.garmin.activityPageSize | quote }}
+            - name: GARMIN_FULL_IMPORT_MAX_ACTIVITIES
+              value: {{ .Values.garmin.fullImportMaxActivities | quote }}
+            - name: GARMIN_INCREMENTAL_OVERLAP_SECONDS
+              value: {{ .Values.garmin.incrementalOverlapSeconds | quote }}
+            - name: GARMIN_MFA_CHALLENGE_TTL_SECONDS
+              value: {{ .Values.garmin.mfaChallengeTtlSeconds | quote }}
             - name: GARMIN_MAX_FIT_BYTES
               value: {{ .Values.garmin.maxFitBytes | quote }}
 {{- if and .Values.mcp.enabled (not .Values.hodor.enabled) }}

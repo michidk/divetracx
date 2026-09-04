@@ -31,6 +31,8 @@ export interface GarminSourceBatch {
   activities: GarminSourceActivity[]
   nextState: Record<string, unknown>
   sourceDescription: string
+  /** A full import must not replace canonical data from a truncated source. */
+  complete?: boolean
   diagnostics?: Record<string, unknown>
 }
 

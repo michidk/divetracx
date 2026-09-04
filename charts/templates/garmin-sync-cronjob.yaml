@@ -1,10 +1,4 @@
 {{- if .Values.garmin.sync.enabled }}
-{{- if not (or .Values.garmin.incrementalImportUrl .Values.garminAdapter.enabled) }}
-{{- fail "garmin.sync.enabled requires garminAdapter.enabled or garmin.incrementalImportUrl" }}
-{{- end }}
-{{- if empty .Values.garmin.existingSecret }}
-{{- fail "garmin.sync.enabled requires garmin.existingSecret with the shared authorization value" }}
-{{- end }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -67,19 +61,16 @@ spec:
                       {{- end }}
                 - name: IMPORT_TIMEOUT_MS
                   value: {{ .Values.imports.timeoutMs | quote }}
-                - name: GARMIN_ADAPTER_FULL_IMPORT_URL
-                  value: {{ include "divetracx.garminAdapterFullImportUrl" . | quote }}
-                - name: GARMIN_ADAPTER_INCREMENTAL_IMPORT_URL
-                  value: {{ include "divetracx.garminAdapterIncrementalImportUrl" . | quote }}
-                - name: GARMIN_ADAPTER_AUTHORIZATION
-                  valueFrom:
-                    secretKeyRef:
-                      name: {{ .Values.garmin.existingSecret }}
-                      key: {{ .Values.garmin.authorizationSecretKey }}
-                - name: GARMIN_ADAPTER_TIMEOUT_MS
-                  value: {{ .Values.garmin.timeoutMs | quote }}
-                - name: GARMIN_ADAPTER_MAX_RESPONSE_BYTES
-                  value: {{ .Values.garmin.maxResponseBytes | quote }}
+                - name: GARMIN_DOMAIN
+                  value: {{ .Values.garmin.domain | quote }}
+                - name: GARMIN_ACTIVITY_PAGE_SIZE
+                  value: {{ .Values.garmin.activityPageSize | quote }}
+                - name: GARMIN_FULL_IMPORT_MAX_ACTIVITIES
+                  value: {{ .Values.garmin.fullImportMaxActivities | quote }}
+                - name: GARMIN_INCREMENTAL_OVERLAP_SECONDS
+                  value: {{ .Values.garmin.incrementalOverlapSeconds | quote }}
+                - name: GARMIN_MFA_CHALLENGE_TTL_SECONDS
+                  value: {{ .Values.garmin.mfaChallengeTtlSeconds | quote }}
                 - name: GARMIN_MAX_FIT_BYTES
                   value: {{ .Values.garmin.maxFitBytes | quote }}
               resources:

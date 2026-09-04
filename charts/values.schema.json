@@ -158,21 +158,19 @@
     "garmin": {
       "type": "object",
       "required": [
-        "fullImportUrl",
-        "incrementalImportUrl",
-        "existingSecret",
-        "authorizationSecretKey",
-        "timeoutMs",
-        "maxResponseBytes",
+        "domain",
+        "activityPageSize",
+        "fullImportMaxActivities",
+        "incrementalOverlapSeconds",
+        "mfaChallengeTtlSeconds",
         "maxFitBytes"
       ],
       "properties": {
-        "fullImportUrl": { "type": "string" },
-        "incrementalImportUrl": { "type": "string" },
-        "existingSecret": { "type": "string" },
-        "authorizationSecretKey": { "type": "string", "minLength": 1 },
-        "timeoutMs": { "type": "integer", "minimum": 1 },
-        "maxResponseBytes": { "type": "integer", "minimum": 1 },
+        "domain": { "type": "string", "enum": ["garmin.com", "garmin.cn"] },
+        "activityPageSize": { "type": "integer", "minimum": 1, "maximum": 200 },
+        "fullImportMaxActivities": { "type": "integer", "minimum": 1 },
+        "incrementalOverlapSeconds": { "type": "integer", "minimum": 0 },
+        "mfaChallengeTtlSeconds": { "type": "integer", "minimum": 1, "maximum": 900 },
         "maxFitBytes": { "type": "integer", "minimum": 1 },
         "sync": {
           "type": "object",
@@ -192,30 +190,6 @@
             "resources": { "type": "object" }
           }
         }
-      }
-    },
-    "garminAdapter": {
-      "type": "object",
-      "required": ["enabled", "port", "domain", "mfaChallengeTtlSeconds", "tokens"],
-      "properties": {
-        "enabled": { "type": "boolean" },
-        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
-        "domain": { "type": "string", "enum": ["garmin.com", "garmin.cn"] },
-        "mfaChallengeTtlSeconds": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 900
-        },
-        "tokens": {
-          "type": "object",
-          "required": ["size"],
-          "properties": {
-            "size": { "type": "string", "minLength": 1 },
-            "storageClass": { "type": "string" },
-            "accessMode": { "type": "string", "minLength": 1 }
-          }
-        },
-        "resources": { "type": "object" }
       }
     },
     "storage": { "type": "object" },

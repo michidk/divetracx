@@ -7,7 +7,7 @@ import {
   isDiveActivity,
   nextAdapterState,
   parseAdapterState,
-} from './envelope'
+} from './connect-envelope'
 
 const diveActivity = {
   activityId: 19283746,
@@ -69,7 +69,7 @@ describe('buildActivityDetails', () => {
   })
 })
 
-describe('adapter state', () => {
+describe('Garmin Connect state', () => {
   test('round-trips the watermark and advances it monotonically', () => {
     expect(parseAdapterState({})).toEqual({ lastActivityStartSeconds: null })
     expect(parseAdapterState({ lastActivityStartSeconds: 1_700 })).toEqual({

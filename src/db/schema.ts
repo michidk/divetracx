@@ -526,6 +526,19 @@ export const integrationState = pgTable('integration_state', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+/**
+ * The Garmin Connect client requires two opaque OAuth token payloads. They stay
+ * in the application database, which is server-only, so imports work from the
+ * web process, the CLI, and scheduled jobs without a second service or volume.
+ */
+export const garminAccounts = pgTable('garmin_accounts', {
+  id: text('id').primaryKey().default('instance'),
+  oauth1Token: jsonb('oauth1_token').$type<Record<string, unknown>>(),
+  oauth2Token: jsonb('oauth2_token').$type<Record<string, unknown>>(),
+  tokensSavedAt: timestamp('tokens_saved_at', { withTimezone: true }),
+  ...auditColumns,
+})
+
 export const externalRecords = pgTable(
   'external_records',
   {
