@@ -121,7 +121,6 @@ gate. The MCP endpoint independently requires OAuth on every protocol request.
 ```yaml
 mcp:
   enabled: true
-  serverUrl: https://dives.example.com/api/mcp
   ingress:
     enabled: true
     className: nginx
@@ -138,6 +137,10 @@ owner session can approve connections. Do not expose the dedicated MCP Service
 with unrestricted paths through an additional proxy. For browser-based MCP
 clients, `mcp.allowedOrigins` adds an explicit Origin allowlist; native clients
 normally omit the Origin header.
+
+Divetracx derives `https://<host>/api/mcp` from the incoming application URL.
+There is no separate MCP URL setting and the MCP Service is only a path-limited
+route to the same Divetracx application process.
 
 ## Validate
 

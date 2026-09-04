@@ -70,13 +70,13 @@ the resulting OAuth tokens are written to `GARMIN_TOKEN_DIRECTORY`.
 
 | Variable | Default | Required | Description |
 | --- | --- | --- | --- |
-| `MCP_SERVER_URL` | — | No | Public URL of the MCP endpoint, e.g. `https://dives.example.com/api/mcp`. Unset disables MCP entirely |
 | `MCP_ALLOWED_ORIGINS` | — | No | Comma-separated Origin allowlist for browser-based MCP clients |
-| `HODOR_SECRET` | — | With MCP | Also used to derive the OAuth signing key; must be at least 32 characters |
+| `HODOR_SECRET` | — | Yes | Also used to derive the OAuth signing key; must be at least 32 characters |
 
-These variables establish the externally reachable OAuth boundary. Runtime
-access is configured in **Settings → AI access**, including the master switch,
-every individual tool, client revocation, granted scopes, and audit activity.
+Divetracx derives its MCP endpoint from its own public origin and serves it at
+`/api/mcp`; no separate MCP URL is configured. Runtime access is managed in
+**Settings → AI access**, including the master switch, every individual tool,
+client revocation, granted scopes, and audit activity.
 
 ## Media storage
 

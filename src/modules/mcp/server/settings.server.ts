@@ -1,5 +1,6 @@
 import '@tanstack/react-start/server-only'
 
+import { getRequest } from '@tanstack/react-start/server'
 import { desc, eq } from 'drizzle-orm'
 import { getDb } from '@/db'
 import { mcpAuditEvents, mcpSettings, oauthClients, oauthTokens } from '@/db/schema'
@@ -90,7 +91,7 @@ export async function loadMcpAdminState() {
   let endpoint: string | null = null
   let configurationError: string | null = null
   try {
-    endpoint = getMcpConfig()?.serverUrl.toString() ?? null
+    endpoint = getMcpConfig(getRequest()).serverUrl.toString()
   } catch (error) {
     configurationError =
       error instanceof Error ? error.message : 'The MCP environment is invalid'

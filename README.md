@@ -209,9 +209,6 @@ never overwrites a field you edited yourself.
 
 ## 🤖 Ask your AI assistant
 
-> [!NOTE]
-> Set `MCP_SERVER_URL` and this turns on. Everything else works without it.
-
 Divetracx exposes a scoped
 [Model Context Protocol](https://modelcontextprotocol.io) endpoint so your own
 AI tools can search and maintain dives, sites, buddies, gear, and your diver
@@ -235,8 +232,8 @@ codex mcp login divetracx
 Tool results can contain private health, location, contact, and certification
 data. Write tools use the same validation and canonical mutation services as
 the web UI; delete tools are separately scoped and marked destructive. The
-endpoint stays unavailable unless `MCP_SERVER_URL` is configured, and it can
-then be paused without deleting clients from **Settings → AI access**.
+endpoint is always part of Divetracx at `/api/mcp` and can be paused without
+deleting clients from **Settings → AI access**.
 Routing details are in [docs/deployment.md](docs/deployment.md#oauth-protected-mcp).
 
 ## 📸 Screenshots

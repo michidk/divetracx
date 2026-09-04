@@ -2,38 +2,53 @@ import { describe, expect, test } from 'bun:test'
 import { resolveMcpConfig } from './config.server'
 
 describe('MCP configuration', () => {
-  test('is disabled without a public server URL', () => {
-    expect(resolveMcpConfig({ HODOR_SECRET: 'x'.repeat(64) })).toBeNull()
-  })
-
-  test('derives the built-in issuer and requires owner-session verification', () => {
+  test('derives the endpoint and issuer from the application URL', () => {
     expect(
-      resolveMcpConfig({
-        MCP_SERVER_URL: 'https://dives.example.com/api/mcp',
-        HODOR_SECRET: 'x'.repeat(64),
-        MCP_ALLOWED_ORIGINS: 'https://chatgpt.com, https://example.test/path',
-      }),
+      resolveMcpConfig(
+        {
+          HODOR_SECRET: 'x'.repeat(64),
+          MCP_ALLOWED_ORIGINS: 'https://chatgpt.com, https://example.test/path',
+        },
+        'https://dives.example.com/settings/mcp?tab=tools',
+      ),
     ).toMatchObject({
+      serverUrl: new URL('https://dives.example.com/api/mcp'),
       issuer: new URL('https://dives.example.com/'),
       allowedOrigins: ['https://chatgpt.com', 'https://example.test'],
     })
-    expect(() =>
-      resolveMcpConfig({ MCP_SERVER_URL: 'https://dives.example.com/api/mcp' }),
-    ).toThrow('HODOR_SECRET')
   })
 
-  test('rejects insecure public and non-canonical MCP URLs', () => {
+  test('requires owner-session verification and a secure application URL', () => {
+    expect(() => resolveMcpConfig({}, 'https://dives.example.com/settings/mcp')).toThrow(
+      'HODOR_SECRET',
+    )
     expect(() =>
-      resolveMcpConfig({
-        MCP_SERVER_URL: 'http://dives.example.com/api/mcp',
-        HODOR_SECRET: 'x'.repeat(64),
-      }),
+      resolveMcpConfig(
+        { HODOR_SECRET: 'x'.repeat(64) },
+        'http://dives.example.com/settings/mcp',
+      ),
     ).toThrow('HTTPS')
-    expect(() =>
-      resolveMcpConfig({
-        MCP_SERVER_URL: 'https://dives.example.com/mcp',
-        HODOR_SECRET: 'x'.repeat(64),
-      }),
-    ).toThrow('/api/mcp')
+  })
+
+  test('allows local HTTP development', () => {
+    expect(
+      resolveMcpConfig(
+        { HODOR_SECRET: 'x'.repeat(64) },
+        'http://localhost:3000/settings/mcp',
+      ).serverUrl.toString(),
+    ).toBe('http://localhost:3000/api/mcp')
+  })
+
+  test('uses the public origin forwarded by the application proxy', () => {
+    const request = new Request('http://app:3000/api/mcp', {
+      headers: {
+        Host: 'app:3000',
+        'X-Forwarded-Host': 'dives.example.com',
+        'X-Forwarded-Proto': 'https',
+      },
+    })
+    expect(
+      resolveMcpConfig({ HODOR_SECRET: 'x'.repeat(64) }, request).serverUrl.toString(),
+    ).toBe('https://dives.example.com/api/mcp')
   })
 })

@@ -26,7 +26,11 @@ import {
 type McpAdminState = Awaited<ReturnType<typeof getMcpAdminState>>
 
 function formatTimestamp(value: string) {
-  return new Date(value).toLocaleString()
+  return `${new Intl.DateTimeFormat('en', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'UTC',
+  }).format(new Date(value))} UTC`
 }
 
 function eventLabel(event: string) {
@@ -176,8 +180,8 @@ export function McpSettingsPage({ state }: { state: McpAdminState }) {
         <CardHeader>
           <CardTitle>Connection</CardTitle>
           <p className="text-sm leading-6 text-muted-foreground">
-            The public endpoint is bootstrapped by deployment configuration because its
-            OAuth and proxy routes must exist before the UI can be reached.
+            Divetracx serves MCP at its own public origin. Use this URL in your AI client;
+            no separate MCP service or URL setting is required.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -201,9 +205,8 @@ export function McpSettingsPage({ state }: { state: McpAdminState }) {
             </div>
           ) : (
             <p className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm text-warning-foreground">
-              Set <code className="font-mono">MCP_SERVER_URL</code> to the public HTTPS
-              URL ending in <code className="font-mono">/api/mcp</code>, then restart
-              Divetracx.
+              {state.configurationError ??
+                'The MCP endpoint could not be derived from this Divetracx URL.'}
             </p>
           )}
 

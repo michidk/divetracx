@@ -172,19 +172,22 @@ export function createMcpHttpHandler(
   }
 }
 
-let handler: ReturnType<typeof createMcpHttpHandler> | undefined
-let configured = false
+const liveStore = new DrizzleOAuthStore()
+const liveProtocolHandler = createProtocolHandler(loadMcpPolicy)
 
 export async function handleMcpHttpRequest(request: Request): Promise<Response | null> {
   try {
-    if (!configured) {
-      const config = getMcpConfig()
-      handler = config
-        ? createMcpHttpHandler(config, new DrizzleOAuthStore(), undefined, loadMcpPolicy)
-        : undefined
-      configured = true
-    }
-    return handler ? await handler(request) : null
+    const pathname = new URL(request.url).pathname
+    if (pathname !== MCP_PATH && !oauthPublicPaths().includes(pathname)) return null
+
+    const config = getMcpConfig(request)
+    const handler = createMcpHttpHandler(
+      config,
+      liveStore,
+      liveProtocolHandler,
+      loadMcpPolicy,
+    )
+    return await handler(request)
   } catch (error) {
     console.error('MCP request failed', error)
     return Response.json(

@@ -92,8 +92,6 @@ spec:
 {{- fail "hodor.enabled must be true when MCP is enabled because OAuth consent requires owner authentication" }}
 {{- end }}
 {{- if .Values.mcp.enabled }}
-            - name: MCP_SERVER_URL
-              value: {{ required "mcp.serverUrl is required when MCP is enabled" .Values.mcp.serverUrl | quote }}
             - name: HODOR_SECRET
               valueFrom:
                 secretKeyRef:

@@ -158,9 +158,10 @@ layouts for DiveMate and Garmin.
 
 ## OAuth-protected MCP
 
-Set `MCP_SERVER_URL` to bootstrap the scoped MCP endpoint. Divetracx ships its
-own OAuth 2.1 authorization server: connecting a client opens the normal
-Hodor-protected app, where you approve access with your existing owner session.
+Divetracx serves its scoped MCP endpoint itself at `/api/mcp` and derives all
+OAuth URLs from the app's public origin. It ships its own OAuth 2.1
+authorization server: connecting a client opens the normal Hodor-protected app,
+where you approve access with your existing owner session.
 It supports dynamic client registration, requires S256 PKCE and an exact
 resource indicator, rotates refresh tokens with replay detection, stores codes
 and refresh tokens only as hashes, and supports immediate revocation. The
@@ -174,7 +175,6 @@ Service and Ingress:
 ```yaml
 mcp:
   enabled: true
-  serverUrl: https://dives.example.com/api/mcp
   ingress:
     enabled: true
     className: nginx
@@ -192,8 +192,9 @@ owner session can approve connections. For browser-based MCP clients,
 
 After deployment, use **Settings → AI access** to pause or resume MCP, enable
 or disable each read, write, and delete tool, inspect granted client scopes,
-revoke clients, and review recent activity. Deployment configuration remains
-responsible only for the public URL and proxy/TLS boundary.
+revoke clients, and review recent activity. The Helm switch only creates the
+path-limited route around Hodor; it does not configure or run another MCP
+server.
 
 Connect a client:
 

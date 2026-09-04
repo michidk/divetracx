@@ -45,8 +45,6 @@ ingress:
 
 mcp:
   enabled: false
-  # Public resource URL. The path must be /api/mcp.
-  serverUrl: ""
   # Optional browser Origin allowlist. Non-browser MCP clients omit Origin.
   allowedOrigins: []
   service:

@@ -30,7 +30,6 @@ external_values=(
   --set garmin.existingSecret=divetracx-garmin
   --set garmin.sync.enabled=true
   --set mcp.enabled=true
-  --set mcp.serverUrl=https://dives.example.test/api/mcp
   --set mcp.ingress.enabled=true
   --set mcp.ingress.hosts[0].host=dives.example.test
 )

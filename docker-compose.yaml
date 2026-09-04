@@ -31,7 +31,6 @@ services:
       GARMIN_ADAPTER_AUTHORIZATION: ${GARMIN_ADAPTER_AUTHORIZATION:-}
       # The built-in MCP authorization server uses the existing Hodor owner
       # session for consent and derives a separate OAuth signing key.
-      MCP_SERVER_URL: ${MCP_SERVER_URL:-}
       MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-}
       HODOR_SECRET: ${HODOR_SECRET:?Set HODOR_SECRET in .env}
     expose:

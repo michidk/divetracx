@@ -50,10 +50,9 @@
     "mcp": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["enabled", "serverUrl", "allowedOrigins", "service", "ingress"],
+      "required": ["enabled", "allowedOrigins", "service", "ingress"],
       "properties": {
         "enabled": { "type": "boolean" },
-        "serverUrl": { "type": "string" },
         "allowedOrigins": {
           "type": "array",
           "items": { "type": "string", "format": "uri" }
