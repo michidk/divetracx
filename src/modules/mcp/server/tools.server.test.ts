@@ -255,6 +255,37 @@ describe('Divetracx MCP tools', () => {
     expect(called.result.isError).toBeFalsy()
     expect(called.result.structuredContent.items[0].manufacturer).toBeNull()
 
+    // A column added to a projection must reach the client rather than being
+    // stripped by the schema that describes it.
+    const widened = createTestHandler({
+      ...loaders,
+      loadGearOverview: async () => ({
+        items: [
+          {
+            id: '11111111-2222-4333-8444-555555555555',
+            name: 'Regulator',
+            category: null,
+            manufacturer: null,
+            model: null,
+            serviceDueAt: null,
+            retiredAt: null,
+            inactive: false,
+            diveCount: 3,
+            lastUsedDate: '2026-01-02',
+            addedLater: 'kept',
+          },
+        ],
+        sets: [],
+      }),
+    } as unknown as McpLoaders)
+    const passedThrough = await postMcp(widened, {
+      jsonrpc: '2.0',
+      id: 4,
+      method: 'tools/call',
+      params: { name: 'list_gear', arguments: {} },
+    })
+    expect(passedThrough.result.structuredContent.items[0].addedLater).toBe('kept')
+
     const drifted = createTestHandler({
       ...loaders,
       loadGearOverview: async () => ({ items: [{ id: 'not-a-uuid' }], sets: [] }),

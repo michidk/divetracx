@@ -8,6 +8,12 @@ import { z } from 'zod'
 // Most columns behind these reads are nullable even where the demo dataset
 // happens to be populated, so a field is only required here when the database
 // forbids null or the value is computed.
+//
+// Objects built from a query row are loose: a strict object silently strips
+// keys it does not declare, so adding a column to a projection would quietly
+// remove it from the answer with nothing failing. Loose objects keep the extra
+// key and advertise that more may appear. Wrappers the tool itself assembles
+// stay strict, since their keys are fixed here.
 
 const id = z.uuid()
 const optionalText = z.string().nullable()
@@ -19,7 +25,7 @@ const decimalString = (unit: string) =>
 
 const isoDate = z.string().nullable().describe('Calendar date as YYYY-MM-DD')
 
-const diveSummary = z.object({
+const diveSummary = z.looseObject({
   id,
   number: z.number().int(),
   diveDate: isoDate,
@@ -48,7 +54,7 @@ export const searchDivesOutput = z.object({
 
 export const listDiveSitesOutput = z.object({
   sites: z.array(
-    z.object({
+    z.looseObject({
       id,
       name: z.string(),
       country: optionalText,
@@ -70,7 +76,7 @@ export const listDiveSitesOutput = z.object({
 })
 
 export const listBuddiesOutput = z.array(
-  z.object({
+  z.looseObject({
     id,
     firstName: optionalText,
     lastName: optionalText,
@@ -86,7 +92,7 @@ export const listBuddiesOutput = z.array(
 
 export const listGearOutput = z.object({
   items: z.array(
-    z.object({
+    z.looseObject({
       id,
       name: z.string(),
       category: optionalText,
@@ -100,7 +106,7 @@ export const listGearOutput = z.object({
     }),
   ),
   sets: z.array(
-    z.object({
+    z.looseObject({
       id,
       name: z.string(),
       notes: optionalText,
@@ -112,7 +118,7 @@ export const listGearOutput = z.object({
 
 // `calendarDives` is stripped by the tool, so it is deliberately absent here.
 export const divingStatisticsOutput = z.object({
-  summary: z.object({
+  summary: z.looseObject({
     totalDives: z.number().int(),
     totalSeconds: z.number().int(),
     longestSeconds: z.number().int(),
@@ -125,21 +131,21 @@ export const divingStatisticsOutput = z.object({
     minimumWaterTemperatureCelsius: decimalString('degrees Celsius'),
     firstDiveDate: isoDate,
   }),
-  sac: z.object({
+  sac: z.looseObject({
     average: decimalString('litres per minute'),
     deviation: decimalString('litres per minute'),
     diveCount: z.number().int(),
   }),
   decoSeconds: z.number().int(),
   preferredMixture: z
-    .object({
+    .looseObject({
       oxygenPercent: z.number(),
       heliumPercent: z.number(),
       tankCount: z.number().int(),
     })
     .nullable(),
   bestBuddy: z
-    .object({
+    .looseObject({
       id,
       firstName: optionalText,
       lastName: optionalText,
@@ -148,7 +154,7 @@ export const divingStatisticsOutput = z.object({
     })
     .nullable(),
   certifications: z.array(
-    z.object({
+    z.looseObject({
       id,
       name: optionalText,
       organization: optionalText,
@@ -156,10 +162,10 @@ export const divingStatisticsOutput = z.object({
     }),
   ),
   divesPerYear: z.array(
-    z.object({ year: z.number().int(), diveCount: z.number().int() }),
+    z.looseObject({ year: z.number().int(), diveCount: z.number().int() }),
   ),
   depthByMonth: z.array(
-    z.object({
+    z.looseObject({
       month: z.string().describe('Calendar month as YYYY-MM'),
       averageDepthMeters: decimalString('metres'),
       averageMaximumDepthMeters: decimalString('metres'),
