@@ -24,6 +24,19 @@ const decimalString = (unit: string) =>
   z.string().nullable().describe(`Decimal string in ${unit}`)
 
 const isoDate = z.string().nullable().describe('Calendar date as YYYY-MM-DD')
+const isoTimestamp = z.string().nullable().describe('ISO 8601 timestamp')
+
+// Photos and signatures are the same picture rows, split by kind.
+const pictureElement = z.looseObject({
+  id: z.string(),
+  kind: optionalText,
+  path: optionalText,
+  storagePath: optionalText,
+  thumbnailStoragePath: optionalText,
+  mimeType: optionalText,
+  description: optionalText,
+  sortOrder: z.number().int().nullable(),
+})
 
 const diveSummary = z.looseObject({
   id,
@@ -170,6 +183,168 @@ export const divingStatisticsOutput = z.object({
       averageDepthMeters: decimalString('metres'),
       averageMaximumDepthMeters: decimalString('metres'),
       diveCount: z.number().int(),
+    }),
+  ),
+})
+
+const diveUsage = z.looseObject({
+  id,
+  number: z.number().int(),
+  diveDate: isoDate,
+  durationSeconds: z.number().int().nullable(),
+  maximumDepthMeters: decimalString('metres'),
+  siteName: optionalText,
+  diveTypeName: optionalText,
+})
+
+export const getDiveOutput = z.looseObject({
+  id,
+  number: z.number().int(),
+  diveDate: isoDate,
+  entryTime: optionalText.describe('Local entry time as HH:MM:SS'),
+  utcOffsetMinutes: z.number().int().nullable(),
+  durationSeconds: z.number().int().nullable(),
+  surfaceIntervalSeconds: z.number().int().nullable(),
+  maximumDepthMeters: decimalString('metres'),
+  averageDepthMeters: decimalString('metres'),
+  airTemperatureCelsius: decimalString('degrees Celsius'),
+  waterTemperatureCelsius: decimalString('degrees Celsius'),
+  weightKg: decimalString('kilograms'),
+  equipmentWeightKg: decimalString('kilograms'),
+  maximumPpo2: decimalString('bar'),
+  decompressionDive: z.boolean(),
+  waterType: z.number().int().nullable(),
+  entryType: z.number().int().nullable(),
+  visibility: optionalText,
+  current: optionalText,
+  waves: optionalText,
+  weather: optionalText,
+  rating: z.number().int().nullable(),
+  computer: optionalText,
+  suit: optionalText,
+  boatName: optionalText,
+  shopName: optionalText,
+  diveTypeName: optionalText,
+  notes: optionalText,
+  updatedAt: isoTimestamp,
+  diver: z
+    .looseObject({ id, firstName: optionalText, lastName: optionalText })
+    .nullable(),
+  site: z
+    .looseObject({
+      id,
+      name: z.string(),
+      country: optionalText,
+      region: optionalText,
+      waterName: optionalText,
+      latitude: decimalString('decimal degrees'),
+      longitude: decimalString('decimal degrees'),
+      maximumDepthMeters: decimalString('metres'),
+      altitudeMeters: z.number().int().nullable().describe('Whole metres'),
+      difficulty: optionalText,
+      rating: z.number().int().nullable(),
+      notes: optionalText,
+    })
+    .nullable(),
+  buddies: z.array(
+    z.looseObject({
+      id,
+      firstName: optionalText,
+      lastName: optionalText,
+      email: optionalText,
+      city: optionalText,
+      country: optionalText,
+      role: optionalText,
+    }),
+  ),
+  equipment: z.array(
+    z.looseObject({
+      id,
+      name: z.string(),
+      category: optionalText,
+      manufacturer: optionalText,
+      model: optionalText,
+    }),
+  ),
+  tanks: z.array(
+    z.looseObject({
+      id,
+      name: optionalText,
+      sortOrder: z.number().int().nullable(),
+      computerTankNumber: z.number().int().nullable(),
+      volumeLiters: decimalString('litres'),
+      startPressureBar: decimalString('bar'),
+      endPressureBar: decimalString('bar'),
+      workingPressureBar: decimalString('bar'),
+      oxygenPercent: decimalString('percent'),
+      heliumPercent: decimalString('percent'),
+      breathingTimeSeconds: z.number().int().nullable(),
+      weightKg: decimalString('kilograms'),
+    }),
+  ),
+  photos: z.array(pictureElement),
+  signatures: z.array(pictureElement),
+  sources: z.array(
+    z.looseObject({
+      integrationKey: optionalText,
+      integrationName: optionalText,
+      externalId: optionalText,
+      identityKey: optionalText,
+      externalUpdatedAt: isoTimestamp,
+      lastSeenAt: isoTimestamp,
+    }),
+  ),
+  // Assembled by the tool: samples are bounded by the caller's requested limit.
+  profile: z.object({
+    totalSamples: z.number().int(),
+    returnedSamples: z.number().int(),
+    truncated: z.boolean(),
+    samples: z.array(
+      z.looseObject({
+        id,
+        sampleIndex: z.number().int(),
+        elapsedSeconds: z.number().int().nullable(),
+        depthMeters: decimalString('metres'),
+        temperatureCelsius: decimalString('degrees Celsius'),
+        pressureBar: decimalString('bar'),
+        tank1PressureBar: decimalString('bar'),
+        tank2PressureBar: decimalString('bar'),
+        decoCeilingMeters: decimalString('metres'),
+        tankNumber: z.number().int().nullable(),
+      }),
+    ),
+  }),
+})
+
+export const getGearItemOutput = z.looseObject({
+  item: z.looseObject({
+    id,
+    diverId: optionalText,
+    name: z.string(),
+    category: optionalText,
+    manufacturer: optionalText,
+    model: optionalText,
+    serialNumber: optionalText,
+    information: optionalText,
+    purchasedAt: isoDate,
+    purchasePrice: decimalString('currency units'),
+    purchaseShop: optionalText,
+    retiredAt: isoDate,
+    serviceDueAt: isoDate,
+    inactive: z.boolean(),
+    weightKg: decimalString('kilograms'),
+    notes: optionalText,
+    createdAt: isoTimestamp,
+    updatedAt: isoTimestamp,
+  }),
+  dives: z.array(diveUsage),
+  pictures: z.array(
+    z.looseObject({
+      id: z.string(),
+      path: optionalText,
+      storagePath: optionalText,
+      thumbnailStoragePath: optionalText,
+      description: optionalText,
     }),
   ),
 })

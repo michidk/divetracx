@@ -29,6 +29,8 @@ import { loadProfile } from '@/modules/profile/server/queries.server'
 import { loadSiteDetail, loadSitesOverview } from '@/modules/sites/server/queries.server'
 import {
   divingStatisticsOutput,
+  getDiveOutput,
+  getGearItemOutput,
   listBuddiesOutput,
   listDiveSitesOutput,
   listGearOutput,
@@ -227,6 +229,7 @@ export function createDivetracxMcpServer(
           dive_id: z.uuid(),
           profile_sample_limit: z.int().min(0).max(1_000).default(0),
         }),
+        outputSchema: getDiveOutput,
         annotations: readOnlyAnnotations,
       },
       async ({ dive_id: diveId, profile_sample_limit: profileSampleLimit }) => {
@@ -239,7 +242,7 @@ export function createDivetracxMcpServer(
         }
 
         const { profileSamples, ...details } = dive
-        return jsonToolResult({
+        return readResult(getDiveOutput, {
           ...details,
           profile: {
             totalSamples: profileSamples.length,
@@ -344,12 +347,13 @@ export function createDivetracxMcpServer(
         title: 'Get gear details',
         description: 'Get one gear item with its dive history.',
         inputSchema: z.object({ gearId: z.string().uuid() }),
+        outputSchema: getGearItemOutput,
         annotations: readOnlyAnnotations,
       },
       async ({ gearId }) => {
         const gear = await loaders.loadGearDetail(gearId)
         return gear
-          ? jsonToolResult(gear)
+          ? readResult(getGearItemOutput, gear)
           : errorToolResult(new Error('Gear item not found'))
       },
     )

@@ -172,10 +172,11 @@ describe('Divetracx MCP tools', () => {
     }[] = listed.result.tools
     const create = tools.find((tool) => tool.name === 'create_dive_site')
     expect(Object.keys(create?.outputSchema?.properties ?? {})).toEqual(['id'])
-    // Detail reads are not declared yet: they nest arrays whose element shape no
-    // dataset here exercises, so advertising one would promise a structure
-    // nothing validates.
-    expect(tools.find((tool) => tool.name === 'get_dive')?.outputSchema).toBeUndefined()
+    expect(
+      tools
+        .filter((tool) => tool.name.startsWith('create_'))
+        .every((tool) => tool.outputSchema),
+    ).toBe(true)
 
     const called = await postMcp(handler, {
       jsonrpc: '2.0',
@@ -235,14 +236,10 @@ describe('Divetracx MCP tools', () => {
       params: {},
     })
     const tools: { name: string; outputSchema?: unknown }[] = listed.result.tools
-    const declared = tools.filter((tool) => tool.outputSchema).map((tool) => tool.name)
-    expect(declared).toEqual([
-      'search_dives',
-      'list_dive_sites',
-      'get_diving_statistics',
-      'list_buddies',
-      'list_gear',
-    ])
+    // Tracked as the shrinking remainder rather than the growing declared set,
+    // so finishing one of these has to update this list deliberately.
+    const undeclared = tools.filter((tool) => !tool.outputSchema).map((tool) => tool.name)
+    expect(undeclared).toEqual(['get_buddy', 'get_profile', 'get_dive_editor_options'])
 
     // Nullable columns stay nullable: the demo dataset happens to populate these,
     // but a real logbook does not have to.
