@@ -4,6 +4,8 @@ import {
   ArrowLeft,
   Bot,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Clipboard,
   KeyRound,
   ShieldCheck,
@@ -19,6 +21,7 @@ import { cn } from '@/lib/utils'
 import { MCP_SCOPE_DETAILS, type McpScope, type McpToolName } from '@/modules/mcp/catalog'
 import {
   type getMcpAdminState,
+  getMcpAuditPage,
   revokeMcpClientConnection,
   updateMcpPolicy,
 } from '@/modules/mcp/server/settings'
@@ -46,7 +49,30 @@ export function McpSettingsPage({ state }: { state: McpAdminState }) {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [showRevoked, setShowRevoked] = useState(false)
+  const [audit, setAudit] = useState(state.audit)
+  const [auditLoading, setAuditLoading] = useState(false)
   const { saved, clearSaved, markSaved } = useTransientSavedState()
+
+  const revokedCount = state.clients.filter((client) => client.revokedAt).length
+  const visibleClients = showRevoked
+    ? state.clients
+    : state.clients.filter((client) => !client.revokedAt)
+
+  const auditPages = Math.max(1, Math.ceil(audit.total / audit.pageSize))
+  const auditFirst = audit.total === 0 ? 0 : audit.page * audit.pageSize + 1
+  const auditLast = Math.min(audit.total, (audit.page + 1) * audit.pageSize)
+
+  async function loadAuditPage(page: number) {
+    setAuditLoading(true)
+    try {
+      setAudit(await getMcpAuditPage({ data: { page } }))
+    } catch {
+      setMessage('Loading activity failed. Try again.')
+    } finally {
+      setAuditLoading(false)
+    }
+  }
 
   const groups = useMemo(
     () =>
@@ -317,60 +343,82 @@ export function McpSettingsPage({ state }: { state: McpAdminState }) {
       </section>
 
       <section aria-labelledby="clients-heading">
-        <div className="mb-4">
-          <h2 id="clients-heading" className="text-xl font-semibold">
-            Connected clients
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Revoke a client to invalidate all of its access and refresh tokens
-            immediately.
-          </p>
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="clients-heading" className="text-xl font-semibold">
+              Connected clients
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Revoking a client invalidates all of its access and refresh tokens
+              immediately.
+            </p>
+          </div>
+          {revokedCount > 0 ? (
+            <label
+              htmlFor="mcp-show-revoked"
+              className="flex items-center gap-2 text-sm text-muted-foreground"
+            >
+              <Switch
+                id="mcp-show-revoked"
+                checked={showRevoked}
+                onCheckedChange={setShowRevoked}
+              />
+              Show {revokedCount} revoked
+            </label>
+          ) : null}
         </div>
         {state.clients.length === 0 ? (
           <Card className="p-6 text-sm text-muted-foreground">
             No MCP clients have connected yet.
           </Card>
+        ) : visibleClients.length === 0 ? (
+          <Card className="p-6 text-sm text-muted-foreground">
+            Every client is revoked. Enable “Show {revokedCount} revoked” to see them.
+          </Card>
         ) : (
-          <div className="space-y-3">
-            {state.clients.map((client) => (
-              <Card key={client.id} className={cn(client.revokedAt && 'bg-muted/35')}>
-                <CardContent className="flex flex-col gap-4 pt-6 sm:flex-row sm:items-center">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold">{client.name}</p>
-                      <Badge variant={client.revokedAt ? 'secondary' : 'accent'}>
-                        {client.revokedAt
-                          ? 'Revoked'
-                          : `${client.activeTokenCount} active token${client.activeTokenCount === 1 ? '' : 's'}`}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 font-mono text-xs text-muted-foreground">
-                      Connected {formatTimestamp(client.createdAt)}
-                    </p>
-                    {client.scopes.length > 0 ? (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {client.scopes.map((scope) => (
-                          <Badge key={scope} variant="outline">
-                            {scope}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                  {!client.revokedAt ? (
+          <Card className="overflow-hidden">
+            <ul className="divide-y divide-border">
+              {visibleClients.map((client) => (
+                <li
+                  key={client.id}
+                  className={cn(
+                    'flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3',
+                    client.revokedAt && 'bg-muted/35',
+                  )}
+                >
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {client.name}
+                  </span>
+                  {client.scopes.map((scope) => (
+                    <Badge key={scope} variant="outline" className="font-mono text-xs">
+                      {scope.replace('divetracx:', '')}
+                    </Badge>
+                  ))}
+                  <Badge variant={client.revokedAt ? 'secondary' : 'accent'}>
+                    {client.revokedAt
+                      ? 'Revoked'
+                      : `${client.activeTokenCount} token${client.activeTokenCount === 1 ? '' : 's'}`}
+                  </Badge>
+                  <span className="whitespace-nowrap font-mono text-xs text-muted-foreground">
+                    {formatTimestamp(client.createdAt)}
+                  </span>
+                  {client.revokedAt ? (
+                    <span className="w-20" />
+                  ) : (
                     <Button
                       type="button"
                       variant="ghost"
-                      className="text-destructive"
+                      size="sm"
+                      className="w-20 text-destructive"
                       onClick={() => void revoke(client.id, client.name)}
                     >
-                      <Trash2 size={16} aria-hidden="true" /> Revoke
+                      <Trash2 size={15} aria-hidden="true" /> Revoke
                     </Button>
-                  ) : null}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </Card>
         )}
       </section>
 
@@ -382,47 +430,80 @@ export function McpSettingsPage({ state }: { state: McpAdminState }) {
           </h2>
         </div>
         <Card className="overflow-hidden">
-          {state.auditEvents.length === 0 ? (
+          {audit.total === 0 ? (
             <p className="p-6 text-sm text-muted-foreground">No MCP activity yet.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[44rem] text-left text-sm">
-                <thead className="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-5 py-3">Time</th>
-                    <th className="px-5 py-3">Event</th>
-                    <th className="px-5 py-3">Tool</th>
-                    <th className="px-5 py-3">Outcome</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {state.auditEvents.map((event) => (
-                    <tr key={event.id}>
-                      <td className="whitespace-nowrap px-5 py-3 font-mono text-xs">
-                        {formatTimestamp(event.createdAt)}
-                      </td>
-                      <td className="px-5 py-3 capitalize">{eventLabel(event.event)}</td>
-                      <td className="px-5 py-3 font-mono text-xs">
-                        {event.toolName ?? '—'}
-                      </td>
-                      <td className="px-5 py-3">
-                        <Badge
-                          variant={
-                            event.outcome === 'success'
-                              ? 'accent'
-                              : event.outcome === 'denied'
-                                ? 'warning'
-                                : 'destructive'
-                          }
-                        >
-                          {event.outcome}
-                        </Badge>
-                      </td>
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[44rem] text-left text-sm">
+                  <thead className="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="px-5 py-3">Time</th>
+                      <th className="px-5 py-3">Event</th>
+                      <th className="px-5 py-3">Tool</th>
+                      <th className="px-5 py-3">Outcome</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody
+                    className={cn('divide-y divide-border', auditLoading && 'opacity-60')}
+                  >
+                    {audit.events.map((event) => (
+                      <tr key={event.id}>
+                        <td className="whitespace-nowrap px-5 py-3 font-mono text-xs">
+                          {formatTimestamp(event.createdAt)}
+                        </td>
+                        <td className="px-5 py-3 capitalize">
+                          {eventLabel(event.event)}
+                        </td>
+                        <td className="px-5 py-3 font-mono text-xs">
+                          {event.toolName ?? '—'}
+                        </td>
+                        <td className="px-5 py-3">
+                          <Badge
+                            variant={
+                              event.outcome === 'success'
+                                ? 'accent'
+                                : event.outcome === 'denied'
+                                  ? 'warning'
+                                  : 'destructive'
+                            }
+                          >
+                            {event.outcome}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {auditPages > 1 ? (
+                <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-3">
+                  <p aria-live="polite" className="text-xs text-muted-foreground">
+                    {auditFirst}–{auditLast} of {audit.total}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={audit.page === 0 || auditLoading}
+                      onClick={() => void loadAuditPage(audit.page - 1)}
+                    >
+                      <ChevronLeft size={15} aria-hidden="true" /> Newer
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={audit.page + 1 >= auditPages || auditLoading}
+                      onClick={() => void loadAuditPage(audit.page + 1)}
+                    >
+                      Older <ChevronRight size={15} aria-hidden="true" />
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </>
           )}
         </Card>
       </section>

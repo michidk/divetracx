@@ -1,7 +1,7 @@
 import '@tanstack/react-start/server-only'
 
 import { getRequest } from '@tanstack/react-start/server'
-import { desc, eq } from 'drizzle-orm'
+import { count, desc, eq } from 'drizzle-orm'
 import { getDb } from '@/db'
 import { mcpAuditEvents, mcpSettings, oauthClients, oauthTokens } from '@/db/schema'
 import {
@@ -71,9 +71,44 @@ export async function revokeMcpClient(clientId: string) {
   })
 }
 
+export const MCP_AUDIT_PAGE_SIZE = 25
+
+function serializeAuditEvent(event: {
+  id: string
+  event: string
+  outcome: string
+  clientId: string | null
+  toolName: string | null
+  createdAt: Date
+}) {
+  return { ...event, createdAt: event.createdAt.toISOString() }
+}
+
+// Every tool call is audited, so the table grows without bound and a fixed tail
+// would hide everything older than the last page.
+export async function loadMcpAuditPage(page = 0) {
+  const db = getDb()
+  const offset = Math.max(0, page) * MCP_AUDIT_PAGE_SIZE
+  const [rows, [totals]] = await Promise.all([
+    db
+      .select()
+      .from(mcpAuditEvents)
+      .orderBy(desc(mcpAuditEvents.createdAt))
+      .limit(MCP_AUDIT_PAGE_SIZE)
+      .offset(offset),
+    db.select({ total: count() }).from(mcpAuditEvents),
+  ])
+  return {
+    events: rows.map(serializeAuditEvent),
+    total: Number(totals?.total ?? 0),
+    page: Math.max(0, page),
+    pageSize: MCP_AUDIT_PAGE_SIZE,
+  }
+}
+
 export async function loadMcpAdminState() {
   const db = getDb()
-  const [policy, clientRows, tokenRows, auditRows] = await Promise.all([
+  const [policy, clientRows, tokenRows, audit] = await Promise.all([
     loadMcpPolicy(),
     db.select().from(oauthClients).orderBy(desc(oauthClients.createdAt)),
     db
@@ -85,7 +120,7 @@ export async function loadMcpAdminState() {
       })
       .from(oauthTokens)
       .orderBy(desc(oauthTokens.createdAt)),
-    db.select().from(mcpAuditEvents).orderBy(desc(mcpAuditEvents.createdAt)).limit(100),
+    loadMcpAuditPage(0),
   ])
 
   let endpoint: string | null = null
@@ -122,9 +157,6 @@ export async function loadMcpAdminState() {
     supportedScopes: scopesForEnabledTools(policy.disabledTools),
     tools: MCP_TOOL_CATALOG.map((tool) => ({ ...tool })),
     clients,
-    auditEvents: auditRows.map((event) => ({
-      ...event,
-      createdAt: event.createdAt.toISOString(),
-    })),
+    audit,
   }
 }
