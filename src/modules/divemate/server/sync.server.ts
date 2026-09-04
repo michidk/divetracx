@@ -37,6 +37,7 @@ import type {
   ExternalRecordInput,
   IntegrationConnector,
 } from '@/modules/integrations/types'
+import { MATCHED_LINK_ROLE } from '@/modules/integrations/types'
 import { resolveAgencyId } from '@/modules/profile/server/agencies.server'
 import { parseDiveMateDiveTeam } from '../dive-team'
 import {
@@ -44,6 +45,7 @@ import {
   formatDiveMateInstructor,
   normalizeDiveMateInstructorName,
 } from '../instructor'
+import { DEFAULT_DIVEMATE_DIVE_TYPES } from '../dive-type'
 import { parseDiveMateDatabase } from '../parser'
 import type { DiveMateSnapshot, DiveMateSourceRecord } from '../types'
 import { findDriveFile, openGoogleDriveBackup } from './google-drive.server'
@@ -174,12 +176,31 @@ interface SnapshotApplyContext {
     externalId: string,
     canonicalEntityType: string,
     canonicalEntityId: string,
+    role?: string,
   ): Promise<void>
   unlink(
     entityType: string,
     externalId: string,
     canonicalEntityTypes: string[],
   ): Promise<void>
+}
+
+async function ensureDiveMateDiveTypes(transaction: DatabaseTransaction) {
+  const existingNames = new Set(
+    (await transaction.select({ name: diveTypes.name }).from(diveTypes)).map((diveType) =>
+      diveType.name.trim().toLocaleLowerCase('en-US'),
+    ),
+  )
+  const missing = DEFAULT_DIVEMATE_DIVE_TYPES.filter(
+    (name) => !existingNames.has(name.toLocaleLowerCase('en-US')),
+  )
+  if (missing.length === 0) return
+  await transaction.insert(diveTypes).values(
+    missing.map((name) => ({
+      name,
+      sortOrder: DEFAULT_DIVEMATE_DIVE_TYPES.indexOf(name) + 1,
+    })),
+  )
 }
 
 async function loadBuddyNameIndex(transaction: DatabaseTransaction) {
@@ -539,12 +560,20 @@ async function applySnapshot(
     }
   }
 
+  const diveTypeIdsByName = new Map(
+    (
+      await tx
+        .select({ id: diveTypes.id, name: diveTypes.name })
+        .from(diveTypes)
+        .orderBy(asc(diveTypes.createdAt))
+    ).map((diveType) => [diveType.name.trim().toLocaleLowerCase('en-US'), diveType.id]),
+  )
   const diveTypeIds = new Map<string, string>()
   for (const item of snapshot.diveTypes) {
     context.signal.throwIfAborted()
-    const existingId = context.canonicalId('dive_type', item.externalId, 'dive_type')
-    if (!context.shouldApply('dive_type', item.externalId) && existingId) {
-      diveTypeIds.set(item.externalId, existingId)
+    const linkedId = context.canonicalId('dive_type', item.externalId, 'dive_type')
+    if (!context.shouldApply('dive_type', item.externalId) && linkedId) {
+      diveTypeIds.set(item.externalId, linkedId)
       continue
     }
     const values = {
@@ -552,16 +581,27 @@ async function applySnapshot(
       sortOrder: item.sortOrder,
       updatedAt: new Date(),
     }
-    const [row] = existingId
+    const existingId =
+      linkedId ?? diveTypeIdsByName.get(item.name.trim().toLocaleLowerCase('en-US'))
+    const [row] = linkedId
       ? await tx
           .update(diveTypes)
           .set(values)
-          .where(eq(diveTypes.id, existingId))
+          .where(eq(diveTypes.id, linkedId))
           .returning({ id: diveTypes.id })
-      : await tx.insert(diveTypes).values(values).returning({ id: diveTypes.id })
+      : existingId
+        ? [{ id: existingId }]
+        : await tx.insert(diveTypes).values(values).returning({ id: diveTypes.id })
     if (row) {
       diveTypeIds.set(item.externalId, row.id)
-      await context.link('dive_type', item.externalId, 'dive_type', row.id)
+      diveTypeIdsByName.set(item.name.trim().toLocaleLowerCase('en-US'), row.id)
+      await context.link(
+        'dive_type',
+        item.externalId,
+        'dive_type',
+        row.id,
+        linkedId || !existingId ? 'produced' : MATCHED_LINK_ROLE,
+      )
     }
   }
 
@@ -1029,6 +1069,7 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
       'equipment_sets',
       'certifications',
       'shops',
+      'boats',
       'dive_types',
       'dives',
       'profile_samples',
@@ -1109,6 +1150,7 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
     const changedRecords = context.records.filter(
       (record) => record.change !== 'unchanged',
     )
+    await ensureDiveMateDiveTypes(context.transaction)
     const counts = await applySnapshot(
       context.transaction,
       context.prepared.data.snapshot,
@@ -1125,11 +1167,18 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
               (link) => link.canonicalEntityType === canonicalEntityType,
             )
             .map((link) => link.canonicalEntityId),
-        link: async (entityType, externalId, canonicalEntityType, canonicalEntityId) =>
+        link: async (
+          entityType,
+          externalId,
+          canonicalEntityType,
+          canonicalEntityId,
+          role,
+        ) =>
           context.linkCanonicalRecord(
             context.findRecord(entityType, externalId).id,
             canonicalEntityType,
             canonicalEntityId,
+            role,
           ),
         unlink: (entityType, externalId, canonicalEntityTypes) =>
           context.unlinkCanonicalRecords(

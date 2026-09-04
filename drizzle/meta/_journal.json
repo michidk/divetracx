@@ -260,6 +260,13 @@
       "when": 1788502723302,
       "tag": "0036_windy_lord_hawal",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1788511482517,
+      "tag": "0037_default_divemate_dive_types",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,27 @@
+export const DEFAULT_DIVEMATE_DIVE_TYPES = [
+  'Freediving',
+  'Training',
+  'Altitude',
+  'Recovery',
+  'Boat',
+  'Ice',
+  'River',
+  'Photography',
+  'Group leadership',
+  'Cave',
+  'Night',
+  'Navigation',
+  'Certification',
+  'Student training',
+  'Drift',
+  'Search',
+  'Freshwater',
+  'Rescue',
+  'Technical',
+  'Deep',
+  'Wreck',
+] as const
+
 const GERMAN_DIVE_TYPE_NAMES = new Map([
   ['apnoe', 'Freediving'],
   ['ausbildung', 'Training'],

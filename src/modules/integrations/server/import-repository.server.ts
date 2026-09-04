@@ -3,6 +3,7 @@ import '@tanstack/react-start/server-only'
 import { eq, inArray } from 'drizzle-orm'
 import type { DatabaseTransaction } from '@/db'
 import {
+  boats,
   buddies,
   certifications,
   diveBuddies,
@@ -41,6 +42,7 @@ const CANONICAL_DELETE_ORDER = [
   'dive_buddy',
   'dive_equipment',
   'dive',
+  'boat',
   'equipment_set',
   'equipment',
   'buddy',
@@ -85,6 +87,9 @@ async function deleteCanonicalRows(
       return
     case 'dive':
       await transaction.delete(dives).where(inArray(dives.id, ids))
+      return
+    case 'boat':
+      await transaction.delete(boats).where(inArray(boats.id, ids))
       return
     case 'equipment_set':
       await transaction.delete(equipmentSets).where(inArray(equipmentSets.id, ids))
