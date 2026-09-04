@@ -212,6 +212,15 @@ hodor:
   sessionTtl: "86400"
   secureCookie: false
   logFormat: compact
+  # Set when Hodor sits behind another reverse proxy, so it resolves the real
+  # client address instead of the ingress address.
+  trustProxy: false
+  trustedProxyCidrs: []
+  # Client networks that skip the password prompt, such as a Tailscale tailnet.
+  bypassCidrs: []
+  # Request paths served without authentication, for endpoints a machine reaches
+  # directly. Exact unless the entry ends in /*.
+  bypassPaths: []
   resources:
     limits:
       cpu: 100m

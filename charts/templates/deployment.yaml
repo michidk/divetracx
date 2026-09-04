@@ -82,6 +82,9 @@ spec:
 {{- if and .Values.mcp.enabled (not .Values.hodor.enabled) }}
 {{- fail "hodor.enabled must be true when MCP is enabled because OAuth consent requires owner authentication" }}
 {{- end }}
+{{- if and .Values.hodor.trustedProxyCidrs (not .Values.hodor.trustProxy) }}
+{{- fail "hodor.trustProxy must be true when hodor.trustedProxyCidrs is set, because Hodor rejects that combination at startup" }}
+{{- end }}
 {{- if .Values.mcp.enabled }}
             - name: HODOR_SECRET
               valueFrom:
@@ -187,6 +190,22 @@ spec:
               value: {{ or .Values.hodor.secureCookie (not (empty .Values.ingress.tls)) | quote }}
             - name: LOG_FORMAT
               value: {{ .Values.hodor.logFormat | quote }}
+            {{- if .Values.hodor.trustProxy }}
+            - name: TRUST_PROXY
+              value: "true"
+            {{- end }}
+            {{- with .Values.hodor.trustedProxyCidrs }}
+            - name: TRUSTED_PROXY_CIDRS
+              value: {{ join "," . | quote }}
+            {{- end }}
+            {{- with .Values.hodor.bypassCidrs }}
+            - name: BYPASS_CIDRS
+              value: {{ join "," . | quote }}
+            {{- end }}
+            {{- with .Values.hodor.bypassPaths }}
+            - name: BYPASS_PATHS
+              value: {{ join "," . | quote }}
+            {{- end }}
           readinessProbe:
             httpGet:
               path: /_gate/health
