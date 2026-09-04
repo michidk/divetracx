@@ -14,7 +14,7 @@ import { SaveButton, useTransientSavedState } from '@/components/save-button'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { MCP_SCOPE_DETAILS, type McpScope, type McpToolName } from '@/modules/mcp/catalog'
 import {
@@ -210,16 +210,10 @@ export function McpSettingsPage({ state }: { state: McpAdminState }) {
             </p>
           )}
 
-          <div className="flex min-h-16 items-center gap-3 rounded-xl border border-border p-4">
-            <Checkbox
-              className="size-11"
-              checked={enabled}
-              onCheckedChange={(checked) => {
-                clearSaved()
-                setEnabled(checked === true)
-              }}
-              aria-label="Enable MCP access"
-            />
+          <label
+            htmlFor="mcp-enabled"
+            className="flex min-h-16 items-center justify-between gap-4 rounded-xl border border-border p-4"
+          >
             <span>
               <span className="block font-semibold">Enable MCP access</span>
               <span className="mt-1 block text-sm text-muted-foreground">
@@ -227,7 +221,15 @@ export function McpSettingsPage({ state }: { state: McpAdminState }) {
                 audit history.
               </span>
             </span>
-          </div>
+            <Switch
+              id="mcp-enabled"
+              checked={enabled}
+              onCheckedChange={(checked) => {
+                clearSaved()
+                setEnabled(checked)
+              }}
+            />
+          </label>
         </CardContent>
       </Card>
 
@@ -266,15 +268,11 @@ export function McpSettingsPage({ state }: { state: McpAdminState }) {
               <CardContent>
                 <div className="divide-y divide-border">
                   {tools.map((tool) => (
-                    <div key={tool.name} className="flex min-h-16 items-start gap-3 py-3">
-                      <Checkbox
-                        className="size-11"
-                        checked={!disabledTools.has(tool.name)}
-                        onCheckedChange={(checked) =>
-                          toggleTool(tool.name, checked === true)
-                        }
-                        aria-label={`Enable ${tool.title}`}
-                      />
+                    <label
+                      key={tool.name}
+                      htmlFor={`mcp-tool-${tool.name}`}
+                      className="flex min-h-16 items-start justify-between gap-3 py-3"
+                    >
                       <span className="min-w-0">
                         <span className="block text-sm font-semibold">{tool.title}</span>
                         <span className="mt-1 block text-xs leading-5 text-muted-foreground">
@@ -284,7 +282,13 @@ export function McpSettingsPage({ state }: { state: McpAdminState }) {
                           {tool.name}
                         </code>
                       </span>
-                    </div>
+                      <Switch
+                        id={`mcp-tool-${tool.name}`}
+                        className="mt-0.5"
+                        checked={!disabledTools.has(tool.name)}
+                        onCheckedChange={(checked) => toggleTool(tool.name, checked)}
+                      />
+                    </label>
                   ))}
                 </div>
               </CardContent>
