@@ -461,4 +461,54 @@ describe('remote MCP OAuth HTTP flow', () => {
     expect(location.pathname).toBe('/settings/mcp/authorize')
     expect(location.searchParams.get('request')).toBe('/oauth/authorize?client_id=x')
   })
+
+  test('consent lets the browser reach the client after approval', async () => {
+    const store = new MemoryOAuthStore()
+    const handle = createMcpHttpHandler(config, store, {
+      async fetch() {
+        return Response.json({ ok: true })
+      },
+    })
+
+    const registration = await handle(
+      request('/oauth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_name: 'ChatGPT',
+          redirect_uris: ['https://chatgpt.com/connector/oauth/ABC'],
+        }),
+      }),
+    )
+    const client = (await registration?.json()) as { client_id: string; scope: string }
+
+    // A client that omits `scope` is offered everything currently enabled, or
+    // the consent page can never present write and delete.
+    expect(client.scope.split(' ').sort()).toEqual([...MCP_SCOPE_VALUES].sort())
+
+    const authorize = new URL('/oauth/authorize', config.issuer)
+    authorize.search = form({
+      response_type: 'code',
+      client_id: client.client_id,
+      redirect_uri: 'https://chatgpt.com/connector/oauth/ABC',
+      scope: MCP_READ_SCOPE,
+      resource: config.serverUrl.toString(),
+      code_challenge: createHash('sha256').update('v'.repeat(43)).digest('base64url'),
+      code_challenge_method: 'S256',
+      state: 'state-csp',
+    }).toString()
+
+    const consent = await handle(
+      new Request(authorize, {
+        headers: { ...OWNER_HEADERS, Host: config.serverUrl.host },
+      }),
+    )
+    expect(consent?.status).toBe(200)
+
+    // form-action is enforced across the redirect the submission lands on, so
+    // omitting the client origin silently blocks the navigation.
+    const csp = consent?.headers.get('content-security-policy') ?? ''
+    expect(csp).toContain("form-action 'self' https://chatgpt.com")
+    expect(csp).toContain("frame-ancestors 'none'")
+  })
 })

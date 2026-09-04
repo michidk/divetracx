@@ -47,7 +47,7 @@ const registrationSchema = z.object({
     .optional()
     .default(['authorization_code', 'refresh_token']),
   response_types: z.array(z.literal('code')).min(1).optional().default(['code']),
-  scope: z.string().trim().max(500).optional().default(MCP_READ_SCOPE),
+  scope: z.string().trim().max(500).optional(),
 })
 
 function parseScopes(value: string, supportedScopes: readonly McpScope[]) {
@@ -143,7 +143,12 @@ function scopeInputName(scope: McpScope) {
   return `scope_${scope.replaceAll(':', '_')}`
 }
 
-function consentPage(clientName: string, request: Request, requestedScopes: McpScope[]) {
+function consentPage(
+  clientName: string,
+  request: Request,
+  requestedScopes: McpScope[],
+  redirectUri: string,
+) {
   const action = new URL(request.url)
   const scopeRows = requestedScopes
     .map((scope) => {
@@ -159,14 +164,22 @@ function consentPage(clientName: string, request: Request, requestedScopes: McpS
     })
     .join('')
   return new Response(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Authorize MCP access</title><style>body{font:16px system-ui;max-width:42rem;margin:8vh auto;padding:1.5rem;color:#102c31;background:#f4f8f8}main{border:1px solid #d3e1e2;border-radius:16px;padding:2rem;background:#fff}h1{margin-top:0}p{line-height:1.55;color:#425f64}label{display:flex;gap:.75rem;padding:1rem 0;border-top:1px solid #d3e1e2}label input{width:1.15rem;height:1.15rem;margin-top:.2rem}label span{display:grid;gap:.25rem}small{color:#597176;line-height:1.45}button{font:inherit;font-weight:600;padding:.7rem 1rem;margin:.75rem .5rem 0 0;border-radius:12px;border:1px solid #667;background:#fff}.approve{background:#087f8c;color:#fff;border-color:#087f8c}</style></head><body><main><h1>Authorize dive-log access?</h1><p><strong>${escapeHtml(clientName)}</strong> wants to connect to this Divetracx instance. Select the requested permissions you want to grant.</p><form method="post" action="${escapeHtml(action.pathname + action.search)}">${scopeRows}<p>Write and delete permissions are never selected automatically. You can revoke this client later in Settings → MCP.</p><button class="approve" name="decision" value="approve">Authorize</button><button name="decision" value="deny">Deny</button></form></main></body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Authorize MCP access</title><style>body{font:16px system-ui;max-width:42rem;margin:8vh auto;padding:1.5rem;color:#102c31;background:#f4f8f8}main{border:1px solid #d3e1e2;border-radius:16px;padding:2rem;background:#fff}h1{margin-top:0}p{line-height:1.55;color:#425f64}label{display:flex;gap:.75rem;padding:1rem 0;border-top:1px solid #d3e1e2}label input{width:1.15rem;height:1.15rem;margin-top:.2rem}label span{display:grid;gap:.25rem}small{color:#597176;line-height:1.45}button{font:inherit;font-weight:600;padding:.7rem 1rem;margin:.75rem .5rem 0 0;border-radius:12px;border:1px solid #667;background:#fff;cursor:pointer}.approve{background:#087f8c;color:#fff;border-color:#087f8c}</style></head><body><main><h1>Authorize dive-log access?</h1><p><strong>${escapeHtml(clientName)}</strong> wants to connect to this Divetracx instance. Select the requested permissions you want to grant.</p><form method="post" action="${escapeHtml(action.pathname + action.search)}">${scopeRows}<p>Write and delete permissions are never selected automatically. You can revoke this client later in Settings → MCP.</p><button class="approve" name="decision" value="approve">Authorize</button><button name="decision" value="deny">Deny</button></form></main></body></html>`,
     {
       status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
         'Cache-Control': 'no-store',
-        'Content-Security-Policy':
-          "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+        'Content-Security-Policy': [
+          "default-src 'none'",
+          "style-src 'unsafe-inline'",
+          // Approving redirects to the client, and form-action is enforced
+          // across that redirect: with only 'self' the browser silently drops
+          // the navigation and the button looks broken.
+          `form-action 'self' ${new URL(redirectUri).origin}`,
+          "frame-ancestors 'none'",
+          "base-uri 'none'",
+        ].join('; '),
         'X-Frame-Options': 'DENY',
       },
     },
@@ -273,7 +286,10 @@ export function createOAuthHttpHandler(
         if (Buffer.byteLength(registrationBody) > 32_768)
           return json({ error: 'invalid_client_metadata' }, { status: 413 })
         const registration = registrationSchema.parse(JSON.parse(registrationBody))
-        const registrationScopes = parseScopes(registration.scope, supportedScopes)
+        const registrationScopes = parseScopes(
+          registration.scope ?? supportedScopes.join(' '),
+          supportedScopes,
+        )
         if (!registration.grant_types.includes('authorization_code')) {
           return json(
             {
@@ -351,7 +367,12 @@ export function createOAuthHttpHandler(
         }
         if (request.method === 'GET') {
           const requestedScopes = authorization.scopes.map(({ name }) => name as McpScope)
-          return consentPage(authorization.client.name, request, requestedScopes)
+          return consentPage(
+            authorization.client.name,
+            request,
+            requestedScopes,
+            authorization.redirectUri,
+          )
         }
 
         const origin = request.headers.get('origin')
