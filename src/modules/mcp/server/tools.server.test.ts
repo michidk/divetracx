@@ -236,10 +236,9 @@ describe('Divetracx MCP tools', () => {
       params: {},
     })
     const tools: { name: string; outputSchema?: unknown }[] = listed.result.tools
-    // Tracked as the shrinking remainder rather than the growing declared set,
-    // so finishing one of these has to update this list deliberately.
+    // Every tool now declares its result shape.
     const undeclared = tools.filter((tool) => !tool.outputSchema).map((tool) => tool.name)
-    expect(undeclared).toEqual(['get_buddy', 'get_profile', 'get_dive_editor_options'])
+    expect(undeclared).toEqual([])
 
     // Nullable columns stay nullable: the demo dataset happens to populate these,
     // but a real logbook does not have to.

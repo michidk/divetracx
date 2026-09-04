@@ -99,7 +99,14 @@ export const listBuddiesOutput = z.array(
     instructor: z.boolean(),
     diveCount: z.number().int(),
     lastDiveDate: isoDate,
-    profileImage: optionalText.describe('Relative media path, when a photo exists'),
+    profileImage: z
+      .looseObject({
+        id: z.string(),
+        buddyId: id,
+        storagePath: optionalText,
+        thumbnailStoragePath: optionalText,
+      })
+      .nullable(),
   }),
 )
 
@@ -345,6 +352,190 @@ export const getGearItemOutput = z.looseObject({
       storagePath: optionalText,
       thumbnailStoragePath: optionalText,
       description: optionalText,
+    }),
+  ),
+})
+
+const agencyElement = z.looseObject({
+  id,
+  code: optionalText,
+  name: optionalText,
+  fullName: optionalText,
+  normalizedName: optionalText,
+  logoSrc: optionalText,
+  websiteUrl: optionalText,
+  loginUrl: optionalText,
+  darkLogo: z.boolean(),
+  builtIn: z.boolean(),
+  createdAt: isoTimestamp,
+  updatedAt: isoTimestamp,
+})
+
+export const getBuddyOutput = z.looseObject({
+  buddy: z.looseObject({
+    id,
+    firstName: optionalText,
+    lastName: optionalText,
+    email: optionalText,
+    phone: optionalText,
+    street: optionalText,
+    postalCode: optionalText,
+    city: optionalText,
+    state: optionalText,
+    country: optionalText,
+    emergencyContact: optionalText,
+    emergencyPhone: optionalText,
+    emergencyEmail: optionalText,
+    instructor: z.boolean(),
+    minimumDives: z.number().int().nullable(),
+    notes: optionalText,
+    createdAt: isoTimestamp,
+    updatedAt: isoTimestamp,
+  }),
+  // Narrower than a dive photo: only what is needed to render an avatar.
+  profileImage: z
+    .looseObject({
+      id: z.string(),
+      storagePath: optionalText,
+      thumbnailStoragePath: optionalText,
+    })
+    .nullable(),
+  dives: z.array(diveUsage),
+  // Buddy certifications and memberships come from their own tables and are
+  // spread whole, so only the stable columns are named and the rest pass through.
+  certifications: z.array(
+    z.looseObject({
+      id,
+      buddyId: id,
+      agencyId: id,
+      name: optionalText,
+      createdAt: isoTimestamp,
+      updatedAt: isoTimestamp,
+      agency: agencyElement,
+    }),
+  ),
+  agencyMemberships: z.array(
+    z.looseObject({
+      id,
+      buddyId: id,
+      agencyId: id,
+      memberNumber: optionalText,
+      createdAt: isoTimestamp,
+      updatedAt: isoTimestamp,
+      agency: agencyElement,
+    }),
+  ),
+})
+
+export const getProfileOutput = z.looseObject({
+  diver: z
+    .looseObject({
+      id,
+      firstName: optionalText,
+      lastName: optionalText,
+      email: optionalText,
+      phone: optionalText,
+      street: optionalText,
+      postalCode: optionalText,
+      city: optionalText,
+      state: optionalText,
+      country: optionalText,
+      birthDate: isoDate,
+      bloodGroup: optionalText,
+      emergencyContact: optionalText,
+      emergencyPhone: optionalText,
+      emergencyEmail: optionalText,
+      showEmergencyOnCard: z.boolean(),
+      insurance: optionalText,
+      insuranceTariff: optionalText,
+      insuranceNumber: optionalText,
+      insuranceHotline: optionalText,
+      showInsuranceOnCard: z.boolean(),
+      notes: optionalText,
+      createdAt: isoTimestamp,
+      updatedAt: isoTimestamp,
+    })
+    .nullable(),
+  profileImage: z
+    .looseObject({
+      id: z.string(),
+      path: optionalText,
+      storagePath: optionalText,
+      thumbnailStoragePath: optionalText,
+      description: optionalText,
+    })
+    .nullable(),
+  certifications: z.array(
+    z.looseObject({
+      id,
+      name: optionalText,
+      organization: optionalText,
+      certificationNumber: optionalText,
+      certifiedAt: isoDate,
+      featuredOnCard: z.boolean(),
+      updatedAt: isoTimestamp,
+      instructor: z
+        .looseObject({ id, firstName: optionalText, lastName: optionalText })
+        .nullable(),
+      // Composed as `<certification>-front`, so not a UUID.
+      scans: z.array(
+        z.looseObject({
+          id: z.string(),
+          path: optionalText,
+          storagePath: optionalText,
+          thumbnailStoragePath: optionalText,
+          description: optionalText,
+        }),
+      ),
+    }),
+  ),
+  agencyMemberships: z.array(
+    z.looseObject({
+      id,
+      diverId: id,
+      agencyId: id,
+      memberNumber: optionalText,
+      createdAt: isoTimestamp,
+      updatedAt: isoTimestamp,
+      agency: agencyElement,
+    }),
+  ),
+  logbook: z.looseObject({
+    totalDives: z.number().int(),
+    totalSeconds: z.number().int(),
+    firstDiveDate: isoDate,
+    latestDiveDate: isoDate,
+    // Computed rather than read from a numeric column, so a number here.
+    maximumDepthMeters: z.number().nullable().describe('Metres'),
+    visitedSites: z.number().int(),
+  }),
+})
+
+// The tool flattens the editor's `options` to the top level and keeps only the
+// next dive number, so the dive being edited is deliberately absent.
+export const diveEditorOptionsOutput = z.object({
+  nextNumber: z.number().int().nullable(),
+  sites: z.array(z.looseObject({ id, name: z.string(), country: optionalText })),
+  shops: z.array(z.looseObject({ id, name: z.string() })),
+  boats: z.array(z.looseObject({ id, name: z.string() })),
+  diveTypes: z.array(z.looseObject({ id, name: z.string() })),
+  buddies: z.array(
+    z.looseObject({ id, firstName: optionalText, lastName: optionalText }),
+  ),
+  equipment: z.array(
+    z.looseObject({
+      id,
+      name: z.string(),
+      category: optionalText,
+      inactive: z.boolean(),
+    }),
+  ),
+  equipmentSets: z.array(
+    z.looseObject({
+      id,
+      name: z.string(),
+      inactive: z.boolean(),
+      equipmentIds: z.array(z.string()),
     }),
   ),
 })

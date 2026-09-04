@@ -28,9 +28,12 @@ import {
 import { loadProfile } from '@/modules/profile/server/queries.server'
 import { loadSiteDetail, loadSitesOverview } from '@/modules/sites/server/queries.server'
 import {
+  diveEditorOptionsOutput,
   divingStatisticsOutput,
+  getBuddyOutput,
   getDiveOutput,
   getGearItemOutput,
+  getProfileOutput,
   listBuddiesOutput,
   listDiveSitesOutput,
   listGearOutput,
@@ -215,7 +218,8 @@ export function createDivetracxMcpServer(
         outputSchema: searchDivesOutput,
         annotations: readOnlyAnnotations,
       },
-      async ({ query, page }) => jsonToolResult(await loaders.loadDives(query, page)),
+      async ({ query, page }) =>
+        readResult(searchDivesOutput, await loaders.loadDives(query, page)),
     )
 
   if (allowed('get_dive'))
@@ -307,7 +311,7 @@ export function createDivetracxMcpServer(
         outputSchema: listBuddiesOutput,
         annotations: readOnlyAnnotations,
       },
-      async () => jsonToolResult(await loaders.loadBuddiesOverview()),
+      async () => readResult(listBuddiesOutput, await loaders.loadBuddiesOverview()),
     )
 
   if (allowed('get_buddy'))
@@ -317,12 +321,13 @@ export function createDivetracxMcpServer(
         title: 'Get buddy details',
         description: 'Get one buddy with certifications, memberships, and shared dives.',
         inputSchema: z.object({ buddyId: z.string().uuid() }),
+        outputSchema: getBuddyOutput,
         annotations: readOnlyAnnotations,
       },
       async ({ buddyId }) => {
         const buddy = await loaders.loadBuddyDetail(buddyId)
         return buddy
-          ? jsonToolResult(buddy)
+          ? readResult(getBuddyOutput, buddy)
           : errorToolResult(new Error('Buddy not found'))
       },
     )
@@ -337,7 +342,7 @@ export function createDivetracxMcpServer(
         outputSchema: listGearOutput,
         annotations: readOnlyAnnotations,
       },
-      async () => jsonToolResult(await loaders.loadGearOverview()),
+      async () => readResult(listGearOutput, await loaders.loadGearOverview()),
     )
 
   if (allowed('get_gear_item'))
@@ -365,9 +370,10 @@ export function createDivetracxMcpServer(
         title: 'Get diver profile',
         description: 'Get the owner profile, certifications, memberships, and totals.',
         inputSchema: z.object({}),
+        outputSchema: getProfileOutput,
         annotations: readOnlyAnnotations,
       },
-      async () => jsonToolResult(await loaders.loadProfile()),
+      async () => readResult(getProfileOutput, await loaders.loadProfile()),
     )
 
   if (allowed('get_dive_editor_options'))
@@ -378,11 +384,12 @@ export function createDivetracxMcpServer(
         description:
           'Get valid sites, dive operators, boats, dive types, buddies, gear items, and gear sets for creating or updating a dive.',
         inputSchema: z.object({}),
+        outputSchema: diveEditorOptionsOutput,
         annotations: readOnlyAnnotations,
       },
       async () => {
         const editor = await loaders.loadDiveEditor(null)
-        return jsonToolResult({
+        return readResult(diveEditorOptionsOutput, {
           nextNumber: editor?.nextNumber ?? null,
           ...editor?.options,
         })
