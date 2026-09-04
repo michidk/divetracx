@@ -88,3 +88,12 @@ so it has to stay behind the gate.
 {{- end -}}
 {{- join "," (uniq $paths) -}}
 {{- end -}}
+
+{{/*
+Whether Hodor forwards the original Host header. MCP validates the raw Host on
+its protocol and OAuth endpoints, so replacing it with the upstream authority
+makes every MCP request fail with "Invalid Host".
+*/}}
+{{- define "divetracx.hodorPreserveHost" -}}
+{{- or .Values.hodor.preserveHost .Values.mcp.enabled | ternary "true" "false" -}}
+{{- end -}}

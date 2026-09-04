@@ -194,6 +194,7 @@
         "trustProxy": { "type": "boolean" },
         "trustedProxyCidrs": { "type": "array", "items": { "type": "string" } },
         "bypassCidrs": { "type": "array", "items": { "type": "string" } },
+        "preserveHost": { "type": "boolean" },
         "bypassPaths": {
           "type": "array",
           "items": { "type": "string", "pattern": "^/([^*]*(/\\*)?)?$" }

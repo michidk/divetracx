@@ -213,6 +213,9 @@ hodor:
   # Request paths served without authentication, for endpoints a machine reaches
   # directly. Exact unless the entry ends in /*.
   bypassPaths: []
+  # Forward the original Host instead of the upstream authority. Forced on when
+  # MCP is enabled, because MCP validates the Host header it receives.
+  preserveHost: false
   resources:
     limits:
       cpu: 100m

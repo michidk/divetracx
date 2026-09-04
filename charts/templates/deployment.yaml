@@ -206,6 +206,8 @@ spec:
             - name: BYPASS_PATHS
               value: {{ . | quote }}
             {{- end }}
+            - name: PRESERVE_HOST
+              value: {{ include "divetracx.hodorPreserveHost" . | quote }}
           readinessProbe:
             httpGet:
               path: /_gate/health
