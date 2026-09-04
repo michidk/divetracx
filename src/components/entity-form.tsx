@@ -7,6 +7,7 @@ import { DayPicker } from 'react-day-picker'
 import { SaveButton, useTransientSavedState } from '@/components/save-button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
@@ -269,14 +270,19 @@ function FieldControl({
       {field.label}
       {field.required ? <span className="text-red-600"> *</span> : null}
       {field.kind === 'textarea' ? (
-        <Textarea
-          id={inputId}
-          value={stringValue}
-          required={field.required}
-          rows={5}
-          onChange={(event) => onChange(event.target.value)}
-          className="mt-2"
-        />
+        <ScrollArea
+          className="mt-2 h-36 overflow-hidden rounded-xl border border-border bg-background"
+          viewportClassName="rounded-[inherit]"
+        >
+          <Textarea
+            id={inputId}
+            value={stringValue}
+            required={field.required}
+            rows={5}
+            onChange={(event) => onChange(event.target.value)}
+            className="min-h-full resize-none rounded-none border-0 bg-transparent focus:border-0 focus:ring-0 [field-sizing:content]"
+          />
+        </ScrollArea>
       ) : (
         <Input
           id={inputId}

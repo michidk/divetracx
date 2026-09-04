@@ -212,6 +212,7 @@ export async function renderProfileCard() {
           <stop stop-color="#38bfc2" />
           <stop offset="1" stop-color="#0a4557" />
         </linearGradient>
+        <clipPath id="card"><rect width="1200" height="630" rx="38" /></clipPath>
         <clipPath id="avatar"><circle cx="230" cy="260" r="150" /></clipPath>
         <clipPath id="agencyLogo" clipPathUnits="userSpaceOnUse"><rect x="5" y="5" width="34" height="34" rx="8" /></clipPath>
         <clipPath id="skillLabel" clipPathUnits="userSpaceOnUse"><rect x="42" y="0" width="255" height="42" /></clipPath>
@@ -229,10 +230,12 @@ export async function renderProfileCard() {
           .membershipFallback { font-size: 10px; font-weight: 700; fill: #087f8c; }
         </style>
       </defs>
-      <rect width="1200" height="630" rx="38" fill="url(#ocean)" />
-      <circle cx="1130" cy="-20" r="250" fill="#6ce3df" fill-opacity="0.07" />
-      <circle cx="1080" cy="590" r="170" fill="#ffffff" fill-opacity="0.04" />
-      <path d="M0 535 C250 475 330 620 610 550 C820 498 980 505 1200 555 L1200 630 L0 630 Z" fill="#021c27" fill-opacity="0.34" />
+      <g clip-path="url(#card)">
+        <rect width="1200" height="630" fill="url(#ocean)" />
+        <circle cx="1130" cy="-20" r="250" fill="#6ce3df" fill-opacity="0.07" />
+        <circle cx="1080" cy="590" r="170" fill="#ffffff" fill-opacity="0.04" />
+        <path d="M0 535 C250 475 330 620 610 550 C820 498 980 505 1200 555 L1200 630 L0 630 Z" fill="#021c27" fill-opacity="0.34" />
+      </g>
 
       <g transform="translate(920 55)">
         <path d="M18 16H26L25 27L22 37L18 40L20 28Z M22 2L17 -5L11 1L-3 -2L2 11L13 23L19 20L22 15L25 20L31 23L42 11L47 -2L33 1L27 -5Z" fill="#8ce7e6" transform="translate(4 5) scale(.72)" />

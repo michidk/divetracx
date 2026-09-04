@@ -1,12 +1,12 @@
 import { Link } from '@tanstack/react-router'
 import { Award, Clock3, Plus, Waves } from 'lucide-react'
 import { EntityForm } from '@/components/entity-form'
+import { ProfileImage } from '@/components/profile-image'
 import { StatCard } from '@/components/stat-card'
 import { formatDiveDate, formatPersonName } from '@/modules/dives/format'
 import type { getProfile } from '@/modules/profile/server/queries'
 import { AgencyMembershipList } from './agency-membership-list'
 import { CertificationList } from './certification-list'
-import { ProfileImage } from './profile-image'
 import { SkillCard } from './skill-card'
 
 type ProfileData = Awaited<ReturnType<typeof getProfile>>
@@ -51,7 +51,12 @@ export function ProfilePage({ profile }: { profile: ProfileData }) {
               : 'Your personal details, emergency information, and certifications.'}
           </p>
         </div>
-        <ProfileImage diverId={diver?.id ?? null} image={profile.profileImage} />
+        <ProfileImage
+          target="profile"
+          personId={diver?.id ?? null}
+          personLabel="Diver"
+          image={profile.profileImage}
+        />
       </header>
 
       <section className="grid gap-4 sm:grid-cols-3">
@@ -68,28 +73,6 @@ export function ProfilePage({ profile }: { profile: ProfileData }) {
         <StatCard icon={Award} label="Certifications" value={certifications.length} />
       </section>
 
-      <section>
-        <div className="mb-3 flex items-center justify-between gap-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Agency memberships
-          </h2>
-          <Link
-            to="/profile/agencies/$agencyMembershipId"
-            params={{ agencyMembershipId: 'new' }}
-            className="inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-          >
-            <Plus size={15} aria-hidden="true" /> Add agency
-          </Link>
-        </div>
-        {agencyMemberships.length === 0 ? (
-          <p className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-            No agency memberships yet.
-          </p>
-        ) : (
-          <AgencyMembershipList memberships={agencyMemberships} />
-        )}
-      </section>
-
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.9fr)]">
         <div className="space-y-7">
           <SkillCard imageVersion={cardVersion} />
@@ -102,11 +85,37 @@ export function ProfilePage({ profile }: { profile: ProfileData }) {
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Personal details
           </h2>
-          {diver ? (
-            <EntityForm entity="divers" recordId={diver.id} record={diver} />
-          ) : (
-            <EntityForm entity="divers" recordId="new" record={null} />
-          )}
+          <EntityForm
+            entity="divers"
+            recordId={diver?.id ?? 'new'}
+            record={diver}
+            renderSectionExtra={(section) => {
+              if (section !== 'Notes') return null
+              return (
+                <div className="mt-6 border-t border-border pt-5">
+                  <div className="mb-3 flex items-center justify-between gap-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                      Agency memberships
+                    </h3>
+                    <Link
+                      to="/profile/agencies/$agencyMembershipId"
+                      params={{ agencyMembershipId: 'new' }}
+                      className="inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+                    >
+                      <Plus size={15} aria-hidden="true" /> Add agency
+                    </Link>
+                  </div>
+                  {agencyMemberships.length === 0 ? (
+                    <p className="rounded-xl bg-muted/50 p-5 text-center text-sm text-muted-foreground">
+                      No agency memberships yet.
+                    </p>
+                  ) : (
+                    <AgencyMembershipList memberships={agencyMemberships} />
+                  )}
+                </div>
+              )
+            }}
+          />
         </div>
       </div>
     </div>

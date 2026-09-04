@@ -5,21 +5,27 @@ import diverFallbackUrl from '@/assets/diver-fallback.png?url'
 import { Button } from '@/components/ui/button'
 import { deletePicture } from '@/modules/media/server/mutations'
 
-interface ProfileImageRecord {
+export interface ProfileImageRecord {
   id: string
   storagePath: string | null
   thumbnailStoragePath: string | null
 }
+
+type ProfileImageTarget = 'profile' | 'buddy'
 
 function mediaUrl(path: string) {
   return `/media/${path.split('/').map(encodeURIComponent).join('/')}`
 }
 
 export function ProfileImage({
-  diverId,
+  target,
+  personId,
+  personLabel,
   image,
 }: {
-  diverId: string | null
+  target: ProfileImageTarget
+  personId: string | null
+  personLabel: string
   image: ProfileImageRecord | null
 }) {
   const router = useRouter()
@@ -27,16 +33,17 @@ export function ProfileImage({
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const imagePath = image?.thumbnailStoragePath ?? image?.storagePath
+  const normalizedLabel = personLabel.toLowerCase()
 
   async function upload(files: FileList | null) {
     const file = files?.item(0)
-    if (!file || !diverId) return
+    if (!file || !personId) return
     setBusy(true)
     setMessage(null)
     try {
       const form = new FormData()
-      form.set('target', 'profile')
-      form.set('id', diverId)
+      form.set('target', target)
+      form.set('id', personId)
       form.set('files', file)
       const response = await fetch('/api/media/upload', { method: 'POST', body: form })
       if (!response.ok) {
@@ -55,7 +62,7 @@ export function ProfileImage({
   }
 
   async function remove() {
-    if (!image || !window.confirm('Remove your profile image?')) return
+    if (!image || !window.confirm(`Remove this ${normalizedLabel} image?`)) return
     setBusy(true)
     setMessage(null)
     try {
@@ -74,7 +81,7 @@ export function ProfileImage({
         {imagePath ? (
           <img
             src={mediaUrl(imagePath)}
-            alt="Diver profile"
+            alt={`${personLabel} profile`}
             className="size-full object-cover"
           />
         ) : (
@@ -90,7 +97,7 @@ export function ProfileImage({
         type="file"
         accept="image/jpeg,image/png,image/webp,image/gif"
         className="sr-only"
-        aria-label="Choose a profile image"
+        aria-label={`Choose a ${normalizedLabel} image`}
         onChange={(event) => void upload(event.target.files)}
       />
       <div className="flex flex-wrap justify-center gap-2">
@@ -98,7 +105,7 @@ export function ProfileImage({
           type="button"
           size="sm"
           variant="outline"
-          disabled={busy || !diverId}
+          disabled={busy || !personId}
           onClick={() => inputRef.current?.click()}
         >
           <Camera size={15} aria-hidden="true" />
@@ -110,16 +117,16 @@ export function ProfileImage({
             size="sm"
             variant="ghost"
             disabled={busy}
-            aria-label="Remove profile image"
+            aria-label={`Remove ${normalizedLabel} image`}
             onClick={() => void remove()}
           >
             <Trash2 size={15} aria-hidden="true" />
           </Button>
         ) : null}
       </div>
-      {!diverId ? (
+      {!personId ? (
         <p className="max-w-48 text-center text-xs text-muted-foreground sm:text-right">
-          Save your personal details before adding an image.
+          Save {normalizedLabel} details before adding an image.
         </p>
       ) : null}
       <p aria-live="polite" className="max-w-56 text-center text-xs text-red-600">

@@ -1,8 +1,11 @@
 import { Download } from 'lucide-react'
+import { useState } from 'react'
+import { ImageLightbox } from '@/components/image-lightbox'
 import { Button } from '@/components/ui/button'
 
 export function SkillCard({ imageVersion }: { imageVersion: string }) {
   const previewUrl = `/profile-card.png?v=${encodeURIComponent(imageVersion)}`
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   return (
     <section aria-labelledby="skill-card-heading">
@@ -27,10 +30,23 @@ export function SkillCard({ imageVersion }: { imageVersion: string }) {
           <Download size={15} aria-hidden="true" /> Download PNG
         </Button>
       </div>
-      <img
+      <button
+        type="button"
+        onClick={() => setLightboxOpen(true)}
+        className="block w-full overflow-hidden rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        aria-label="Open Divetracx diver skill card"
+      >
+        <img
+          src={previewUrl}
+          alt="Divetracx diver skill card preview"
+          className="block aspect-[1200/630] w-full transition-transform hover:scale-[1.02]"
+        />
+      </button>
+      <ImageLightbox
         src={previewUrl}
-        alt="Divetracx diver skill card preview"
-        className="block aspect-[1200/630] w-full"
+        alt="Divetracx diver skill card"
+        open={lightboxOpen}
+        onOpenChange={setLightboxOpen}
       />
     </section>
   )

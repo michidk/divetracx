@@ -189,6 +189,24 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
       { key: 'state', label: 'State / province', kind: 'text', section: 'Address' },
       { key: 'country', label: 'Country', kind: 'text', section: 'Address' },
       {
+        key: 'emergencyContact',
+        label: 'Contact',
+        kind: 'text',
+        section: 'Emergency Contact',
+      },
+      {
+        key: 'emergencyPhone',
+        label: 'Phone',
+        kind: 'tel',
+        section: 'Emergency Contact',
+      },
+      {
+        key: 'emergencyEmail',
+        label: 'Email',
+        kind: 'email',
+        section: 'Emergency Contact',
+      },
+      {
         key: 'instructor',
         label: 'Instructor',
         kind: 'checkbox',

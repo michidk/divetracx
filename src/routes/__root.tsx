@@ -19,8 +19,8 @@ export const Route = createRootRoute({
       },
     ],
     links: [
-      { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
-      { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+      { rel: 'icon', type: 'image/png', href: '/divetracx-logo-v2.png' },
+      { rel: 'apple-touch-icon', href: '/divetracx-logo-v2.png' },
     ],
   }),
   component: () => (

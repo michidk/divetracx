@@ -1,5 +1,5 @@
-import { X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
+import { ImageLightbox } from '@/components/image-lightbox'
 
 export interface GalleryPicture {
   id: string
@@ -21,21 +21,6 @@ export function PictureGallery({
   onDelete?: (picture: GalleryPicture) => void
 }) {
   const [selected, setSelected] = useState<GalleryPicture | null>(null)
-  const closeButton = useRef<HTMLButtonElement>(null)
-
-  useEffect(() => {
-    if (!selected) return
-    const close = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSelected(null)
-    }
-    document.addEventListener('keydown', close)
-    document.body.style.overflow = 'hidden'
-    closeButton.current?.focus()
-    return () => {
-      document.removeEventListener('keydown', close)
-      document.body.style.overflow = ''
-    }
-  }, [selected])
 
   return (
     <>
@@ -79,30 +64,14 @@ export function PictureGallery({
       </ul>
 
       {selected?.storagePath ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={selected.description || 'Picture'}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 md:p-8"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setSelected(null)
+        <ImageLightbox
+          src={mediaUrl(selected.storagePath)}
+          alt={selected.description || 'Picture'}
+          open
+          onOpenChange={(open) => {
+            if (!open) setSelected(null)
           }}
-        >
-          <button
-            ref={closeButton}
-            type="button"
-            onClick={() => setSelected(null)}
-            className="absolute right-4 top-4 flex size-11 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 focus-visible:outline-2 focus-visible:outline-white"
-            aria-label="Close picture"
-          >
-            <X aria-hidden="true" />
-          </button>
-          <img
-            src={mediaUrl(selected.storagePath)}
-            alt={selected.description || 'Picture'}
-            className="max-h-full max-w-full object-contain"
-          />
-        </div>
+        />
       ) : null}
     </>
   )

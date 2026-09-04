@@ -1,16 +1,20 @@
 import { Link } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
+import diverFallbackUrl from '@/assets/diver-fallback.png?url'
 import { Badge } from '@/components/ui/badge'
 import type { getBuddies } from '@/modules/buddies/server/queries'
 import { formatDiveDate, formatPersonName } from '@/modules/dives/format'
 
 type BuddiesData = Awaited<ReturnType<typeof getBuddies>>
 
-function initials(buddy: BuddiesData[number]) {
-  const letters = [buddy.firstName, buddy.lastName]
-    .map((name) => name?.trim().charAt(0) ?? '')
-    .join('')
-  return letters.toUpperCase() || '?'
+function mediaUrl(path: string) {
+  return `/media/${path.split('/').map(encodeURIComponent).join('/')}`
+}
+
+function profileImageUrl(buddy: BuddiesData[number]) {
+  const imagePath =
+    buddy.profileImage?.thumbnailStoragePath ?? buddy.profileImage?.storagePath
+  return imagePath ? mediaUrl(imagePath) : diverFallbackUrl
 }
 
 export function BuddiesPage({ buddies }: { buddies: BuddiesData }) {
@@ -48,8 +52,12 @@ export function BuddiesPage({ buddies }: { buddies: BuddiesData }) {
               className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <div className="flex items-center gap-4">
-                <span className="grid size-12 shrink-0 place-items-center rounded-full bg-accent font-semibold text-primary">
-                  {initials(buddy)}
+                <span className="size-12 shrink-0 overflow-hidden rounded-full bg-accent">
+                  <img
+                    src={profileImageUrl(buddy)}
+                    alt={`${formatPersonName(buddy)} profile`}
+                    className="size-full object-cover"
+                  />
                 </span>
                 <span className="min-w-0">
                   <span className="flex min-w-0 items-center gap-2">

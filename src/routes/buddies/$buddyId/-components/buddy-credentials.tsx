@@ -15,7 +15,7 @@ export function BuddyCredentials({
   memberships: BuddyDetail['agencyMemberships']
 }) {
   return (
-    <div className="space-y-6">
+    <div className="grid gap-6 lg:grid-cols-2">
       <section>
         <div className="mb-3 flex items-center justify-between gap-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">

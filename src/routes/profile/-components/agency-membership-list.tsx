@@ -13,7 +13,7 @@ export function AgencyMembershipList({
   memberships: AgencyMembership[]
 }) {
   return (
-    <ul className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <ul className="grid min-w-0 gap-4">
       {memberships.map((membership) => {
         const displayName = membership.agency.name
         return (
