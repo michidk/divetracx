@@ -126,12 +126,12 @@ export async function saveDiveEntry(input: DiveEntryInput) {
     rating: dive.rating === 0 ? null : dive.rating,
     computer: text(dive.computer),
     suit: text(dive.suit),
-    boat: text(dive.boat),
     notes: text(dive.notes),
     updatedAt: new Date(),
   }
   const parsedTanks = parseTanks(input.tanks)
   const shopId = text(dive.shopId)
+  const boatId = text(dive.boatId)
   const diveTypeId = text(dive.diveTypeId)
 
   return getDb().transaction(async (transaction) => {
@@ -144,14 +144,20 @@ export async function saveDiveEntry(input: DiveEntryInput) {
         .limit(1)
       const [row] = await transaction
         .insert(dives)
-        .values({ ...fields, shopId, diveTypeId, diverId: primaryDiver?.id ?? null })
+        .values({
+          ...fields,
+          shopId,
+          boatId,
+          diveTypeId,
+          diverId: primaryDiver?.id ?? null,
+        })
         .returning({ id: dives.id })
       if (!row) throw new Error('The dive could not be created')
       diveRowId = row.id
     } else {
       const [row] = await transaction
         .update(dives)
-        .set({ ...fields, shopId, diveTypeId })
+        .set({ ...fields, shopId, boatId, diveTypeId })
         .where(eq(dives.id, input.diveId))
         .returning({ id: dives.id })
       if (!row) throw new Error('The dive was not found')

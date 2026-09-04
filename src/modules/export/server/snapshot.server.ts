@@ -4,6 +4,7 @@ import { getDb } from '@/db'
 import {
   agencies,
   agencyMemberships,
+  boats,
   buddies,
   buddyAgencyMemberships,
   buddyCertifications,
@@ -29,7 +30,7 @@ export async function loadExportSnapshot(): Promise<ExportSnapshot> {
   return getDb().transaction(
     async (transaction) => ({
       format: 'divetracx-backup',
-      version: 15,
+      version: 16,
       exportedAt: new Date().toISOString(),
       data: {
         agencies: await transaction.select().from(agencies),
@@ -44,6 +45,7 @@ export async function loadExportSnapshot(): Promise<ExportSnapshot> {
         certifications: await transaction.select().from(certifications),
         agencyMemberships: await transaction.select().from(agencyMemberships),
         shops: await transaction.select().from(shops),
+        boats: await transaction.select().from(boats),
         diveTypes: await transaction.select().from(diveTypes),
         dives: await transaction.select().from(dives),
         diveBuddies: await transaction.select().from(diveBuddies),

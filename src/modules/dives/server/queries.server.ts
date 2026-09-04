@@ -3,6 +3,7 @@ import '@tanstack/react-start/server-only'
 import { and, asc, count, desc, eq, sql } from 'drizzle-orm'
 import { getDb } from '@/db'
 import {
+  boats,
   buddies,
   diveBuddies,
   diveEquipment,
@@ -235,7 +236,7 @@ export async function loadDive(diveId: string) {
           rating: dives.rating,
           computer: dives.computer,
           suit: dives.suit,
-          boat: dives.boat,
+          boatName: boats.name,
           notes: dives.notes,
           updatedAt: dives.updatedAt,
           diver: {
@@ -264,6 +265,7 @@ export async function loadDive(diveId: string) {
         .leftJoin(divers, eq(dives.diverId, divers.id))
         .leftJoin(diveSites, eq(dives.siteId, diveSites.id))
         .leftJoin(shops, eq(dives.shopId, shops.id))
+        .leftJoin(boats, eq(dives.boatId, boats.id))
         .leftJoin(diveTypes, eq(dives.diveTypeId, diveTypes.id))
         .where(eq(dives.id, diveId))
         .limit(1)

@@ -8,6 +8,7 @@ import {
   ListOrdered,
   RefreshCw,
   ScrollText,
+  Ship,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -40,6 +41,12 @@ const sections = [
     label: 'Dive types',
     description: 'Rename imported classifications or add your own dive types.',
     icon: Fish,
+  },
+  {
+    to: '/settings/operators-boats',
+    label: 'Dive operators & boats',
+    description: 'List and rename the operators and boats used by your dives.',
+    icon: Ship,
   },
   {
     to: '/settings/agencies',

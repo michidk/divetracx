@@ -95,6 +95,12 @@ export const shops = pgTable('shops', {
   ...auditColumns,
 })
 
+export const boats = pgTable('boats', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  ...auditColumns,
+})
+
 export const equipment = pgTable('equipment', {
   id: uuid('id').primaryKey().defaultRandom(),
   diverId: uuid('diver_id').references(() => divers.id, {
@@ -277,6 +283,9 @@ export const dives = pgTable(
     shopId: uuid('shop_id').references(() => shops.id, {
       onDelete: 'set null',
     }),
+    boatId: uuid('boat_id').references(() => boats.id, {
+      onDelete: 'set null',
+    }),
     diveTypeId: uuid('dive_type_id').references(() => diveTypes.id, {
       onDelete: 'set null',
     }),
@@ -316,7 +325,6 @@ export const dives = pgTable(
     rating: integer('rating'),
     computer: text('computer'),
     suit: text('suit'),
-    boat: text('boat'),
     notes: text('notes'),
     ...auditColumns,
   },

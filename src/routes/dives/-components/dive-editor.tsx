@@ -66,7 +66,7 @@ function initialDiveState(data: DiveEditorData) {
     rating: dive?.rating ?? 0,
     computer: dive?.computer ?? '',
     suit: dive?.suit ?? '',
-    boat: dive?.boat ?? '',
+    boatId: dive?.boatId ?? '',
     notes: dive?.notes ?? '',
     siteId: dive?.siteId ?? '',
     shopId: dive?.shopId ?? '',
@@ -374,33 +374,82 @@ export function DiveEditor({
               </Select>
             )}
           </Field>
-          <Field label="Dive shop / operator">
-            {(id) => (
-              <Select
-                value={dive.shopId}
-                items={[
-                  { value: '', label: 'Not set' },
-                  ...data.options.shops.map((shop) => ({
-                    value: shop.id,
-                    label: shop.name,
-                  })),
-                ]}
-                onValueChange={(value) => update('shopId', value ?? '')}
-              >
-                <SelectTrigger id={id} className="mt-2">
-                  <SelectValue placeholder="Not set" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Not set</SelectItem>
-                  {data.options.shops.map((shop) => (
-                    <SelectItem key={shop.id} value={shop.id}>
-                      {shop.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </Field>
+          <div className="grid gap-5 sm:col-span-2 sm:grid-cols-2 lg:col-span-4">
+            <Field
+              label="Dive operator"
+              action={
+                <Link
+                  to="/settings/operators-boats"
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  Manage
+                </Link>
+              }
+            >
+              {(id) => (
+                <Select
+                  value={dive.shopId}
+                  items={[
+                    { value: '', label: 'Not set' },
+                    ...data.options.shops.map((shop) => ({
+                      value: shop.id,
+                      label: shop.name,
+                    })),
+                  ]}
+                  onValueChange={(value) => update('shopId', value ?? '')}
+                >
+                  <SelectTrigger id={id} className="mt-2">
+                    <SelectValue placeholder="Not set" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Not set</SelectItem>
+                    {data.options.shops.map((shop) => (
+                      <SelectItem key={shop.id} value={shop.id}>
+                        {shop.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </Field>
+            <Field
+              label="Boat"
+              action={
+                <Link
+                  to="/settings/operators-boats"
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  Manage
+                </Link>
+              }
+            >
+              {(id) => (
+                <Select
+                  value={dive.boatId}
+                  items={[
+                    { value: '', label: 'Not set' },
+                    ...data.options.boats.map((boat) => ({
+                      value: boat.id,
+                      label: boat.name,
+                    })),
+                  ]}
+                  onValueChange={(value) => update('boatId', value ?? '')}
+                >
+                  <SelectTrigger id={id} className="mt-2">
+                    <SelectValue placeholder="Not set" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Not set</SelectItem>
+                    {data.options.boats.map((boat) => (
+                      <SelectItem key={boat.id} value={boat.id}>
+                        {boat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </Field>
+          </div>
         </div>
       </EditorSection>
 
@@ -716,19 +765,6 @@ export function DiveEditor({
           value={buddyAssignments}
           onChange={setBuddyAssignments}
         />
-        <div className="mt-5 max-w-md">
-          <Field label="Boat">
-            {(id) => (
-              <Input
-                id={id}
-                type="text"
-                value={dive.boat}
-                onChange={(event) => update('boat', event.target.value)}
-                className="mt-2"
-              />
-            )}
-          </Field>
-        </div>
       </EditorSection>
 
       <EditorSection title="Gear">

@@ -108,6 +108,7 @@ export function rewriteDiveMateDatabase(
   const equipmentIds = assignDiveMateIds([...data.equipment, ...data.equipmentSets])
   const certificationIds = assignDiveMateIds(data.certifications)
   const shopIds = assignDiveMateIds(data.shops)
+  const boatsById = new Map(data.boats.map((boat) => [boat.id, boat.name]))
   const diveTypeIds = assignDiveMateIds(data.diveTypes)
   const diveIds = assignDiveMateIds(data.dives)
   const tankIds = assignDiveMateIds(data.tanks)
@@ -352,7 +353,7 @@ export function rewriteDiveMateDatabase(
             Rating: row.rating,
             Computer: row.computer,
             Divesuit: row.suit,
-            Boat: row.boat,
+            Boat: row.boatId ? boatsById.get(row.boatId) : null,
             Divemaster: formatDiveMateDiveTeam(diveTeamByDive.get(row.id) ?? []),
             Buddy: buddyNamesByDive.get(row.id)?.[0] ?? null,
             Comments: row.notes,

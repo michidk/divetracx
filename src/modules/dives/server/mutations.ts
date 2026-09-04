@@ -39,7 +39,7 @@ export const diveEntryInputSchema = z.object({
     rating: z.number().int().min(0).max(5).default(0),
     computer: formText,
     suit: formText,
-    boat: formText,
+    boatId: formText,
     notes: formText,
     siteId: formText,
     shopId: formText,

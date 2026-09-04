@@ -3,6 +3,7 @@ import '@tanstack/react-start/server-only'
 import { asc, eq, sql } from 'drizzle-orm'
 import { getDb } from '@/db'
 import {
+  boats,
   buddies,
   diveBuddies,
   diveEquipment,
@@ -18,13 +19,14 @@ import {
 
 async function loadEditorOptions() {
   const db = getDb()
-  const [siteRows, shopRows, typeRows, buddyRows, equipmentRows, setRows] =
+  const [siteRows, shopRows, boatRows, typeRows, buddyRows, equipmentRows, setRows] =
     await Promise.all([
       db
         .select({ id: diveSites.id, name: diveSites.name, country: diveSites.country })
         .from(diveSites)
         .orderBy(asc(diveSites.name)),
       db.select({ id: shops.id, name: shops.name }).from(shops).orderBy(asc(shops.name)),
+      db.select({ id: boats.id, name: boats.name }).from(boats).orderBy(asc(boats.name)),
       db
         .select({ id: diveTypes.id, name: diveTypes.name })
         .from(diveTypes)
@@ -82,6 +84,7 @@ async function loadEditorOptions() {
   return {
     sites: siteRows,
     shops: shopRows,
+    boats: boatRows,
     diveTypes: typeRows,
     buddies: buddyRows,
     equipment: equipmentRows,

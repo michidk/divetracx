@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { asc, eq, inArray } from 'drizzle-orm'
 import type { DatabaseTransaction } from '@/db'
 import {
+  boats,
   buddies,
   buddyAgencyMemberships,
   certifications,
@@ -632,6 +633,12 @@ async function applySnapshot(
     }
   }
 
+  const boatIdsByName = new Map(
+    (await tx.select({ id: boats.id, name: boats.name }).from(boats)).map((boat) => [
+      boat.name.trim().toLowerCase(),
+      boat.id,
+    ]),
+  )
   const diveIds = new Map<string, string>()
   const profileSamplesByDive = new Map<string, DiveMateSnapshot['profileSamples']>()
   for (const sample of snapshot.profileSamples) {
@@ -648,11 +655,25 @@ async function applySnapshot(
       diveIds.set(item.externalId, existingId)
       continue
     }
+    const sourceBoatName = item.boat?.trim() || null
+    let boatId = context.canonicalId('dive', item.externalId, 'boat')
+    if (sourceBoatName && !boatId) {
+      boatId = boatIdsByName.get(sourceBoatName.toLowerCase()) ?? null
+      if (!boatId) {
+        const [createdBoat] = await tx
+          .insert(boats)
+          .values({ name: sourceBoatName })
+          .returning({ id: boats.id })
+        boatId = createdBoat?.id ?? null
+        if (boatId) boatIdsByName.set(sourceBoatName.toLowerCase(), boatId)
+      }
+    }
     const values = {
       captureSource: item.captureSource,
       diverId: item.diverExternalId ? (diverIds.get(item.diverExternalId) ?? null) : null,
       siteId: item.siteExternalId ? (siteIds.get(item.siteExternalId) ?? null) : null,
       shopId: item.shopExternalId ? (shopIds.get(item.shopExternalId) ?? null) : null,
+      boatId: sourceBoatName ? boatId : null,
       diveTypeId: item.diveTypeExternalId
         ? (diveTypeIds.get(item.diveTypeExternalId) ?? null)
         : null,
@@ -679,7 +700,6 @@ async function applySnapshot(
       rating: item.rating,
       computer: item.computer,
       suit: item.suit,
-      boat: item.boat,
       notes: item.notes,
       updatedAt: new Date(),
     }
@@ -693,6 +713,10 @@ async function applySnapshot(
     if (!row) continue
     diveIds.set(item.externalId, row.id)
     await context.link('dive', item.externalId, 'dive', row.id)
+    await context.unlink('dive', item.externalId, ['boat'])
+    if (sourceBoatName && boatId) {
+      await context.link('dive', item.externalId, 'boat', boatId)
+    }
 
     const oldBuddyLinks = context.canonicalIds('dive', item.externalId, 'dive_buddy')
     if (oldBuddyLinks.length > 0)

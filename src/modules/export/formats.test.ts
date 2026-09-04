@@ -6,7 +6,7 @@ function fixture(): ExportSnapshot {
   const timestamp = new Date('2026-08-29T10:15:00.000Z')
   return {
     format: 'divetracx-backup',
-    version: 15,
+    version: 16,
     exportedAt: timestamp.toISOString(),
     data: {
       agencies: [],
@@ -64,6 +64,14 @@ function fixture(): ExportSnapshot {
       certifications: [],
       agencyMemberships: [],
       shops: [],
+      boats: [
+        {
+          id: 'boat-1',
+          name: 'Boat',
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        },
+      ],
       diveTypes: [],
       dives: [
         {
@@ -72,6 +80,7 @@ function fixture(): ExportSnapshot {
           diverId: 'diver-1',
           siteId: 'site-1',
           shopId: null,
+          boatId: 'boat-1',
           diveTypeId: null,
           number: 42,
           diveDate: '2026-07-26',
@@ -96,7 +105,6 @@ function fixture(): ExportSnapshot {
           rating: 5,
           computer: 'Computer',
           suit: '5 mm',
-          boat: 'Boat',
           notes: '=HYPERLINK("bad")\notherwise memorable',
           createdAt: timestamp,
           updatedAt: timestamp,
@@ -153,7 +161,7 @@ describe('export formats', () => {
     }
 
     expect(parsed.format).toBe('divetracx-backup')
-    expect(parsed.version).toBe(15)
+    expect(parsed.version).toBe(16)
     expect(parsed.data.dives).toHaveLength(1)
     expect(parsed.data.divers[0]?.createdAt).toBe('2026-08-29T10:15:00.000Z')
   })

@@ -50,10 +50,10 @@ const diveFields = {
   rating: z.number().int().min(1).max(5).nullable().optional(),
   computer: nullableShortText,
   suit: nullableShortText,
-  boat: nullableShortText,
   notes: nullableText,
   siteId: z.string().uuid().nullable().optional(),
   shopId: z.string().uuid().nullable().optional(),
+  boatId: z.string().uuid().nullable().optional(),
   diveTypeId: z.string().uuid().nullable().optional(),
 } as const
 

@@ -35,6 +35,7 @@ import { Route as SettingsAgenciesIndexRouteImport } from './routes/settings/age
 import { Route as SettingsDiveTypesIndexRouteImport } from './routes/settings/dive-types/index'
 import { Route as SettingsExportIndexRouteImport } from './routes/settings/export/index'
 import { Route as SettingsMcpIndexRouteImport } from './routes/settings/mcp/index'
+import { Route as SettingsOperatorsBoatsIndexRouteImport } from './routes/settings/operators-boats/index'
 import { Route as SettingsSyncIndexRouteImport } from './routes/settings/sync/index'
 import { Route as SitesSiteIdIndexRouteImport } from './routes/sites/$siteId/index'
 import { Route as SitesNewIndexRouteImport } from './routes/sites/new/index'
@@ -177,6 +178,12 @@ const SettingsMcpIndexRoute = SettingsMcpIndexRouteImport.update({
   path: '/settings/mcp/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsOperatorsBoatsIndexRoute =
+  SettingsOperatorsBoatsIndexRouteImport.update({
+    id: '/settings/operators-boats/',
+    path: '/settings/operators-boats/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const SettingsSyncIndexRoute = SettingsSyncIndexRouteImport.update({
   id: '/settings/sync/',
   path: '/settings/sync/',
@@ -264,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/settings/dive-types/': typeof SettingsDiveTypesIndexRoute
   '/settings/export/': typeof SettingsExportIndexRoute
   '/settings/mcp/': typeof SettingsMcpIndexRoute
+  '/settings/operators-boats/': typeof SettingsOperatorsBoatsIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
   '/sites/$siteId/': typeof SitesSiteIdIndexRoute
   '/sites/new/': typeof SitesNewIndexRoute
@@ -303,6 +311,7 @@ export interface FileRoutesByTo {
   '/settings/dive-types': typeof SettingsDiveTypesIndexRoute
   '/settings/export': typeof SettingsExportIndexRoute
   '/settings/mcp': typeof SettingsMcpIndexRoute
+  '/settings/operators-boats': typeof SettingsOperatorsBoatsIndexRoute
   '/settings/sync': typeof SettingsSyncIndexRoute
   '/sites/$siteId': typeof SitesSiteIdIndexRoute
   '/sites/new': typeof SitesNewIndexRoute
@@ -343,6 +352,7 @@ export interface FileRoutesById {
   '/settings/dive-types/': typeof SettingsDiveTypesIndexRoute
   '/settings/export/': typeof SettingsExportIndexRoute
   '/settings/mcp/': typeof SettingsMcpIndexRoute
+  '/settings/operators-boats/': typeof SettingsOperatorsBoatsIndexRoute
   '/settings/sync/': typeof SettingsSyncIndexRoute
   '/sites/$siteId/': typeof SitesSiteIdIndexRoute
   '/sites/new/': typeof SitesNewIndexRoute
@@ -384,6 +394,7 @@ export interface FileRouteTypes {
     | '/settings/dive-types/'
     | '/settings/export/'
     | '/settings/mcp/'
+    | '/settings/operators-boats/'
     | '/settings/sync/'
     | '/sites/$siteId/'
     | '/sites/new/'
@@ -423,6 +434,7 @@ export interface FileRouteTypes {
     | '/settings/dive-types'
     | '/settings/export'
     | '/settings/mcp'
+    | '/settings/operators-boats'
     | '/settings/sync'
     | '/sites/$siteId'
     | '/sites/new'
@@ -462,6 +474,7 @@ export interface FileRouteTypes {
     | '/settings/dive-types/'
     | '/settings/export/'
     | '/settings/mcp/'
+    | '/settings/operators-boats/'
     | '/settings/sync/'
     | '/sites/$siteId/'
     | '/sites/new/'
@@ -502,6 +515,7 @@ export interface RootRouteChildren {
   SettingsDiveTypesIndexRoute: typeof SettingsDiveTypesIndexRoute
   SettingsExportIndexRoute: typeof SettingsExportIndexRoute
   SettingsMcpIndexRoute: typeof SettingsMcpIndexRoute
+  SettingsOperatorsBoatsIndexRoute: typeof SettingsOperatorsBoatsIndexRoute
   SettingsSyncIndexRoute: typeof SettingsSyncIndexRoute
   SitesSiteIdIndexRoute: typeof SitesSiteIdIndexRoute
   SitesNewIndexRoute: typeof SitesNewIndexRoute
@@ -699,6 +713,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsMcpIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/operators-boats/': {
+      id: '/settings/operators-boats/'
+      path: '/settings/operators-boats'
+      fullPath: '/settings/operators-boats/'
+      preLoaderRoute: typeof SettingsOperatorsBoatsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/sync/': {
       id: '/settings/sync/'
       path: '/settings/sync'
@@ -806,6 +827,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsDiveTypesIndexRoute: SettingsDiveTypesIndexRoute,
   SettingsExportIndexRoute: SettingsExportIndexRoute,
   SettingsMcpIndexRoute: SettingsMcpIndexRoute,
+  SettingsOperatorsBoatsIndexRoute: SettingsOperatorsBoatsIndexRoute,
   SettingsSyncIndexRoute: SettingsSyncIndexRoute,
   SitesSiteIdIndexRoute: SitesSiteIdIndexRoute,
   SitesNewIndexRoute: SitesNewIndexRoute,

@@ -469,6 +469,12 @@ export async function seedDemoDatabase(database: DemoDatabase): Promise<void> {
     .returning()
   const shopId = required(shop, 'Demo shop was not created').id
 
+  const [boat] = await database
+    .insert(schema.boats)
+    .values({ name: 'Sea Glass' })
+    .returning()
+  const boatId = required(boat, 'Demo boat was not created').id
+
   const types = await database
     .insert(schema.diveTypes)
     .values([
@@ -693,6 +699,7 @@ export async function seedDemoDatabase(database: DemoDatabase): Promise<void> {
         diverId,
         siteId: siteId.get(dive.site),
         shopId,
+        boatId,
         diveTypeId: typeId.get(dive.type),
         captureSource: 'computer' as const,
         number: dive.number,

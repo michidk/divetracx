@@ -92,7 +92,8 @@ export const MCP_TOOL_CATALOG = [
   {
     name: 'get_dive_editor_options',
     title: 'Get dive reference data',
-    description: 'Read valid sites, shops, dive types, buddies, gear, and gear sets.',
+    description:
+      'Read valid sites, dive operators, boats, dive types, buddies, gear, and gear sets.',
     group: 'Read',
     scope: 'divetracx:read',
   },

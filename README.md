@@ -160,7 +160,7 @@ scripts and backups.
 | Format | Endpoint | Best for | What it contains |
 | --- | --- | --- | --- |
 | **DiveMate backup** `.ddb` | `/api/export/divemate` | Opening your whole logbook in DiveMate again | A DiveMate-compatible SQLite database rebuilt from canonical data, including Garmin-imported and hand-logged dives |
-| **Divetracx backup** `.json` | `/api/export/json` | Complete, lossless backups | Every table in the database as versioned JSON (`divetracx-backup`, currently version 15) |
+| **Divetracx backup** `.json` | `/api/export/json` | Complete, lossless backups | Every table in the database as versioned JSON (`divetracx-backup`, currently version 16) |
 | **Dive spreadsheet** `.csv` | `/api/export/csv` | Spreadsheets and data analysis | One joined row per dive: site, buddies, equipment, tanks, conditions, notes, and the full profile as inline samples |
 | **Universal dive log** `.uddf` | `/api/export/uddf` | Other logbook software | UDDF 3.2.3 with diver, sites, and dives including depth profiles |
 

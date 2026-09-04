@@ -215,8 +215,8 @@ export function DivePage({ dive }: { dive: DiveData }) {
               <Value label="Weather" value={dive.weather} />
               <Value label="Computer" value={dive.computer} />
               <Value label="Suit" value={dive.suit} />
-              <Value label="Boat" value={dive.boat} />
-              <Value label="Dive shop" value={dive.shopName} />
+              <Value label="Dive operator" value={dive.shopName} />
+              <Value label="Boat" value={dive.boatName} />
               <Value
                 label="Rating"
                 value={

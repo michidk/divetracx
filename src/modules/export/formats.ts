@@ -84,6 +84,7 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
   const { data } = snapshot
   const sites = new Map(data.diveSites.map((site) => [site.id, site]))
   const shops = new Map(data.shops.map((shop) => [shop.id, shop]))
+  const boats = new Map(data.boats.map((boat) => [boat.id, boat]))
   const diveTypes = new Map(data.diveTypes.map((type) => [type.id, type]))
   const buddies = new Map(data.buddies.map((buddy) => [buddy.id, buddy]))
   const equipment = new Map(data.equipment.map((item) => [item.id, item]))
@@ -239,7 +240,7 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
         csvCell(dive.rating),
         csvCell(dive.computer, true),
         csvCell(dive.suit, true),
-        csvCell(dive.boat, true),
+        csvCell(dive.boatId ? boats.get(dive.boatId)?.name : '', true),
         csvCell(diveTeam, true),
         csvCell(buddyNames, true),
         csvCell(equipmentNames, true),

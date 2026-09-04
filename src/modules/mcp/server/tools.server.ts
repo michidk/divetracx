@@ -344,7 +344,7 @@ export function createDivetracxMcpServer(
       {
         title: 'Get dive reference data',
         description:
-          'Get valid sites, shops, dive types, buddies, gear items, and gear sets for creating or updating a dive.',
+          'Get valid sites, dive operators, boats, dive types, buddies, gear items, and gear sets for creating or updating a dive.',
         inputSchema: z.object({}),
         annotations: readOnlyAnnotations,
       },

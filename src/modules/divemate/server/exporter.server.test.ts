@@ -62,7 +62,7 @@ describe('canonical DiveMate export', () => {
     const now = new Date('2026-09-01T12:00:00Z')
     const snapshot = {
       format: 'divetracx-backup',
-      version: 15,
+      version: 16,
       exportedAt: now.toISOString(),
       data: {
         agencies: [
@@ -198,6 +198,7 @@ describe('canonical DiveMate export', () => {
         ],
         agencyMemberships: [],
         shops: [],
+        boats: [],
         diveTypes: [],
         dives: [
           {
@@ -206,6 +207,7 @@ describe('canonical DiveMate export', () => {
             diverId: null,
             siteId: '11111111-1111-1111-1111-111111111111',
             shopId: null,
+            boatId: null,
             diveTypeId: null,
             number: 7,
             diveDate: '2026-08-31',
@@ -230,7 +232,6 @@ describe('canonical DiveMate export', () => {
             rating: null,
             computer: 'Garmin Descent',
             suit: null,
-            boat: null,
             notes: 'Imported through the canonical model',
             createdAt: now,
             updatedAt: now,
