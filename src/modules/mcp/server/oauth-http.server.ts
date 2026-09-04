@@ -129,9 +129,12 @@ async function oauthRequest(
   return converted
 }
 
-function authorizationLoginRedirect(request: Request) {
+function authorizationLoginRedirect(request: Request, config: McpConfig) {
   const authorize = new URL(request.url)
-  const bridge = new URL(MCP_OWNER_BRIDGE_PATH, authorize)
+  // The MCP ingress forwards this path to the app in plaintext, so the bridge
+  // has to come from the issuer. Deriving it from the request would send the
+  // owner to an http:// login form.
+  const bridge = new URL(MCP_OWNER_BRIDGE_PATH, config.issuer)
   bridge.searchParams.set('request', `${authorize.pathname}${authorize.search}`)
   return Response.redirect(bridge, 302)
 }
@@ -323,7 +326,7 @@ export function createOAuthHttpHandler(
 
     if (url.pathname === '/oauth/authorize' && ['GET', 'POST'].includes(request.method)) {
       if (!hasValidOwnerSession(request, config.signingSecret)) {
-        return authorizationLoginRedirect(request)
+        return authorizationLoginRedirect(request, config)
       }
       try {
         let authorizationRequest = request

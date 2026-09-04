@@ -443,4 +443,27 @@ describe('remote MCP OAuth HTTP flow', () => {
     )
     expect(rejected?.status).toBe(400)
   })
+
+  test('sends the owner to the bridge over the issuer scheme, not the proxied one', async () => {
+    const handle = createMcpHttpHandler(config, new MemoryOAuthStore(), {
+      async fetch() {
+        return Response.json({ ok: true })
+      },
+    })
+
+    // The MCP ingress forwards /oauth/authorize to the app in plaintext, so
+    // request.url is http even though the public issuer is https. Redirecting
+    // to the request scheme would put the Hodor password form on http://.
+    const proxied = new Request('http://dives.example.com/oauth/authorize?client_id=x', {
+      headers: { Host: config.serverUrl.host },
+    })
+
+    const redirect = await handle(proxied)
+    expect(redirect?.status).toBe(302)
+    const location = new URL(redirect?.headers.get('location') ?? '')
+    expect(location.protocol).toBe('https:')
+    expect(location.origin).toBe(config.issuer.origin)
+    expect(location.pathname).toBe('/settings/mcp/authorize')
+    expect(location.searchParams.get('request')).toBe('/oauth/authorize?client_id=x')
+  })
 })
