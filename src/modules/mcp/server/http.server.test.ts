@@ -5,7 +5,7 @@ import { MCP_SCOPE_VALUES } from '@/modules/mcp/catalog'
 import { getOAuthSigningKey } from './auth.server'
 import type { McpConfig } from './config.server'
 import { MCP_READ_SCOPE } from './config.server'
-import { createMcpHttpHandler } from './http.server'
+import { createMcpHttpHandler, handlesMcpHttpPath } from './http.server'
 import type {
   OAuthAuditEvent,
   OAuthStore,
@@ -404,5 +404,43 @@ describe('remote MCP OAuth HTTP flow', () => {
     expect(preflight?.headers.get('access-control-allow-headers')).toContain(
       'MCP-Protocol-Version',
     )
+  })
+
+  test('routes the owner consent bridge instead of falling through to the router', () => {
+    // The live entry point returns null for unhandled paths, which lets the
+    // application router answer with its own 404. The bridge must not fall
+    // through, or the ChatGPT consent hand-off dead-ends on "Not Found".
+    expect(handlesMcpHttpPath('/settings/mcp/authorize')).toBe(true)
+    expect(handlesMcpHttpPath('/api/mcp')).toBe(true)
+    expect(handlesMcpHttpPath('/oauth/authorize')).toBe(true)
+    expect(handlesMcpHttpPath('/settings/mcp')).toBe(false)
+    expect(handlesMcpHttpPath('/dives')).toBe(false)
+  })
+
+  test('owner consent bridge returns the signed-in owner to the authorize request', async () => {
+    const handle = createMcpHttpHandler(config, new MemoryOAuthStore(), {
+      async fetch() {
+        return Response.json({ ok: true })
+      },
+    })
+
+    const authorizeRequest = '/oauth/authorize?client_id=abc&response_type=code'
+    const bridge = `/settings/mcp/authorize?request=${encodeURIComponent(authorizeRequest)}`
+
+    const anonymous = await handle(request(bridge))
+    expect(anonymous?.status).toBe(401)
+
+    const resumed = await handle(request(bridge, { headers: { Cookie: ownerCookie() } }))
+    expect(resumed?.status).toBe(302)
+    expect(resumed?.headers.get('location')).toBe(
+      new URL(authorizeRequest, config.issuer).toString(),
+    )
+
+    const rejected = await handle(
+      request('/settings/mcp/authorize?request=%2F%2Fevil.example.com', {
+        headers: { Cookie: ownerCookie() },
+      }),
+    )
+    expect(rejected?.status).toBe(400)
   })
 })

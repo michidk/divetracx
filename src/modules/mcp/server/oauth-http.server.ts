@@ -27,7 +27,7 @@ const PUBLIC_OAUTH_PATHS = new Set([
   '/oauth/token',
   '/oauth/revoke',
 ])
-const OWNER_BRIDGE_PATH = '/settings/mcp/authorize'
+export const MCP_OWNER_BRIDGE_PATH = '/settings/mcp/authorize'
 
 async function recordAudit(store: OAuthStore, event: Parameters<OAuthStore['audit']>[0]) {
   try {
@@ -131,7 +131,7 @@ async function oauthRequest(
 
 function authorizationLoginRedirect(request: Request) {
   const authorize = new URL(request.url)
-  const bridge = new URL(OWNER_BRIDGE_PATH, authorize)
+  const bridge = new URL(MCP_OWNER_BRIDGE_PATH, authorize)
   bridge.searchParams.set('request', `${authorize.pathname}${authorize.search}`)
   return Response.redirect(bridge, 302)
 }
@@ -191,7 +191,7 @@ export function createOAuthHttpHandler(
     request: Request,
   ): Promise<Response | null> {
     const url = new URL(request.url)
-    if (!PUBLIC_OAUTH_PATHS.has(url.pathname) && url.pathname !== OWNER_BRIDGE_PATH) {
+    if (!PUBLIC_OAUTH_PATHS.has(url.pathname) && url.pathname !== MCP_OWNER_BRIDGE_PATH) {
       return null
     }
 
@@ -243,7 +243,7 @@ export function createOAuthHttpHandler(
       )
     }
 
-    if (url.pathname === OWNER_BRIDGE_PATH) {
+    if (url.pathname === MCP_OWNER_BRIDGE_PATH) {
       if (!hasValidOwnerSession(request, config.signingSecret)) {
         return new Response('Owner authentication required', { status: 401 })
       }

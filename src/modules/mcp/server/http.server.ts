@@ -9,7 +9,11 @@ import {
 import { MCP_TOOL_CATALOG, type McpToolName, mcpScopeSchema } from '@/modules/mcp/catalog'
 import { createLocalTokenVerifier } from './auth.server'
 import { getMcpConfig, MCP_READ_SCOPE, type McpConfig } from './config.server'
-import { createOAuthHttpHandler, oauthPublicPaths } from './oauth-http.server'
+import {
+  createOAuthHttpHandler,
+  MCP_OWNER_BRIDGE_PATH,
+  oauthPublicPaths,
+} from './oauth-http.server'
 import { DrizzleOAuthStore, type OAuthStore } from './oauth-store.server'
 import { loadMcpPolicy, type McpPolicy } from './settings.server'
 import { createDivetracxMcpServer } from './tools.server'
@@ -19,6 +23,14 @@ const defaultPolicyLoader = async (): Promise<McpPolicy> => ({
   enabled: true,
   disabledTools: [],
 })
+
+export function handlesMcpHttpPath(pathname: string) {
+  return (
+    pathname === MCP_PATH ||
+    pathname === MCP_OWNER_BRIDGE_PATH ||
+    oauthPublicPaths().includes(pathname)
+  )
+}
 
 function createProtocolHandler(policyLoader: () => Promise<McpPolicy>) {
   return createMcpHandler(async ({ authInfo }) => {
@@ -178,7 +190,7 @@ const liveProtocolHandler = createProtocolHandler(loadMcpPolicy)
 export async function handleMcpHttpRequest(request: Request): Promise<Response | null> {
   try {
     const pathname = new URL(request.url).pathname
-    if (pathname !== MCP_PATH && !oauthPublicPaths().includes(pathname)) return null
+    if (!handlesMcpHttpPath(pathname)) return null
 
     const config = getMcpConfig(request)
     const handler = createMcpHttpHandler(
