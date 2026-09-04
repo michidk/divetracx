@@ -7,7 +7,9 @@ function option(name: string) {
 
 const integration = option('integration')
 if (integration !== 'divemate' && integration !== 'garmin') {
-  throw new Error('Use --integration=divemate or --integration=garmin')
+  throw new Error(
+    'Use --integration=divemate or --integration=garmin (Subsurface files import with import:subsurface)',
+  )
 }
 const trigger = option('trigger') ?? 'cli'
 if (trigger !== 'cli' && trigger !== 'schedule' && trigger !== 'manual') {

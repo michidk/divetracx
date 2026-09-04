@@ -1,4 +1,4 @@
-import { Download, FileCode2, FileJson2, ShieldAlert, Table2 } from 'lucide-react'
+import { Download, FileCode2, FileJson2, ShieldAlert, Table2, Waves } from 'lucide-react'
 import type { ComponentType } from 'react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { buttonVariants } from '@/components/ui/button'
@@ -48,6 +48,16 @@ const exportOptions: ExportOption[] = [
     href: '/api/export/uddf',
     label: 'Download UDDF',
     icon: FileCode2,
+  },
+  {
+    title: 'Subsurface logbook',
+    description:
+      'Open your dives in Subsurface, or bring them back later via Integrations.',
+    details:
+      'SSRF · native Subsurface XML with sites, buddies, cylinders, gas changes, and full profiles',
+    href: '/api/export/subsurface',
+    label: 'Download SSRF',
+    icon: Waves,
   },
 ]
 

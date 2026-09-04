@@ -4,13 +4,25 @@ import { desc, eq } from 'drizzle-orm'
 import { getDb } from '@/db'
 import { importRuns, integrationState, integrations } from '@/db/schema'
 import { getServerEnv } from '@/env'
+import {
+  createSubsurfaceConnector,
+  type SubsurfaceUpload,
+} from '@/modules/subsurface/server/connector.server'
 import { getIntegrationConnector, listIntegrationConnectors } from '../registry.server'
-import type { ImportMode, ImportTrigger } from '../types'
+import type { ImportMode, ImportResult, ImportTrigger } from '../types'
 import {
   expireTimedOutImportRuns,
   performFullImport,
   performIncrementalImport,
 } from './import-service.server'
+
+const CONFIGURATION_HINTS: Record<string, string> = {
+  divemate: 'Configure the Google Drive backup folder and server-side service account.',
+  garmin:
+    'Connect the Garmin Connect account below. Tokens stay in Divetracx’s server-only database.',
+  subsurface:
+    'Upload a logbook saved by Subsurface (.ssrf or .xml). Dives are matched by their start time, so re-uploading a newer export updates them in place.',
+}
 
 export async function loadIntegrationStatus() {
   await expireTimedOutImportRuns()
@@ -52,14 +64,13 @@ export async function loadIntegrationStatus() {
               incrementalImport: Boolean(environment.DIVEMATE_GOOGLE_DRIVE_FOLDER_ID),
               export: Boolean(environment.DIVEMATE_GOOGLE_DRIVE_FOLDER_ID),
             }
-          : { fullImport: true, incrementalImport: true, export: false }
+          : connector.descriptor.key === 'subsurface'
+            ? { fullImport: false, incrementalImport: true, export: true }
+            : { fullImport: true, incrementalImport: true, export: false }
       return {
         descriptor: connector.descriptor,
         configured,
-        configurationHint:
-          connector.descriptor.key === 'divemate'
-            ? 'Configure the Google Drive backup folder and server-side service account.'
-            : 'Connect the Garmin Connect account below. Tokens stay in Divetracx’s server-only database.',
+        configurationHint: CONFIGURATION_HINTS[connector.descriptor.key] ?? '',
         latestRun,
         stateUpdatedAt: storedState?.updatedAt ?? null,
       }
@@ -104,11 +115,7 @@ export function runIntegrationImport(
     : performIncrementalImport(connector, { trigger })
 }
 
-export async function runIntegrationImportForUi(
-  integrationKey: string,
-  mode: ImportMode,
-) {
-  const result = await runIntegrationImport(integrationKey, mode, 'manual')
+function summarizeImportResult(result: ImportResult) {
   return {
     runId: result.runId,
     integrationKey: result.integrationKey,
@@ -123,6 +130,20 @@ export async function runIntegrationImportForUi(
       byEntity: result.canonical.byEntity ?? null,
     },
   }
+}
+
+export async function runIntegrationImportForUi(
+  integrationKey: string,
+  mode: ImportMode,
+) {
+  return summarizeImportResult(await runIntegrationImport(integrationKey, mode, 'manual'))
+}
+
+export async function importSubsurfaceUpload(upload: SubsurfaceUpload) {
+  const result = await performIncrementalImport(createSubsurfaceConnector(upload), {
+    trigger: 'manual',
+  })
+  return summarizeImportResult(result)
 }
 
 export async function exportFromIntegration(integrationKey: string) {

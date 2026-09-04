@@ -1,5 +1,6 @@
 import '@tanstack/react-start/server-only'
 
+import { buildSubsurfaceExport } from '@/modules/subsurface/exporter'
 import { buildCsvExport, buildJsonExport, buildUddfExport } from '../formats'
 import type { ExportFile, ExportFormat } from '../types'
 import { loadExportSnapshot } from './snapshot.server'
@@ -29,6 +30,12 @@ export async function buildExportFile(format: ExportFormat): Promise<ExportFile>
       return {
         body: buildUddfExport(snapshot),
         fileName: `divetracx-logbook-${timestamp}.uddf`,
+        contentType: 'application/xml; charset=utf-8',
+      }
+    case 'subsurface':
+      return {
+        body: buildSubsurfaceExport(snapshot),
+        fileName: `divetracx-logbook-${timestamp}.ssrf`,
         contentType: 'application/xml; charset=utf-8',
       }
   }

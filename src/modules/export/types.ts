@@ -51,7 +51,7 @@ export interface ExportSnapshot {
   }
 }
 
-export type ExportFormat = 'json' | 'csv' | 'uddf'
+export type ExportFormat = 'json' | 'csv' | 'uddf' | 'subsurface'
 
 export interface ExportFile {
   body: string

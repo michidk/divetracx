@@ -9,9 +9,10 @@ import {
   RefreshCw,
   ScrollText,
   ShieldAlert,
+  Upload,
   UploadCloud,
 } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -32,7 +33,69 @@ import {
 
 type Integrations = Awaited<ReturnType<typeof getIntegrationStatus>>
 type Integration = Integrations[number]
+type IntegrationKey = 'divemate' | 'garmin' | 'subsurface'
 type GarminAccount = Awaited<ReturnType<typeof getGarminAccountStatus>>
+type ImportSummary = Awaited<ReturnType<typeof runIncrementalImport>>
+
+function importSummaryMessage(result: ImportSummary) {
+  return `${result.records.created} new, ${result.records.updated} changed, and ${result.records.skipped} unchanged source records.`
+}
+
+function SubsurfaceUploadButton({
+  disabled,
+  onStart,
+  onFinish,
+}: {
+  disabled: boolean
+  onStart(): void
+  onFinish(message: string): Promise<void> | void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  async function upload(files: FileList | null) {
+    const file = files?.[0]
+    if (!file) return
+    onStart()
+    try {
+      const form = new FormData()
+      form.set('file', file)
+      const response = await fetch('/api/import/subsurface', {
+        method: 'POST',
+        body: form,
+      })
+      const body = (await response.json().catch(() => null)) as
+        | ImportSummary
+        | { error?: string }
+        | null
+      if (!response.ok || !body || !('records' in body)) {
+        const error = body && 'error' in body ? body.error : undefined
+        throw new Error(error || 'Subsurface import failed')
+      }
+      await onFinish(`${file.name}: ${importSummaryMessage(body)}`)
+    } catch (error) {
+      await onFinish(error instanceof Error ? error.message : 'Subsurface import failed')
+    } finally {
+      if (inputRef.current) inputRef.current.value = ''
+    }
+  }
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".ssrf,.xml,application/xml,text/xml"
+        className="sr-only"
+        aria-label="Choose a Subsurface logbook to import"
+        onChange={(event) => void upload(event.target.files)}
+      />
+      <Button type="button" disabled={disabled} onClick={() => inputRef.current?.click()}>
+        <Upload size={16} aria-hidden="true" />
+        {disabled ? 'Importing…' : 'Import logbook file'}
+      </Button>
+    </>
+  )
+}
 
 function GarminAccountSection({ account }: { account: GarminAccount }) {
   const router = useRouter()
@@ -248,15 +311,12 @@ export function SyncPage({
   const [messages, setMessages] = useState<Record<string, string>>({})
 
   async function incrementalImport(integration: Integration) {
-    const key = integration.descriptor.key as 'divemate' | 'garmin'
+    const key = integration.descriptor.key as IntegrationKey
     setRunning(`${key}:incremental`)
     setMessages((current) => ({ ...current, [key]: '' }))
     try {
       const result = await runIncrementalImport({ data: { integrationKey: key } })
-      setMessages((current) => ({
-        ...current,
-        [key]: `${result.records.created} new, ${result.records.updated} changed, and ${result.records.skipped} unchanged source records.`,
-      }))
+      setMessages((current) => ({ ...current, [key]: importSummaryMessage(result) }))
       await router.invalidate()
     } catch (error) {
       setMessages((current) => ({
@@ -273,7 +333,7 @@ export function SyncPage({
       `A full ${integration.descriptor.displayName} import replaces every canonical record that came from an integration. Locally created, unlinked records are preserved. Type REPLACE to continue.`,
     )
     if (confirmation !== 'REPLACE') return
-    const key = integration.descriptor.key as 'divemate' | 'garmin'
+    const key = integration.descriptor.key as IntegrationKey
     setRunning(`${key}:full`)
     setMessages((current) => ({ ...current, [key]: '' }))
     try {
@@ -415,35 +475,52 @@ export function SyncPage({
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
-                <Button
-                  type="button"
-                  disabled={
-                    !integration.configured.incrementalImport ||
-                    !garminConnected ||
-                    running !== null
-                  }
-                  onClick={() => void incrementalImport(integration)}
-                >
-                  <RefreshCw
-                    className={incrementalRunning ? 'animate-spin' : ''}
-                    size={16}
-                    aria-hidden="true"
+                {key === 'subsurface' ? (
+                  <SubsurfaceUploadButton
+                    disabled={running !== null}
+                    onStart={() => {
+                      setRunning(`${key}:incremental`)
+                      setMessages((current) => ({ ...current, [key]: '' }))
+                    }}
+                    onFinish={async (message) => {
+                      setMessages((current) => ({ ...current, [key]: message }))
+                      setRunning(null)
+                      await router.invalidate()
+                    }}
                   />
-                  {incrementalRunning ? 'Importing…' : 'Incremental import'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={
-                    !integration.configured.fullImport ||
-                    !garminConnected ||
-                    running !== null
-                  }
-                  onClick={() => void fullImport(integration)}
-                >
-                  <ShieldAlert size={16} aria-hidden="true" />
-                  {fullRunning ? 'Replacing…' : 'Full import'}
-                </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    disabled={
+                      !integration.configured.incrementalImport ||
+                      !garminConnected ||
+                      running !== null
+                    }
+                    onClick={() => void incrementalImport(integration)}
+                  >
+                    <RefreshCw
+                      className={incrementalRunning ? 'animate-spin' : ''}
+                      size={16}
+                      aria-hidden="true"
+                    />
+                    {incrementalRunning ? 'Importing…' : 'Incremental import'}
+                  </Button>
+                )}
+                {integration.descriptor.capabilities.fullImport ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={
+                      !integration.configured.fullImport ||
+                      !garminConnected ||
+                      running !== null
+                    }
+                    onClick={() => void fullImport(integration)}
+                  >
+                    <ShieldAlert size={16} aria-hidden="true" />
+                    {fullRunning ? 'Replacing…' : 'Full import'}
+                  </Button>
+                ) : null}
                 {integration.descriptor.capabilities.export ? (
                   <a
                     href={`/api/export/${key}`}

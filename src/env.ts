@@ -24,6 +24,11 @@ export function getServerEnv() {
         .positive()
         .default(100 * 1024 * 1024),
       GOOGLE_APPLICATION_CREDENTIALS: z.string().trim().min(1).optional(),
+      SUBSURFACE_MAX_UPLOAD_BYTES: z.coerce
+        .number()
+        .int()
+        .positive()
+        .default(50 * 1024 * 1024),
       GARMIN_DOMAIN: z.enum(['garmin.com', 'garmin.cn']).default('garmin.com'),
       GARMIN_ACTIVITY_PAGE_SIZE: z.coerce.number().int().positive().max(200).default(50),
       GARMIN_FULL_IMPORT_MAX_ACTIVITIES: z.coerce
@@ -65,6 +70,7 @@ export function getServerEnv() {
       DIVEMATE_MAX_BACKUP_BYTES: process.env.DIVEMATE_MAX_BACKUP_BYTES,
       DIVEMATE_MAX_IMAGE_BYTES: process.env.DIVEMATE_MAX_IMAGE_BYTES,
       GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      SUBSURFACE_MAX_UPLOAD_BYTES: process.env.SUBSURFACE_MAX_UPLOAD_BYTES,
       GARMIN_DOMAIN: process.env.GARMIN_DOMAIN,
       GARMIN_ACTIVITY_PAGE_SIZE: process.env.GARMIN_ACTIVITY_PAGE_SIZE,
       GARMIN_FULL_IMPORT_MAX_ACTIVITIES: process.env.GARMIN_FULL_IMPORT_MAX_ACTIVITIES,

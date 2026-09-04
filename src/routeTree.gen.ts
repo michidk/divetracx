@@ -23,7 +23,9 @@ import { Route as StatsIndexRouteImport } from './routes/stats/index'
 import { Route as ApiExportCsvRouteImport } from './routes/api/export/csv'
 import { Route as ApiExportDivemateRouteImport } from './routes/api/export/divemate'
 import { Route as ApiExportJsonRouteImport } from './routes/api/export/json'
+import { Route as ApiExportSubsurfaceRouteImport } from './routes/api/export/subsurface'
 import { Route as ApiExportUddfRouteImport } from './routes/api/export/uddf'
+import { Route as ApiImportSubsurfaceRouteImport } from './routes/api/import/subsurface'
 import { Route as ApiMediaUploadRouteImport } from './routes/api/media/upload'
 import { Route as BuddiesBuddyIdIndexRouteImport } from './routes/buddies/$buddyId/index'
 import { Route as BuddiesNewIndexRouteImport } from './routes/buddies/new/index'
@@ -118,9 +120,19 @@ const ApiExportJsonRoute = ApiExportJsonRouteImport.update({
   path: '/api/export/json',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiExportSubsurfaceRoute = ApiExportSubsurfaceRouteImport.update({
+  id: '/api/export/subsurface',
+  path: '/api/export/subsurface',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiExportUddfRoute = ApiExportUddfRouteImport.update({
   id: '/api/export/uddf',
   path: '/api/export/uddf',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiImportSubsurfaceRoute = ApiImportSubsurfaceRouteImport.update({
+  id: '/api/import/subsurface',
+  path: '/api/import/subsurface',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiMediaUploadRoute = ApiMediaUploadRouteImport.update({
@@ -259,7 +271,9 @@ export interface FileRoutesByFullPath {
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/divemate': typeof ApiExportDivemateRoute
   '/api/export/json': typeof ApiExportJsonRoute
+  '/api/export/subsurface': typeof ApiExportSubsurfaceRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
+  '/api/import/subsurface': typeof ApiImportSubsurfaceRoute
   '/api/media/upload': typeof ApiMediaUploadRoute
   '/buddies/$buddyId/': typeof BuddiesBuddyIdIndexRoute
   '/buddies/new/': typeof BuddiesNewIndexRoute
@@ -299,7 +313,9 @@ export interface FileRoutesByTo {
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/divemate': typeof ApiExportDivemateRoute
   '/api/export/json': typeof ApiExportJsonRoute
+  '/api/export/subsurface': typeof ApiExportSubsurfaceRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
+  '/api/import/subsurface': typeof ApiImportSubsurfaceRoute
   '/api/media/upload': typeof ApiMediaUploadRoute
   '/buddies/$buddyId': typeof BuddiesBuddyIdIndexRoute
   '/buddies/new': typeof BuddiesNewIndexRoute
@@ -340,7 +356,9 @@ export interface FileRoutesById {
   '/api/export/csv': typeof ApiExportCsvRoute
   '/api/export/divemate': typeof ApiExportDivemateRoute
   '/api/export/json': typeof ApiExportJsonRoute
+  '/api/export/subsurface': typeof ApiExportSubsurfaceRoute
   '/api/export/uddf': typeof ApiExportUddfRoute
+  '/api/import/subsurface': typeof ApiImportSubsurfaceRoute
   '/api/media/upload': typeof ApiMediaUploadRoute
   '/buddies/$buddyId/': typeof BuddiesBuddyIdIndexRoute
   '/buddies/new/': typeof BuddiesNewIndexRoute
@@ -382,7 +400,9 @@ export interface FileRouteTypes {
     | '/api/export/csv'
     | '/api/export/divemate'
     | '/api/export/json'
+    | '/api/export/subsurface'
     | '/api/export/uddf'
+    | '/api/import/subsurface'
     | '/api/media/upload'
     | '/buddies/$buddyId/'
     | '/buddies/new/'
@@ -422,7 +442,9 @@ export interface FileRouteTypes {
     | '/api/export/csv'
     | '/api/export/divemate'
     | '/api/export/json'
+    | '/api/export/subsurface'
     | '/api/export/uddf'
+    | '/api/import/subsurface'
     | '/api/media/upload'
     | '/buddies/$buddyId'
     | '/buddies/new'
@@ -462,7 +484,9 @@ export interface FileRouteTypes {
     | '/api/export/csv'
     | '/api/export/divemate'
     | '/api/export/json'
+    | '/api/export/subsurface'
     | '/api/export/uddf'
+    | '/api/import/subsurface'
     | '/api/media/upload'
     | '/buddies/$buddyId/'
     | '/buddies/new/'
@@ -503,7 +527,9 @@ export interface RootRouteChildren {
   ApiExportCsvRoute: typeof ApiExportCsvRoute
   ApiExportDivemateRoute: typeof ApiExportDivemateRoute
   ApiExportJsonRoute: typeof ApiExportJsonRoute
+  ApiExportSubsurfaceRoute: typeof ApiExportSubsurfaceRoute
   ApiExportUddfRoute: typeof ApiExportUddfRoute
+  ApiImportSubsurfaceRoute: typeof ApiImportSubsurfaceRoute
   ApiMediaUploadRoute: typeof ApiMediaUploadRoute
   BuddiesBuddyIdIndexRoute: typeof BuddiesBuddyIdIndexRoute
   BuddiesNewIndexRoute: typeof BuddiesNewIndexRoute
@@ -629,11 +655,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExportJsonRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/export/subsurface': {
+      id: '/api/export/subsurface'
+      path: '/api/export/subsurface'
+      fullPath: '/api/export/subsurface'
+      preLoaderRoute: typeof ApiExportSubsurfaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/export/uddf': {
       id: '/api/export/uddf'
       path: '/api/export/uddf'
       fullPath: '/api/export/uddf'
       preLoaderRoute: typeof ApiExportUddfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/import/subsurface': {
+      id: '/api/import/subsurface'
+      path: '/api/import/subsurface'
+      fullPath: '/api/import/subsurface'
+      preLoaderRoute: typeof ApiImportSubsurfaceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/media/upload': {
@@ -815,7 +855,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExportCsvRoute: ApiExportCsvRoute,
   ApiExportDivemateRoute: ApiExportDivemateRoute,
   ApiExportJsonRoute: ApiExportJsonRoute,
+  ApiExportSubsurfaceRoute: ApiExportSubsurfaceRoute,
   ApiExportUddfRoute: ApiExportUddfRoute,
+  ApiImportSubsurfaceRoute: ApiImportSubsurfaceRoute,
   ApiMediaUploadRoute: ApiMediaUploadRoute,
   BuddiesBuddyIdIndexRoute: BuddiesBuddyIdIndexRoute,
   BuddiesNewIndexRoute: BuddiesNewIndexRoute,

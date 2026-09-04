@@ -27,6 +27,7 @@ PostgreSQL-backed single-run lock and the same timeout.
 | `GOOGLE_APPLICATION_CREDENTIALS` | — | For DiveMate | Path to a service-account JSON with read access to that folder |
 | `DIVEMATE_MAX_BACKUP_BYTES` | `52428800` | No | Largest accepted `.ddb` (50 MiB) |
 | `DIVEMATE_MAX_IMAGE_BYTES` | `104857600` | No | Largest accepted media file (100 MiB) |
+| `SUBSURFACE_MAX_UPLOAD_BYTES` | `52428800` | No | Largest Subsurface `.ssrf`/`.xml` logbook accepted by the upload importer (50 MiB) |
 
 Viewer access to the folder is enough for imports and for using the backup as
 a schema template when exporting. Publishing an export back to Drive needs

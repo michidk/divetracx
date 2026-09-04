@@ -70,8 +70,8 @@ choice.
 - 🗺️ **Maps and statistics.** Interactive profiles, a site map with a
   click-to-pin coordinate picker, calendar activity, trends, personal records,
   and aggregate statistics.
-- 📤 **Your data, portable.** Export to DiveMate `.ddb`, UDDF 3.2.3, CSV, or
-  versioned Divetracx JSON at any time.
+- 📤 **Your data, portable.** Export to DiveMate `.ddb`, Subsurface `.ssrf`,
+  UDDF 3.2.3, CSV, or versioned Divetracx JSON at any time.
 - 🤖 **Ask your agent.** An optional OAuth-protected MCP endpoint with
   owner-controlled read, write, and delete tools
   lets your own AI tools search dives, load details, list sites, and read
@@ -83,21 +83,22 @@ choice.
 
 ## 📥 Getting dives in
 
-Two import sources are supported today. Both are configured and run from
-**Settings → Integrations**, and both can also run from the command line or on
-a schedule. Every run lands in **Import history**, which reports discovered,
+Three import sources are supported today. All are run from
+**Settings → Integrations** and from the command line; DiveMate and Garmin can
+also run on a schedule. Every run lands in **Import history**, which reports discovered,
 new, changed, unchanged, and failed source records.
 
 | Source | Full import | Incremental sync | What comes across | How it connects |
 | --- | :---: | :---: | --- | --- |
 | **DiveMate** `.ddb` | ✅ | ✅ | Dives, profiles, tanks, sites, buddies, equipment, equipment sets, certifications with card images, shops, dive types, diver profile, pictures | Reads `DiveMate.ddb` plus its `Media` and `Cards` files from a Google Drive folder via a service account |
 | **Garmin** dive computers | ✅ | ✅ | Dives, profiles, tanks, gases | Divetracx signs in with your account (MFA supported) and pulls FIT activities |
+| **Subsurface** `.ssrf` / `.xml` | — | ✅ | Dives, profiles, cylinders, gas changes, sites with GPS, buddies and dive guides, weights, tags | Upload a logbook file from the browser or the CLI |
 
 > [!NOTE]
-> **Not yet supported:** uploading a file from the browser, and importing UDDF,
-> CSV, or Divetracx JSON. Those three formats are export-only for now. If your
-> dives live elsewhere, log them by hand or bring them through a DiveMate
-> backup.
+> **Not yet supported:** importing UDDF, CSV, or Divetracx JSON. Those three
+> formats are export-only for now. If your dives live elsewhere, log them by
+> hand, or export them from [Subsurface](https://subsurface-divelog.org/) —
+> which reads most dive computers and logbook formats — and upload that file.
 
 **Full** and **incremental** mean different things:
 
@@ -150,6 +151,29 @@ bun run import:incremental --integration=garmin
 
 </details>
 
+<details>
+<summary><b>Subsurface details</b></summary>
+
+Divetracx reads the native Subsurface XML in all three layouts it has used over
+the years — the original `<dives>` files, `<divelog version='2'>` with inline
+`<location>` elements, and the current `<divelog version='3'>` with a
+`<divesites>` table — so `.ssrf` files saved by any Subsurface release import.
+Because Subsurface has no stable dive identifier, each dive is keyed by its
+start date and time; uploading a newer export of the same logbook updates those
+dives in place and never deletes anything. Sites are matched to existing
+Divetracx sites by name or coordinates before new ones are created, buddies and
+dive guides become people, cylinders become tanks, gas-change events become the
+active tank on each profile sample, and `boat`/`shore`/`deco` tags map onto the
+entry type and decompression flag. A tag that matches one of your dive types
+assigns it. The file itself is not stored; only the parsed records and a
+fingerprint of the upload are kept for change detection.
+
+```bash
+bun run import:subsurface --file=backups/logbook.ssrf
+```
+
+</details>
+
 ## 📤 Getting dives out
 
 Everything you put in, you can take out again. **Settings → Export** offers
@@ -162,6 +186,7 @@ scripts and backups.
 | **Divetracx backup** `.json` | `/api/export/json` | Complete, lossless backups | Every table in the database as versioned JSON (`divetracx-backup`, currently version 16) |
 | **Dive spreadsheet** `.csv` | `/api/export/csv` | Spreadsheets and data analysis | One joined row per dive: site, buddies, equipment, tanks, conditions, notes, and the full profile as inline samples |
 | **Universal dive log** `.uddf` | `/api/export/uddf` | Other logbook software | UDDF 3.2.3 with diver, sites, and dives including depth profiles |
+| **Subsurface logbook** `.ssrf` | `/api/export/subsurface` | Opening the logbook in Subsurface, or a Subsurface ⇄ Divetracx round trip | Native Subsurface XML (format 3) with sites and GPS, cylinders, weights, buddies and dive team, tags, gas-change events, and full profiles with per-tank pressure and deco ceiling |
 
 The DiveMate export uses your configured `.ddb` only as a schema template and
 rebuilds the supported tables from canonical data. Besides downloading it, you
@@ -347,6 +372,7 @@ migrations.
 | `bun run db:seed` | Seed the same fictional dataset as the public demo |
 | `bun run sync:divemate` | Run an incremental DiveMate import |
 | `bun run import:incremental --integration=garmin` | Run an incremental Garmin import |
+| `bun run import:subsurface --file=backups/logbook.ssrf` | Import a Subsurface logbook file |
 | `bun run export:divemate --output=backups/DiveMate.ddb` | Rebuild a DiveMate backup from canonical data |
 | `bun run media:refresh-thumbnails` | Regenerate WebP thumbnails for stored pictures |
 

@@ -465,7 +465,7 @@ export function DivePage({ dive }: { dive: DiveData }) {
                 dive.sources.map((source) => (
                   <Value
                     key={`${source.integrationKey}:${source.identityKey}`}
-                    label={source.integrationKey === 'divemate' ? 'DiveMate' : 'Garmin'}
+                    label={source.integrationName}
                     value={`${source.externalId ?? source.identityKey} · seen ${formatRecordTime(source.lastSeenAt)}`}
                   />
                 ))

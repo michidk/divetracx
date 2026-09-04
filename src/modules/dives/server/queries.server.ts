@@ -15,6 +15,7 @@ import {
   equipment,
   externalRecordLinks,
   externalRecords,
+  integrations,
   pictures,
   shops,
   tanks,
@@ -357,6 +358,7 @@ export async function loadDive(diveId: string) {
       const sources = await transaction
         .select({
           integrationKey: externalRecords.integrationKey,
+          integrationName: integrations.displayName,
           externalId: externalRecords.externalId,
           identityKey: externalRecords.identityKey,
           externalUpdatedAt: externalRecords.externalUpdatedAt,
@@ -367,6 +369,7 @@ export async function loadDive(diveId: string) {
           externalRecords,
           eq(externalRecordLinks.externalRecordId, externalRecords.id),
         )
+        .innerJoin(integrations, eq(externalRecords.integrationKey, integrations.key))
         .where(
           and(
             eq(externalRecordLinks.canonicalEntityType, 'dive'),

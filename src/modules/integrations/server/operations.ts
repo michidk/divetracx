@@ -6,7 +6,7 @@ import {
   runIntegrationImportForUi,
 } from './operations.server'
 
-const integrationKey = z.enum(['divemate', 'garmin'])
+const integrationKey = z.enum(['divemate', 'garmin', 'subsurface'])
 
 export const getIntegrationStatus = createServerFn({ method: 'GET' }).handler(
   loadIntegrationStatus,
