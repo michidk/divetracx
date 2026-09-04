@@ -6,7 +6,12 @@ import {
   hostHeaderValidationResponse,
   requireBearerAuth,
 } from '@modelcontextprotocol/server'
-import { MCP_TOOL_CATALOG, type McpToolName, mcpScopeSchema } from '@/modules/mcp/catalog'
+import {
+  MCP_TOOL_CATALOG,
+  type McpToolName,
+  mcpScopeSchema,
+  scopesForEnabledTools,
+} from '@/modules/mcp/catalog'
 import { createLocalTokenVerifier } from './auth.server'
 import { getMcpConfig, MCP_READ_SCOPE, type McpConfig } from './config.server'
 import {
@@ -66,6 +71,22 @@ function withMcpCors(response: Response, origin: string | null) {
   headers.set('Access-Control-Allow-Origin', origin)
   headers.append('Vary', 'Origin')
   headers.set('Access-Control-Expose-Headers', 'WWW-Authenticate, MCP-Protocol-Version')
+  return new Response(response.body, { status: response.status, headers })
+}
+
+// requireBearerAuth advertises exactly the scopes it enforces, and read alone is
+// enough to call the endpoint. Clients that take the challenge's `scope` as the
+// set to request — ChatGPT does — would therefore never ask for write or delete,
+// leaving the owner no way to grant them. Advertise everything currently enabled
+// and let the consent screen decide what is actually granted.
+function advertiseGrantableScopes(response: Response, grantable: readonly string[]) {
+  const challenge = response.headers.get('WWW-Authenticate')
+  if (!challenge || grantable.length === 0) return response
+  const headers = new Headers(response.headers)
+  headers.set(
+    'WWW-Authenticate',
+    challenge.replace(/scope="[^"]*"/, `scope="${grantable.join(' ')}"`),
+  )
   return new Response(response.body, { status: response.status, headers })
 }
 
@@ -156,7 +177,12 @@ export function createMcpHttpHandler(
     }
 
     const auth = await authGate(request)
-    if (auth instanceof Response) return withMcpCors(auth, origin)
+    if (auth instanceof Response) {
+      return withMcpCors(
+        advertiseGrantableScopes(auth, scopesForEnabledTools(policy.disabledTools)),
+        origin,
+      )
+    }
 
     const toolName = await calledToolName(request)
     try {

@@ -511,4 +511,46 @@ describe('remote MCP OAuth HTTP flow', () => {
     expect(csp).toContain("form-action 'self' https://chatgpt.com")
     expect(csp).toContain("frame-ancestors 'none'")
   })
+
+  test('advertises every enabled scope in the auth challenge', async () => {
+    const handle = createMcpHttpHandler(config, new MemoryOAuthStore(), {
+      async fetch() {
+        return Response.json({ ok: true })
+      },
+    })
+
+    // Clients take the challenge's `scope` as the set to request, so listing only
+    // the scope required to call the endpoint leaves write and delete ungrantable.
+    const challenged = await handle(request('/api/mcp', { method: 'POST' }))
+    expect(challenged?.status).toBe(401)
+    expect(challenged?.headers.get('www-authenticate')).toContain(
+      `scope="${MCP_SCOPE_VALUES.join(' ')}"`,
+    )
+
+    const restricted = createMcpHttpHandler(
+      config,
+      new MemoryOAuthStore(),
+      {
+        async fetch() {
+          return Response.json({ ok: true })
+        },
+      },
+      async () => ({
+        enabled: true,
+        disabledTools: [
+          'delete_dive',
+          'delete_dive_site',
+          'delete_buddy',
+          'delete_gear_item',
+          'delete_gear_set',
+        ],
+      }),
+    )
+    // A scope survives while any tool using it is enabled, so dropping delete
+    // from the advertisement means disabling the whole group.
+    const narrowed = await restricted(request('/api/mcp', { method: 'POST' }))
+    expect(narrowed?.headers.get('www-authenticate')).toContain(
+      'scope="divetracx:read divetracx:write"',
+    )
+  })
 })
