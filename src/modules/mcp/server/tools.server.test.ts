@@ -172,11 +172,10 @@ describe('Divetracx MCP tools', () => {
     }[] = listed.result.tools
     const create = tools.find((tool) => tool.name === 'create_dive_site')
     expect(Object.keys(create?.outputSchema?.properties ?? {})).toEqual(['id'])
-    // Read tools describe their results in prose for now, so advertising an
-    // output schema for them would promise a shape nothing validates.
-    expect(
-      tools.find((tool) => tool.name === 'search_dives')?.outputSchema,
-    ).toBeUndefined()
+    // Detail reads are not declared yet: they nest arrays whose element shape no
+    // dataset here exercises, so advertising one would promise a structure
+    // nothing validates.
+    expect(tools.find((tool) => tool.name === 'get_dive')?.outputSchema).toBeUndefined()
 
     const called = await postMcp(handler, {
       jsonrpc: '2.0',
@@ -204,5 +203,68 @@ describe('Divetracx MCP tools', () => {
       params: { name: 'create_dive_site', arguments: { name: 'Blue Hole' } },
     })
     expect(called.result.isError).toBe(true)
+  })
+
+  test('declares read shapes and rejects a query result that drifts from them', async () => {
+    const loaders = {
+      ...emptyLoaders,
+      loadGearOverview: async () => ({
+        items: [
+          {
+            id: '11111111-2222-4333-8444-555555555555',
+            name: 'Regulator',
+            category: null,
+            manufacturer: null,
+            model: null,
+            serviceDueAt: null,
+            retiredAt: null,
+            inactive: false,
+            diveCount: 3,
+            lastUsedDate: '2026-01-02',
+          },
+        ],
+        sets: [],
+      }),
+    } as unknown as McpLoaders
+    const handler = createTestHandler(loaders)
+
+    const listed = await postMcp(handler, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'tools/list',
+      params: {},
+    })
+    const tools: { name: string; outputSchema?: unknown }[] = listed.result.tools
+    const declared = tools.filter((tool) => tool.outputSchema).map((tool) => tool.name)
+    expect(declared).toEqual([
+      'search_dives',
+      'list_dive_sites',
+      'get_diving_statistics',
+      'list_buddies',
+      'list_gear',
+    ])
+
+    // Nullable columns stay nullable: the demo dataset happens to populate these,
+    // but a real logbook does not have to.
+    const called = await postMcp(handler, {
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'tools/call',
+      params: { name: 'list_gear', arguments: {} },
+    })
+    expect(called.result.isError).toBeFalsy()
+    expect(called.result.structuredContent.items[0].manufacturer).toBeNull()
+
+    const drifted = createTestHandler({
+      ...loaders,
+      loadGearOverview: async () => ({ items: [{ id: 'not-a-uuid' }], sets: [] }),
+    } as unknown as McpLoaders)
+    const failed = await postMcp(drifted, {
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'tools/call',
+      params: { name: 'list_gear', arguments: {} },
+    })
+    expect(failed.result.isError).toBe(true)
   })
 })

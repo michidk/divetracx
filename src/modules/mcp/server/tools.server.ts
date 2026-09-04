@@ -28,6 +28,13 @@ import {
 import { loadProfile } from '@/modules/profile/server/queries.server'
 import { loadSiteDetail, loadSitesOverview } from '@/modules/sites/server/queries.server'
 import {
+  divingStatisticsOutput,
+  listBuddiesOutput,
+  listDiveSitesOutput,
+  listGearOutput,
+  searchDivesOutput,
+} from './tool-outputs'
+import {
   createBuddyFromMcp,
   createDiveFromMcp,
   createGearFromMcp,
@@ -128,6 +135,13 @@ const defaultLoaders: McpLoaders = {
   deleteGearSet: deleteGearSetFromMcp,
 }
 
+// A read answers with the application's own query result, so it is validated as
+// the JSON it becomes: serialising first turns Date instances into the strings
+// the schema describes, and guarantees the checked value is the value sent.
+function readResult<T>(schema: z.ZodType<T>, value: unknown) {
+  return jsonToolResult(schema.parse(JSON.parse(JSON.stringify(value))))
+}
+
 export function jsonToolResult(value: unknown) {
   return {
     content: [{ type: 'text' as const, text: JSON.stringify(value) }],
@@ -196,6 +210,7 @@ export function createDivetracxMcpServer(
             .describe('Search text; empty lists all dives'),
           page: z.int().min(1).default(1),
         }),
+        outputSchema: searchDivesOutput,
         annotations: readOnlyAnnotations,
       },
       async ({ query, page }) => jsonToolResult(await loaders.loadDives(query, page)),
@@ -247,11 +262,12 @@ export function createDivetracxMcpServer(
           offset: z.int().min(0).default(0),
           limit: z.int().min(1).max(200).default(100),
         }),
+        outputSchema: listDiveSitesOutput,
         annotations: readOnlyAnnotations,
       },
       async ({ offset, limit }) => {
         const sites = await loaders.loadSitesOverview()
-        return jsonToolResult({
+        return readResult(listDiveSitesOutput, {
           sites: sites.slice(offset, offset + limit),
           total: sites.length,
           offset,
@@ -269,11 +285,12 @@ export function createDivetracxMcpServer(
         description:
           'Get aggregate dive statistics and trends without returning every calendar dive.',
         inputSchema: z.object({}),
+        outputSchema: divingStatisticsOutput,
         annotations: readOnlyAnnotations,
       },
       async () => {
         const { calendarDives: _, ...statistics } = await loaders.loadStatistics()
-        return jsonToolResult(statistics)
+        return readResult(divingStatisticsOutput, statistics)
       },
     )
 
@@ -284,6 +301,7 @@ export function createDivetracxMcpServer(
         title: 'List buddies',
         description: 'List buddies with shared-dive counts and last dive dates.',
         inputSchema: z.object({}),
+        outputSchema: listBuddiesOutput,
         annotations: readOnlyAnnotations,
       },
       async () => jsonToolResult(await loaders.loadBuddiesOverview()),
@@ -313,6 +331,7 @@ export function createDivetracxMcpServer(
         title: 'List gear',
         description: 'List gear items and reusable gear sets.',
         inputSchema: z.object({}),
+        outputSchema: listGearOutput,
         annotations: readOnlyAnnotations,
       },
       async () => jsonToolResult(await loaders.loadGearOverview()),
