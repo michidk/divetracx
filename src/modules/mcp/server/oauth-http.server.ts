@@ -247,7 +247,7 @@ export function createOAuthHttpHandler(
     }
 
     if (url.pathname === MCP_OWNER_BRIDGE_PATH) {
-      if (!hasValidOwnerSession(request, config.signingSecret)) {
+      if (!hasValidOwnerSession(request)) {
         return new Response('Owner authentication required', { status: 401 })
       }
       const destination = url.searchParams.get('request')
@@ -325,7 +325,7 @@ export function createOAuthHttpHandler(
     }
 
     if (url.pathname === '/oauth/authorize' && ['GET', 'POST'].includes(request.method)) {
-      if (!hasValidOwnerSession(request, config.signingSecret)) {
+      if (!hasValidOwnerSession(request)) {
         return authorizationLoginRedirect(request, config)
       }
       try {

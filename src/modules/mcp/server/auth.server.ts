@@ -1,6 +1,6 @@
 import '@tanstack/react-start/server-only'
 
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { createHmac } from 'node:crypto'
 import {
   OAuthError,
   OAuthErrorCode,
@@ -20,34 +20,18 @@ export function getOAuthSigningKey(secret: string) {
   return derivedSigningKey(secret)
 }
 
-function cookieValue(request: Request, name: string) {
-  for (const pair of (request.headers.get('cookie') ?? '').split(';')) {
-    const [key, ...value] = pair.trim().split('=')
-    if (key === name) return value.join('=')
-  }
-  return undefined
-}
+// Hodor reports how it admitted each request it proxies. Reading that is what
+// the header is for: its session cookie is an internal format, and re-deriving
+// the HMAC here left a client admitted by BYPASS_CIDRS — which never receives a
+// cookie — indistinguishable from an anonymous one. Hodor strips any
+// client-supplied copy before setting its own, and every route reaching this
+// code is served through Hodor, so the value cannot be forged.
+const HODOR_AUTH_HEADER = 'x-hodor-auth'
+const OWNER_AUTH_METHODS = new Set(['password', 'bypass'])
 
-export function hasValidOwnerSession(
-  request: Request,
-  secret: string,
-  nowSeconds = Math.floor(Date.now() / 1_000),
-) {
-  const token = cookieValue(request, 'hodor')
-  if (!token) return false
-  const [expiryText, signatureHex, ...extra] = token.split('|')
-  if (!expiryText || !signatureHex || extra.length > 0) return false
-  const expiry = Number(expiryText)
-  if (!Number.isSafeInteger(expiry) || expiry < nowSeconds) return false
-
-  let actual: Buffer
-  try {
-    actual = Buffer.from(signatureHex, 'hex')
-  } catch {
-    return false
-  }
-  const expected = createHmac('sha256', secret).update(expiryText).digest()
-  return actual.length === expected.length && timingSafeEqual(actual, expected)
+export function hasValidOwnerSession(request: Request) {
+  const method = request.headers.get(HODOR_AUTH_HEADER)
+  return method !== null && OWNER_AUTH_METHODS.has(method)
 }
 
 export function createLocalTokenVerifier(

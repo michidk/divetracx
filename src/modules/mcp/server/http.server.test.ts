@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { createHash, createHmac, randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { SignJWT } from 'jose'
 import { MCP_SCOPE_VALUES } from '@/modules/mcp/catalog'
 import { getOAuthSigningKey } from './auth.server'
@@ -109,13 +109,8 @@ function request(path: string, init?: RequestInit) {
   return new Request(new URL(path, config.issuer), { ...init, headers })
 }
 
-function ownerCookie() {
-  const expiry = String(Math.floor(Date.now() / 1_000) + 600)
-  const signature = createHmac('sha256', config.signingSecret)
-    .update(expiry)
-    .digest('hex')
-  return `hodor=${expiry}|${signature}`
-}
+// Hodor sets this on every request it proxies after admitting the owner.
+const OWNER_HEADERS = { 'X-Hodor-Auth': 'password' } as const
 
 function form(values: Record<string, string>) {
   return new URLSearchParams(values)
@@ -202,7 +197,7 @@ describe('remote MCP OAuth HTTP flow', () => {
 
     const consent = await handle(
       new Request(authorize, {
-        headers: { Cookie: ownerCookie(), Host: config.serverUrl.host },
+        headers: { ...OWNER_HEADERS, Host: config.serverUrl.host },
       }),
     )
     expect(consent?.status).toBe(200)
@@ -215,7 +210,7 @@ describe('remote MCP OAuth HTTP flow', () => {
       new Request(authorize, {
         method: 'POST',
         headers: {
-          Cookie: ownerCookie(),
+          ...OWNER_HEADERS,
           Host: config.serverUrl.host,
           Origin: config.issuer.origin,
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -430,7 +425,7 @@ describe('remote MCP OAuth HTTP flow', () => {
     const anonymous = await handle(request(bridge))
     expect(anonymous?.status).toBe(401)
 
-    const resumed = await handle(request(bridge, { headers: { Cookie: ownerCookie() } }))
+    const resumed = await handle(request(bridge, { headers: OWNER_HEADERS }))
     expect(resumed?.status).toBe(302)
     expect(resumed?.headers.get('location')).toBe(
       new URL(authorizeRequest, config.issuer).toString(),
@@ -438,7 +433,7 @@ describe('remote MCP OAuth HTTP flow', () => {
 
     const rejected = await handle(
       request('/settings/mcp/authorize?request=%2F%2Fevil.example.com', {
-        headers: { Cookie: ownerCookie() },
+        headers: OWNER_HEADERS,
       }),
     )
     expect(rejected?.status).toBe(400)
