@@ -202,9 +202,9 @@ spec:
             - name: BYPASS_CIDRS
               value: {{ join "," . | quote }}
             {{- end }}
-            {{- with .Values.hodor.bypassPaths }}
+            {{- with (include "divetracx.hodorBypassPaths" .) }}
             - name: BYPASS_PATHS
-              value: {{ join "," . | quote }}
+              value: {{ . | quote }}
             {{- end }}
           readinessProbe:
             httpGet:

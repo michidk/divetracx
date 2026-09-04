@@ -156,25 +156,20 @@ signing key is derived from `HODOR_SECRET`, which must be at least 32
 characters.
 
 Docker Compose routes the MCP and OAuth paths past Hodor out of the box. In
-Helm, set `mcp.enabled` and `mcp.ingress.enabled` to create a path-limited
-Service and Ingress:
+Helm, `mcp.enabled` adds them to Hodor's `BYPASS_PATHS`, so they are served over
+the normal application host without a second Ingress:
 
 ```yaml
 mcp:
   enabled: true
-  ingress:
-    enabled: true
-    className: nginx
-    hosts:
-      - host: dives.example.com
-    tls:
-      - secretName: dives-tls
-        hosts:
-          - dives.example.com
+  allowedOrigins:
+    - https://chatgpt.com
 ```
 
-The MCP host must also be the normal Hodor-protected application host so the
-owner session can approve connections. For browser-based MCP clients,
+Machine endpoints — the protocol endpoint, OAuth discovery, registration, token,
+and revocation — skip the login form; the protocol endpoint still requires OAuth
+on every request. `/oauth/authorize` stays behind Hodor, because that is where
+the owner approves a client. For browser-based MCP clients,
 `MCP_ALLOWED_ORIGINS` adds an explicit Origin allowlist.
 
 After deployment, use **Settings → AI access** to pause or resume MCP, enable

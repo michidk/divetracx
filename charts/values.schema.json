@@ -50,40 +50,12 @@
     "mcp": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["enabled", "allowedOrigins", "service", "ingress"],
+      "required": ["enabled", "allowedOrigins"],
       "properties": {
         "enabled": { "type": "boolean" },
         "allowedOrigins": {
           "type": "array",
           "items": { "type": "string", "format": "uri" }
-        },
-        "service": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["port"],
-          "properties": {
-            "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
-          }
-        },
-        "ingress": {
-          "type": "object",
-          "required": ["enabled", "className", "annotations", "hosts", "tls"],
-          "properties": {
-            "enabled": { "type": "boolean" },
-            "className": { "type": "string" },
-            "annotations": { "$ref": "#/definitions/stringMap" },
-            "hosts": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "required": ["host"],
-                "properties": {
-                  "host": { "type": "string", "minLength": 1 }
-                }
-              }
-            },
-            "tls": { "type": "array", "items": { "type": "object" } }
-          }
         }
       }
     },

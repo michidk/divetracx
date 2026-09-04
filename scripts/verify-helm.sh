@@ -27,8 +27,6 @@ external_values=(
   --set sync.enabled=true
   --set garmin.sync.enabled=true
   --set mcp.enabled=true
-  --set mcp.ingress.enabled=true
-  --set mcp.ingress.hosts[0].host=dives.example.test
 )
 
 bundled_values=(

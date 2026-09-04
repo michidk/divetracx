@@ -68,3 +68,23 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- printf "%s-divemate" (include "divetracx.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end }}
+
+{{/*
+Paths Hodor serves without a password. MCP's discovery, registration, token, and
+protocol endpoints are reached by machines that cannot complete a login form.
+`/oauth/authorize` is deliberately absent: it asks the owner to approve a client,
+so it has to stay behind the gate.
+*/}}
+{{- define "divetracx.hodorBypassPaths" -}}
+{{- $paths := .Values.hodor.bypassPaths | default list -}}
+{{- if .Values.mcp.enabled -}}
+{{- $paths = concat $paths (list
+  "/api/mcp"
+  "/.well-known/oauth-protected-resource/api/mcp"
+  "/.well-known/oauth-authorization-server"
+  "/oauth/register"
+  "/oauth/token"
+  "/oauth/revoke") -}}
+{{- end -}}
+{{- join "," (uniq $paths) -}}
+{{- end -}}

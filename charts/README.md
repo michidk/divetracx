@@ -98,22 +98,17 @@ OIDC provider settings are required. After deployment, the owner configures
 individual read, write, and delete tools, connected clients, and revocation in
 **Settings → AI access**.
 
-The MCP Ingress routes only the protocol endpoint and its OAuth discovery
-documents directly to the application, bypassing Hodor's interactive cookie
-gate. The MCP endpoint independently requires OAuth on every protocol request.
+Enabling MCP adds its protocol endpoint, OAuth discovery documents, and token
+endpoints to Hodor's `BYPASS_PATHS`, so machine clients reach them without a
+login form while everything else stays gated. The MCP endpoint independently
+requires OAuth on every protocol request. `/oauth/authorize` is deliberately not
+public: it asks the owner to approve a client, so Hodor authenticates it first.
 
 ```yaml
 mcp:
   enabled: true
-  ingress:
-    enabled: true
-    className: nginx
-    hosts:
-      - host: dives.example.com
-    tls:
-      - secretName: dives-tls
-        hosts:
-          - dives.example.com
+  allowedOrigins:
+    - https://chatgpt.com
 ```
 
 The MCP host must also be the normal Hodor-protected application host so the

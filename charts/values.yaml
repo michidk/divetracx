@@ -47,14 +47,6 @@ mcp:
   enabled: false
   # Optional browser Origin allowlist. Non-browser MCP clients omit Origin.
   allowedOrigins: []
-  service:
-    port: 80
-  ingress:
-    enabled: false
-    className: ""
-    annotations: {}
-    hosts: []
-    tls: []
 
 resources:
   limits:
