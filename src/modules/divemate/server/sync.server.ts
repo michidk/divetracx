@@ -40,12 +40,12 @@ import type {
 import { MATCHED_LINK_ROLE } from '@/modules/integrations/types'
 import { resolveAgencyId } from '@/modules/profile/server/agencies.server'
 import { parseDiveMateDiveTeam } from '../dive-team'
+import { DEFAULT_DIVEMATE_DIVE_TYPES } from '../dive-type'
 import {
   cleanDiveMateInstructorName,
   formatDiveMateInstructor,
   normalizeDiveMateInstructorName,
 } from '../instructor'
-import { DEFAULT_DIVEMATE_DIVE_TYPES } from '../dive-type'
 import { parseDiveMateDatabase } from '../parser'
 import type { DiveMateSnapshot, DiveMateSourceRecord } from '../types'
 import { findDriveFile, openGoogleDriveBackup } from './google-drive.server'
