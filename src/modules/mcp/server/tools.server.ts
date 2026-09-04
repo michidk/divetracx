@@ -59,6 +59,12 @@ const writeAnnotations = {
 } as const
 
 const createAnnotations = { ...writeAnnotations, idempotentHint: false } as const
+// Every mutation answers with the identifier of the record it touched. Declaring
+// it lets a client know what it gets back instead of inferring from a JSON blob.
+const mutationResultSchema = z.object({
+  id: z.uuid().describe('Identifier of the created, updated, or deleted record'),
+})
+
 const deleteAnnotations = {
   readOnlyHint: false,
   destructiveHint: true,
@@ -141,9 +147,12 @@ function errorToolResult(error: unknown) {
   }
 }
 
+// Parsing through the advertised schema is what keeps the two in step: a
+// mutation that starts answering with a different shape fails here and in the
+// tests, rather than shipping a result the model was told not to expect.
 async function writeResult(operation: () => Promise<unknown>) {
   try {
-    return jsonToolResult(await operation())
+    return jsonToolResult(mutationResultSchema.parse(await operation()))
   } catch (error) {
     return errorToolResult(error)
   }
@@ -365,6 +374,7 @@ export function createDivetracxMcpServer(
         description:
           'Create a manual dive. Omitted dive number uses the next number; relationship arrays default to empty.',
         inputSchema: createDiveToolInputSchema,
+        outputSchema: mutationResultSchema,
         annotations: createAnnotations,
       },
       async (input) => writeResult(async () => ({ id: await loaders.createDive(input) })),
@@ -378,6 +388,7 @@ export function createDivetracxMcpServer(
         description:
           'Partially update a dive. Omitted fields are preserved; supplied relationship arrays replace their current values.',
         inputSchema: updateDiveToolInputSchema,
+        outputSchema: mutationResultSchema,
         annotations: writeAnnotations,
       },
       async (input) => writeResult(async () => ({ id: await loaders.updateDive(input) })),
@@ -390,6 +401,7 @@ export function createDivetracxMcpServer(
         title: 'Create dive site',
         description: 'Create a dive site. Name is required.',
         inputSchema: siteValuesSchema.extend({ name: z.string().trim().min(1).max(500) }),
+        outputSchema: mutationResultSchema,
         annotations: createAnnotations,
       },
       async (input) => writeResult(async () => ({ id: await loaders.createSite(input) })),
@@ -402,6 +414,7 @@ export function createDivetracxMcpServer(
         title: 'Update dive site',
         description: 'Partially update a dive site; omitted fields are preserved.',
         inputSchema: siteValuesSchema.extend({ siteId: z.string().uuid() }),
+        outputSchema: mutationResultSchema,
         annotations: writeAnnotations,
       },
       async ({ siteId, ...input }) =>
@@ -415,6 +428,7 @@ export function createDivetracxMcpServer(
         title: 'Create buddy',
         description: 'Create a buddy record.',
         inputSchema: buddyValuesSchema,
+        outputSchema: mutationResultSchema,
         annotations: createAnnotations,
       },
       async (input) =>
@@ -428,6 +442,7 @@ export function createDivetracxMcpServer(
         title: 'Update buddy',
         description: 'Partially update a buddy; omitted fields are preserved.',
         inputSchema: buddyValuesSchema.extend({ buddyId: z.string().uuid() }),
+        outputSchema: mutationResultSchema,
         annotations: writeAnnotations,
       },
       async ({ buddyId, ...input }) =>
@@ -441,6 +456,7 @@ export function createDivetracxMcpServer(
         title: 'Create gear item',
         description: 'Create a gear item. Name is required.',
         inputSchema: gearValuesSchema.extend({ name: z.string().trim().min(1).max(500) }),
+        outputSchema: mutationResultSchema,
         annotations: createAnnotations,
       },
       async (input) => writeResult(async () => ({ id: await loaders.createGear(input) })),
@@ -453,6 +469,7 @@ export function createDivetracxMcpServer(
         title: 'Update gear item',
         description: 'Partially update a gear item; omitted fields are preserved.',
         inputSchema: gearValuesSchema.extend({ gearId: z.string().uuid() }),
+        outputSchema: mutationResultSchema,
         annotations: writeAnnotations,
       },
       async ({ gearId, ...input }) =>
@@ -468,6 +485,7 @@ export function createDivetracxMcpServer(
         inputSchema: gearSetValuesSchema.extend({
           name: z.string().trim().min(1).max(200),
         }),
+        outputSchema: mutationResultSchema,
         annotations: createAnnotations,
       },
       async (input) => writeResult(async () => await loaders.createGearSet(input)),
@@ -480,6 +498,7 @@ export function createDivetracxMcpServer(
         title: 'Update gear set',
         description: 'Partially update a gear set; omitted fields are preserved.',
         inputSchema: gearSetValuesSchema.extend({ gearSetId: z.string().uuid() }),
+        outputSchema: mutationResultSchema,
         annotations: writeAnnotations,
       },
       async ({ gearSetId, ...input }) =>
@@ -493,6 +512,7 @@ export function createDivetracxMcpServer(
         title: 'Update diver profile',
         description: 'Partially update the owner profile; omitted fields are preserved.',
         inputSchema: profileValuesSchema,
+        outputSchema: mutationResultSchema,
         annotations: writeAnnotations,
       },
       async (input) =>
@@ -508,6 +528,7 @@ export function createDivetracxMcpServer(
         title: 'Delete dive',
         description: 'Permanently delete one dive and its dependent records.',
         inputSchema: deleteIdSchema,
+        outputSchema: mutationResultSchema,
         annotations: deleteAnnotations,
       },
       async ({ id }) =>
@@ -529,6 +550,7 @@ export function createDivetracxMcpServer(
         title: `Delete ${tool[2].toLowerCase()}`,
         description: `Permanently delete one ${tool[2].toLowerCase()}.`,
         inputSchema: deleteIdSchema,
+        outputSchema: mutationResultSchema,
         annotations: deleteAnnotations,
       },
       async ({ id }) =>
@@ -546,6 +568,7 @@ export function createDivetracxMcpServer(
         title: 'Delete gear set',
         description: 'Permanently delete one gear set.',
         inputSchema: deleteIdSchema,
+        outputSchema: mutationResultSchema,
         annotations: deleteAnnotations,
       },
       async ({ id }) =>

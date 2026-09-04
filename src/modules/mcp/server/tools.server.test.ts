@@ -148,4 +148,61 @@ describe('Divetracx MCP tools', () => {
     expect(received).toEqual(['Maldives', 2])
     expect(message.result.structuredContent).toMatchObject({ total: 0, page: 2 })
   })
+
+  test('advertises the mutation result shape and answers in it', async () => {
+    const siteId = '11111111-2222-4333-8444-555555555555'
+    const loaders = {
+      ...emptyLoaders,
+      createSite: async () => siteId,
+      deleteEntity: async () => undefined,
+    } as unknown as McpLoaders
+    const handler = createTestHandler(loaders, {
+      scopes: ['divetracx:read', 'divetracx:write', 'divetracx:delete'],
+    })
+
+    const listed = await postMcp(handler, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'tools/list',
+      params: {},
+    })
+    const tools: {
+      name: string
+      outputSchema?: { properties?: Record<string, unknown> }
+    }[] = listed.result.tools
+    const create = tools.find((tool) => tool.name === 'create_dive_site')
+    expect(Object.keys(create?.outputSchema?.properties ?? {})).toEqual(['id'])
+    // Read tools describe their results in prose for now, so advertising an
+    // output schema for them would promise a shape nothing validates.
+    expect(
+      tools.find((tool) => tool.name === 'search_dives')?.outputSchema,
+    ).toBeUndefined()
+
+    const called = await postMcp(handler, {
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'tools/call',
+      params: { name: 'create_dive_site', arguments: { name: 'Blue Hole' } },
+    })
+    expect(called.result.structuredContent).toEqual({ id: siteId })
+    expect(called.result.isError).toBeFalsy()
+  })
+
+  test('a mutation answering off-shape fails instead of contradicting its schema', async () => {
+    const loaders = {
+      ...emptyLoaders,
+      createSite: async () => ({ unexpected: true }),
+    } as unknown as McpLoaders
+    const handler = createTestHandler(loaders, {
+      scopes: ['divetracx:read', 'divetracx:write'],
+    })
+
+    const called = await postMcp(handler, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'tools/call',
+      params: { name: 'create_dive_site', arguments: { name: 'Blue Hole' } },
+    })
+    expect(called.result.isError).toBe(true)
+  })
 })
