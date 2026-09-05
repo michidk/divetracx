@@ -42,7 +42,7 @@ function skillFontSize(label: string) {
     return width + 0.56
   }, 0)
   if (widthInEms === 0) return 18
-  return Math.min(18, Math.floor((255 / widthInEms) * 0.94 * 10) / 10)
+  return Math.min(18, Math.floor((245 / widthInEms) * 0.82 * 10) / 10)
 }
 
 async function profileImageData(storagePath: string | null | undefined) {
@@ -142,17 +142,17 @@ async function agencyMembershipBadges(
       const logo = logos[index]
       const column = index % 2
       const row = Math.floor(index / 2)
-      const agencyName = compact(membership.agency.name, 11)
+      const agencyName = compact(membership.agency.name, 15)
       const logoContent = logo
-        ? `<image href="${logo}" x="5" y="5" width="34" height="34" preserveAspectRatio="xMidYMid meet" clip-path="url(#agencyLogo)" />`
-        : `<text x="22" y="26" text-anchor="middle" class="membershipFallback">${xml(agencyInitials(membership.agency.name))}</text>`
+        ? `<image href="${logo}" x="5" y="5" width="38" height="38" preserveAspectRatio="xMidYMid meet" clip-path="url(#agencyLogo)" />`
+        : `<text x="24" y="29" text-anchor="middle" class="membershipFallback">${xml(agencyInitials(membership.agency.name))}</text>`
       return `
-        <g transform="translate(${80 + column * 155} ${468 + row * 54})">
-          <rect width="145" height="44" rx="12" fill="#ffffff" fill-opacity="0.95" />
-          <rect x="5" y="5" width="34" height="34" rx="8" fill="${membership.agency.darkLogo ? '#132833' : '#ffffff'}" stroke="#d3e1e2" />
+        <g transform="translate(${45 + column * 180} ${458 + row * 58})">
+          <rect width="170" height="48" rx="13" fill="#ffffff" fill-opacity="0.95" />
+          <rect x="5" y="5" width="38" height="38" rx="9" fill="${membership.agency.darkLogo ? '#132833' : '#ffffff'}" stroke="#d3e1e2" />
           ${logoContent}
-          <text x="47" y="18" class="membershipAgency">${xml(agencyName)}</text>
-          <text x="47" y="34" class="membershipNumber">${xml(compact(membership.memberNumber, 12))}</text>
+          <text x="51" y="20" class="membershipAgency">${xml(agencyName)}</text>
+          <text x="51" y="37" class="membershipNumber">${xml(compact(membership.memberNumber, 14))}</text>
         </g>`
     })
     .join('')
@@ -172,14 +172,14 @@ export async function renderProfileCard() {
     maximumFractionDigits: 1,
   }).format(logbook.maximumDepthMeters)
   const photo = imageData
-    ? `<image href="${imageData}" x="80" y="110" width="300" height="300" preserveAspectRatio="xMidYMid slice" clip-path="url(#avatar)" />`
-    : `<image href="${diverFallbackImage}" x="80" y="110" width="300" height="300" preserveAspectRatio="xMidYMid slice" clip-path="url(#avatar)" />`
+    ? `<image href="${imageData}" x="95" y="125" width="270" height="270" preserveAspectRatio="xMidYMid slice" clip-path="url(#avatar)" />`
+    : `<image href="${diverFallbackImage}" x="95" y="125" width="270" height="270" preserveAspectRatio="xMidYMid slice" clip-path="url(#avatar)" />`
   const skills = certificationPills(certifications)
   const memberships = await agencyMembershipBadges(agencyMemberships)
   const skillHeading = certifications.length
     ? `${certifications.length} certification${certifications.length === 1 ? '' : 's'}`
     : 'No certifications added yet'
-  const insuranceDetails = diver
+  const insuranceDetails = diver?.showInsuranceOnCard
     ? [
         diver.insurance,
         diver.insuranceTariff,
@@ -191,7 +191,7 @@ export async function renderProfileCard() {
   const insurance = insuranceDetails
     ? `Insurance: ${compact(insuranceDetails, 74)}`
     : null
-  const emergencyDetails = diver
+  const emergencyDetails = diver?.showEmergencyOnCard
     ? [diver.emergencyContact, diver.emergencyPhone, diver.emergencyEmail]
         .filter(Boolean)
         .join(' · ')
@@ -213,8 +213,8 @@ export async function renderProfileCard() {
           <stop offset="1" stop-color="#0a4557" />
         </linearGradient>
         <clipPath id="card"><rect width="1200" height="630" rx="38" /></clipPath>
-        <clipPath id="avatar"><circle cx="230" cy="260" r="150" /></clipPath>
-        <clipPath id="agencyLogo" clipPathUnits="userSpaceOnUse"><rect x="5" y="5" width="34" height="34" rx="8" /></clipPath>
+        <clipPath id="avatar"><circle cx="230" cy="260" r="135" /></clipPath>
+        <clipPath id="agencyLogo" clipPathUnits="userSpaceOnUse"><rect x="5" y="5" width="38" height="38" rx="9" /></clipPath>
         <clipPath id="skillLabel" clipPathUnits="userSpaceOnUse"><rect x="42" y="0" width="255" height="42" /></clipPath>
         <style>
           text { font-family: "DejaVu Sans", sans-serif; fill: #f3ffff; }
@@ -242,11 +242,11 @@ export async function renderProfileCard() {
         <text x="57" y="27" class="brand">DIVETRACX</text>
       </g>
 
-      <circle cx="230" cy="260" r="158" fill="none" stroke="#9ff3ef" stroke-width="3" stroke-opacity="0.7" />
+      <circle cx="230" cy="260" r="143" fill="none" stroke="#9ff3ef" stroke-width="3" stroke-opacity="0.7" />
       ${photo}
       ${memberships}
 
-      <text x="450" y="102" class="eyebrow">DIVER SKILLSET</text>
+      <text x="450" y="102" class="eyebrow">DIVER PROFILE</text>
       <text x="450" y="164" class="name">${xml(compact(name, 25))}</text>
       <text x="450" y="202" class="footer">${xml(skillHeading)}</text>
       ${skills}

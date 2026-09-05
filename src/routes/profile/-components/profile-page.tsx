@@ -29,6 +29,7 @@ export function ProfilePage({ profile }: { profile: ProfileData }) {
   )
   const cardVersion = [
     profile.profileImage?.id ?? 'no-profile-image',
+    diver?.updatedAt ?? 'no-diver',
     certifications.length,
     latestCertificationUpdate,
     agencyMemberships.length,
@@ -89,32 +90,29 @@ export function ProfilePage({ profile }: { profile: ProfileData }) {
             entity="divers"
             recordId={diver?.id ?? 'new'}
             record={diver}
-            renderSectionExtra={(section) => {
-              if (section !== 'Notes') return null
-              return (
-                <div className="mt-6 border-t border-border pt-5">
-                  <div className="mb-3 flex items-center justify-between gap-4">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                      Agency memberships
-                    </h3>
-                    <Link
-                      to="/profile/agencies/$agencyMembershipId"
-                      params={{ agencyMembershipId: 'new' }}
-                      className="inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-                    >
-                      <Plus size={15} aria-hidden="true" /> Add agency
-                    </Link>
-                  </div>
-                  {agencyMemberships.length === 0 ? (
-                    <p className="rounded-xl bg-muted/50 p-5 text-center text-sm text-muted-foreground">
-                      No agency memberships yet.
-                    </p>
-                  ) : (
-                    <AgencyMembershipList memberships={agencyMemberships} />
-                  )}
+            renderAfterSections={
+              <section className="rounded-2xl border border-border bg-card p-5 md:p-6">
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Agency memberships
+                  </h2>
+                  <Link
+                    to="/profile/agencies/$agencyMembershipId"
+                    params={{ agencyMembershipId: 'new' }}
+                    className="inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+                  >
+                    <Plus size={15} aria-hidden="true" /> Add agency
+                  </Link>
                 </div>
-              )
-            }}
+                {agencyMemberships.length === 0 ? (
+                  <p className="rounded-xl bg-muted/50 p-5 text-center text-sm text-muted-foreground">
+                    No agency memberships yet.
+                  </p>
+                ) : (
+                  <AgencyMembershipList memberships={agencyMemberships} />
+                )}
+              </section>
+            }
           />
         </div>
       </div>

@@ -156,10 +156,12 @@ async function saveDiver(id: string, values: EditorValues) {
     emergencyContact: optionalText(values, 'emergencyContact'),
     emergencyPhone: optionalText(values, 'emergencyPhone'),
     emergencyEmail: optionalText(values, 'emergencyEmail'),
+    showEmergencyOnCard: booleanValue(values, 'showEmergencyOnCard'),
     insurance: optionalText(values, 'insurance'),
     insuranceTariff: optionalText(values, 'insuranceTariff'),
     insuranceNumber: optionalText(values, 'insuranceNumber'),
     insuranceHotline: optionalText(values, 'insuranceHotline'),
+    showInsuranceOnCard: booleanValue(values, 'showInsuranceOnCard'),
     notes: optionalText(values, 'notes'),
     updatedAt: new Date(),
   }

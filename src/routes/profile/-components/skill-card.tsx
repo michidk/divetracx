@@ -34,17 +34,17 @@ export function SkillCard({ imageVersion }: { imageVersion: string }) {
         type="button"
         onClick={() => setLightboxOpen(true)}
         className="block w-full overflow-hidden rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        aria-label="Open Divetracx diver skill card"
+        aria-label="Open Divetracx Diver Profile card"
       >
         <img
           src={previewUrl}
-          alt="Divetracx diver skill card preview"
+          alt="Divetracx Diver Profile card preview"
           className="block aspect-[1200/630] w-full transition-transform hover:scale-[1.02]"
         />
       </button>
       <ImageLightbox
         src={previewUrl}
-        alt="Divetracx diver skill card"
+        alt="Divetracx Diver Profile card"
         open={lightboxOpen}
         onOpenChange={setLightboxOpen}
       />

@@ -40,10 +40,12 @@ export const divers = pgTable('divers', {
   emergencyContact: text('emergency_contact'),
   emergencyPhone: text('emergency_phone'),
   emergencyEmail: text('emergency_email'),
+  showEmergencyOnCard: boolean('show_emergency_on_card').notNull().default(true),
   insurance: text('insurance'),
   insuranceTariff: text('insurance_tariff'),
   insuranceNumber: text('insurance_number'),
   insuranceHotline: text('insurance_hotline'),
+  showInsuranceOnCard: boolean('show_insurance_on_card').notNull().default(true),
   notes: text('notes'),
   ...auditColumns,
 })

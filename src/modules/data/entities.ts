@@ -31,6 +31,7 @@ export interface EntityField {
     | 'rating'
     | 'select'
   section: string
+  defaultValue?: boolean
   required?: boolean
   min?: number
   max?: number
@@ -152,6 +153,13 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
         kind: 'email',
         section: 'Emergency Contact',
       },
+      {
+        key: 'showEmergencyOnCard',
+        label: 'Include on Diver Profile card',
+        kind: 'checkbox',
+        section: 'Emergency Contact',
+        defaultValue: true,
+      },
       { key: 'insurance', label: 'Insurer', kind: 'text', section: 'Insurance' },
       {
         key: 'insuranceTariff',
@@ -170,6 +178,13 @@ export const entityDefinitions: Record<EntityKey, EntityDefinition> = {
         label: 'Emergency hotline',
         kind: 'tel',
         section: 'Insurance',
+      },
+      {
+        key: 'showInsuranceOnCard',
+        label: 'Include on Diver Profile card',
+        kind: 'checkbox',
+        section: 'Insurance',
+        defaultValue: true,
       },
       { key: 'notes', label: 'Notes', kind: 'textarea', section: 'Notes' },
     ],

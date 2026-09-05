@@ -26,7 +26,9 @@ import { entityDefinitions } from '@/modules/data/entities'
 import { saveRecord } from '@/modules/data/server/mutations'
 
 function initialValue(field: EntityField, record: Record<string, unknown> | null) {
-  if (field.kind === 'checkbox') return record?.[field.key] === true
+  if (field.kind === 'checkbox') {
+    return record ? record[field.key] === true : (field.defaultValue ?? false)
+  }
   const value = record?.[field.key]
   if (value === null || value === undefined) return ''
   // Selects encode numeric source codes; 0 means "not set" in imported data.
@@ -311,6 +313,7 @@ export function EntityForm({
   record,
   onSaved,
   renderSectionExtra,
+  renderAfterSections,
   selectOptions,
   fixedValues,
 }: {
@@ -325,6 +328,7 @@ export function EntityForm({
     values: EditorValues,
     setValue: (key: string, value: EditorValue) => void,
   ) => React.ReactNode
+  renderAfterSections?: React.ReactNode
 }) {
   const definition = entityDefinitions[entity]
   const router = useRouter()
@@ -387,6 +391,7 @@ export function EntityForm({
           )}
         </section>
       ))}
+      {renderAfterSections}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p aria-live="polite" className="text-sm text-muted-foreground">
           {message}
