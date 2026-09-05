@@ -11,9 +11,9 @@
   },
   "homepage": "https://divetracx.vercel.app",
   "bugs": "https://github.com/michidk/divetracx/issues",
-  "packageManager": "bun@1.4.0",
+  "packageManager": "bun@1.4.2",
   "engines": {
-    "bun": "1.4.0"
+    "bun": "1.4.2"
   },
   "scripts": {
     "dev": "vite dev --port 3000",
