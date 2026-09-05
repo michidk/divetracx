@@ -20,6 +20,7 @@ import {
   shops,
   tanks,
 } from '@/db/schema'
+import { loadDiveMerges } from './merge.server'
 
 export async function loadDashboard() {
   const db = getDb()
@@ -346,6 +347,7 @@ export async function loadDive(diveId: string) {
         .select({
           id: diveProfileSamples.id,
           sampleIndex: diveProfileSamples.sampleIndex,
+          segmentIndex: diveProfileSamples.segmentIndex,
           elapsedSeconds: diveProfileSamples.elapsedSeconds,
           depthMeters: diveProfileSamples.depthMeters,
           temperatureCelsius: diveProfileSamples.temperatureCelsius,
@@ -384,8 +386,11 @@ export async function loadDive(diveId: string) {
           ),
         )
 
+      const merges = await loadDiveMerges(transaction, diveId)
+
       return {
         ...dive,
+        merges,
         buddies: diveBuddiesData,
         equipment: diveEquipmentData,
         tanks: diveTanks,

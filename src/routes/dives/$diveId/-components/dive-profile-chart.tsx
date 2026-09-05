@@ -18,6 +18,7 @@ interface ProfileSample {
   tank2PressureBar: string | null
   decoCeilingMeters: string | null
   tankNumber: number | null
+  segmentIndex: number
 }
 
 interface ProfileTank {
@@ -29,6 +30,46 @@ interface ProfileTank {
 }
 
 const TANK_COLORS = ['#0891b2', '#7c3aed', '#ea580c', '#16a34a', '#db2777', '#4f46e5']
+
+/**
+ * The stretch between two merged dives, where the diver was at the surface and
+ * the computer recorded nothing. Shaded rather than drawn through, so an
+ * absence of data never reads as a flat dive.
+ */
+function SurfaceGapBands({
+  gaps,
+}: {
+  gaps: ReturnType<typeof createProfileGeometry>['surfaceGaps']
+}) {
+  return (
+    <>
+      {gaps.map((gap) => (
+        <g key={`${gap.startElapsedSeconds}-${gap.endElapsedSeconds}`}>
+          <rect
+            x={gap.startX}
+            y={PROFILE_CHART_VIEWBOX.top}
+            width={Math.max(0, gap.endX - gap.startX)}
+            height={PROFILE_CHART_VIEWBOX.depthHeight}
+            className="fill-muted"
+            opacity={0.7}
+          />
+          {[gap.startX, gap.endX].map((x) => (
+            <line
+              key={x}
+              x1={x}
+              x2={x}
+              y1={PROFILE_CHART_VIEWBOX.top}
+              y2={PROFILE_CHART_VIEWBOX.top + PROFILE_CHART_VIEWBOX.depthHeight}
+              className="stroke-border"
+              strokeDasharray="4 5"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+        </g>
+      ))}
+    </>
+  )
+}
 
 function formatElapsedTime(totalSeconds: number) {
   const roundedSeconds = Math.max(0, Math.round(totalSeconds))
@@ -384,6 +425,7 @@ function ProfileMagnifier({
             vectorEffect="non-scaling-stroke"
           />
         ))}
+        <SurfaceGapBands gaps={geometry.surfaceGaps} />
         <path d={geometry.depthAreaPath} fill={`url(#${gradientId})`} />
         {geometry.ceilingAreaPath ? (
           <path d={geometry.ceilingAreaPath} fill={`url(#${ceilingGradientId})`} />
@@ -477,6 +519,7 @@ export function DiveProfileChart({
       createProfileGeometry(
         samples.map((sample) => ({
           elapsedSeconds: sample.elapsedSeconds,
+          segmentIndex: sample.segmentIndex,
           depthMeters: Number(sample.depthMeters),
           temperatureCelsius:
             sample.temperatureCelsius === null ? null : Number(sample.temperatureCelsius),
@@ -582,6 +625,12 @@ export function DiveProfileChart({
             <span className="inline-flex items-center gap-2">
               <span className="h-0.5 w-5 bg-primary" /> Depth
             </span>
+            {geometry.surfaceGaps.length > 0 ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="h-3 w-5 border border-border bg-muted" />
+                Surface interval · no recorded data
+              </span>
+            ) : null}
             {geometry.ceilingPath ? (
               <span className="inline-flex items-center gap-2">
                 <span className="h-0.5 w-5 bg-red-500" />
@@ -711,6 +760,7 @@ export function DiveProfileChart({
                 </g>
               ))}
 
+              <SurfaceGapBands gaps={geometry.surfaceGaps} />
               <path d={geometry.depthAreaPath} fill={`url(#${gradientId})`} />
               {geometry.ceilingAreaPath ? (
                 <path d={geometry.ceilingAreaPath} fill={`url(#${ceilingGradientId})`} />

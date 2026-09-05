@@ -16,9 +16,11 @@ function sample(
     tank2PressureBar: number | null
     decoCeilingMeters: number | null
     tankNumber: number | null
+    segmentIndex: number
   }> = {},
 ) {
   return {
+    segmentIndex: 0,
     elapsedSeconds,
     depthMeters,
     temperatureCelsius: null,
@@ -157,5 +159,62 @@ describe('dive profile chart geometry', () => {
     expect(geometry.minimumTemperaturePoint?.elapsedSeconds).toBe(30)
     expect(geometry.minimumTemperaturePoint?.temperatureCelsius).toBe(12)
     expect(geometry.pressureRange).toEqual({ minimum: 0, maximum: 200 })
+  })
+
+  test('lifts the pen across a merged dive’s surface interval', () => {
+    const geometry = createProfileGeometry([
+      sample(0, 0),
+      sample(60, 18),
+      sample(120, 0),
+      // The diver surfaced for half an hour before the computer logged again.
+      sample(1920, 0, { segmentIndex: 1 }),
+      sample(1980, 12, { segmentIndex: 1 }),
+      sample(2040, 0, { segmentIndex: 1 }),
+    ])
+
+    // One outline and one fill per recorded dive, never a line through the gap.
+    expect(geometry.depthPath.match(/M/g)).toHaveLength(2)
+    expect(geometry.depthAreaPath.match(/Z/g)).toHaveLength(2)
+    expect(geometry.surfaceGaps).toHaveLength(1)
+    expect(geometry.surfaceGaps[0]?.startElapsedSeconds).toBe(120)
+    expect(geometry.surfaceGaps[0]?.endElapsedSeconds).toBe(1920)
+    expect(geometry.surfaceGaps[0]?.startX).toBe(geometry.points[2]?.x ?? 0)
+    expect(geometry.surfaceGaps[0]?.endX).toBe(geometry.points[3]?.x ?? 0)
+    // The merged timeline keeps real elapsed times, so the gap is to scale.
+    expect(geometry.maximumElapsedSeconds).toBe(2040)
+  })
+
+  test('never interpolates a ceiling across a surface interval', () => {
+    const geometry = createProfileGeometry([
+      sample(0, 30, { decoCeilingMeters: 6 }),
+      sample(60, 30, { decoCeilingMeters: 6 }),
+      // A new segment that starts shallower must not read as clearing the
+      // previous segment's ceiling.
+      sample(3600, 2, { decoCeilingMeters: 0, segmentIndex: 1 }),
+      sample(3660, 2, { decoCeilingMeters: 0, segmentIndex: 1 }),
+    ])
+
+    expect(geometry.ceilingCrossings).toHaveLength(0)
+    expect(geometry.ceilingPath.match(/M/g)).toHaveLength(1)
+  })
+
+  test('breaks every track at a segment boundary', () => {
+    const geometry = createProfileGeometry([
+      sample(0, 10, { temperatureCelsius: 20, tank1PressureBar: 200 }),
+      sample(60, 12, { temperatureCelsius: 19, tank1PressureBar: 180 }),
+      sample(1800, 12, {
+        temperatureCelsius: 19,
+        tank1PressureBar: 170,
+        segmentIndex: 1,
+      }),
+      sample(1860, 10, {
+        temperatureCelsius: 20,
+        tank1PressureBar: 150,
+        segmentIndex: 1,
+      }),
+    ])
+
+    expect(geometry.temperaturePath.match(/M/g)).toHaveLength(2)
+    expect(geometry.tank1PressurePath.match(/M/g)).toHaveLength(2)
   })
 })

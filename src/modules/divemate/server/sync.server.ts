@@ -161,6 +161,11 @@ async function pruneDiscardedDives(
 interface SnapshotApplyContext {
   signal: AbortSignal
   shouldApply(entityType: string, externalId: string): boolean
+  canonicalRole(
+    entityType: string,
+    externalId: string,
+    canonicalEntityType: string,
+  ): string | null
   canonicalId(
     entityType: string,
     externalId: string,
@@ -690,6 +695,13 @@ async function applySnapshot(
 
   for (const item of snapshot.dives) {
     context.signal.throwIfAborted()
+    // A matched dive belongs to the logbook rather than to this backup — it
+    // was merged into another dive, or already existed here. Leaving it out of
+    // `diveIds` also keeps its tanks and pictures from landing on the dive that
+    // absorbed it.
+    if (context.canonicalRole('dive', item.externalId, 'dive') === MATCHED_LINK_ROLE) {
+      continue
+    }
     const existingId = context.canonicalId('dive', item.externalId, 'dive')
     if (!context.shouldApply('dive', item.externalId) && existingId) {
       diveIds.set(item.externalId, existingId)
@@ -896,6 +908,9 @@ async function applySnapshot(
       continue
     }
     if (!context.shouldApply('picture', item.externalId)) continue
+    // A picture of a dive that was not applied — a merge already took it — must
+    // not be recreated loose in the gallery.
+    if (item.diveExternalId && !diveIds.has(item.diveExternalId)) continue
     const referenceValues = {
       diveId: item.diveExternalId ? (diveIds.get(item.diveExternalId) ?? null) : null,
       siteId: item.siteExternalId ? (siteIds.get(item.siteExternalId) ?? null) : null,
@@ -1159,6 +1174,12 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
         signal: context.signal,
         shouldApply: (entityType, externalId) =>
           context.findRecord(entityType, externalId).change !== 'unchanged',
+        canonicalRole: (entityType, externalId, canonicalEntityType) =>
+          context
+            .findRecord(entityType, externalId)
+            .canonicalLinks.find(
+              (link) => link.canonicalEntityType === canonicalEntityType,
+            )?.role ?? null,
         canonicalId: context.findCanonicalId,
         canonicalIds: (entityType, externalId, canonicalEntityType) =>
           context

@@ -9,7 +9,9 @@ import {
   integrationState,
   integrations,
 } from '@/db/schema'
+import { mergeDivesInto } from '@/modules/dives/server/merge.server'
 import type { ExternalRecordInput, IntegrationConnector } from '../types'
+import { MATCHED_LINK_ROLE } from '../types'
 import {
   expireTimedOutImportRuns,
   ImportAlreadyRunningError,
@@ -56,6 +58,15 @@ const connector: IntegrationConnector = {
     let skipped = 0
     for (const record of context.records) {
       if (record.change === 'unchanged') {
+        skipped += 1
+        continue
+      }
+      const link = record.canonicalLinks.find(
+        (candidate) => candidate.canonicalEntityType === 'dive',
+      )
+      // A matched dive belongs to the logbook, not to this feed: it is only
+      // ever enriched, exactly as the real connectors treat one.
+      if (link?.role === MATCHED_LINK_ROLE) {
         skipped += 1
         continue
       }
@@ -201,6 +212,70 @@ describe.skipIf(!enabled)('generic import service database contract', () => {
     await expect(performFullImport(connector, { trigger: 'schedule' })).rejects.toThrow(
       'Full imports must be initiated manually',
     )
+  })
+
+  test('keeps a merged dive syncing without undoing the merge', async () => {
+    await getDb().delete(dives)
+    await getDb()
+      .delete(externalRecords)
+      .where(eq(externalRecords.integrationKey, INTEGRATION_KEY))
+
+    batch = {
+      records: [diveRecord('split-a', 28), diveRecord('split-b', 12)],
+      cursor: 'merge-1',
+    }
+    await performIncrementalImport(connector, { trigger: 'manual' })
+    const imported = await getDb()
+      .select({ id: dives.id, maximumDepthMeters: dives.maximumDepthMeters })
+      .from(dives)
+      .orderBy(desc(dives.maximumDepthMeters))
+    const keeper = imported[0]
+    const absorbed = imported[1]
+    if (!keeper || !absorbed) throw new Error('The import did not produce two dives')
+
+    await mergeDivesInto(keeper.id, [absorbed.id])
+    expect(await getDb().select().from(dives)).toHaveLength(1)
+
+    // The absorbed dive's record now matches the keeper, so re-running the
+    // import does not bring it back.
+    batch = {
+      records: [diveRecord('split-a', 28), diveRecord('split-b', 12)],
+      cursor: 'merge-2',
+    }
+    await performIncrementalImport(connector, { trigger: 'manual' })
+    expect(await getDb().select().from(dives)).toHaveLength(1)
+
+    // The keeper is still an ordinary imported dive: an upstream edit reaches
+    // it, and the dive it absorbed is still not recreated.
+    batch = {
+      records: [diveRecord('split-a', 28, 'edited upstream'), diveRecord('split-b', 12)],
+      cursor: 'merge-3',
+    }
+    await performIncrementalImport(connector, { trigger: 'manual' })
+    const afterEdit = await getDb().select().from(dives)
+    expect(afterEdit).toHaveLength(1)
+    expect(afterEdit[0]?.id).toBe(keeper.id)
+    expect(afterEdit[0]?.notes).toBe('edited upstream')
+
+    // Both records point at the merged dive, one as its own and one as matched.
+    const provenance = await getDb()
+      .select({
+        identityKey: externalRecords.identityKey,
+        diveId: externalRecordLinks.canonicalEntityId,
+        role: externalRecordLinks.role,
+      })
+      .from(externalRecordLinks)
+      .innerJoin(
+        externalRecords,
+        eq(externalRecordLinks.externalRecordId, externalRecords.id),
+      )
+      .where(eq(externalRecords.entityType, 'dive'))
+    expect(provenance).toHaveLength(2)
+    expect(provenance.every((item) => item.diveId === keeper.id)).toBe(true)
+    expect(provenance.map((item) => item.role).sort()).toEqual([
+      MATCHED_LINK_ROLE,
+      'produced',
+    ])
   })
 
   test('allows only one import job to run at a time', async () => {

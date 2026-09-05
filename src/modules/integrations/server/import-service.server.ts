@@ -9,6 +9,7 @@ import {
   integrations,
 } from '@/db/schema'
 import { getServerEnv } from '@/env'
+import { restoreMergedDiveProfiles } from '@/modules/dives/server/merge.server'
 import { externalRecordKey } from '../record-classification'
 import type {
   ApplyImportContext,
@@ -265,6 +266,10 @@ async function performLockedImport<TData>(
         unlinkCanonicalRecords,
       })
       signal.throwIfAborted()
+      // A merged dive syncs like any other, so an upstream change can rewrite
+      // its scalars from one segment. Its profile still spans them all, so put
+      // the derived values back in step before the transaction closes.
+      await restoreMergedDiveProfiles(transaction)
       await markExternalRecordsProcessed(transaction, observed, signal)
 
       const created = observed.filter((record) => record.change === 'created').length

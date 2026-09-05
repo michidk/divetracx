@@ -1,4 +1,10 @@
 export interface DiveProfilePoint {
+  /**
+   * Which recorded dive this sample came from. Merging appends another dive's
+   * profile under the next index; the surface interval between segments holds
+   * no data, so the chart lifts the pen rather than drawing through it.
+   */
+  segmentIndex: number
   elapsedSeconds: number
   depthMeters: number
   temperatureCelsius: number | null
@@ -17,6 +23,13 @@ export interface PositionedDiveProfilePoint extends DiveProfilePoint {
   tank1PressureY: number | null
   tank2PressureY: number | null
   ceilingY: number | null
+}
+
+export interface DiveProfileSurfaceGap {
+  startX: number
+  endX: number
+  startElapsedSeconds: number
+  endElapsedSeconds: number
 }
 
 export interface DiveProfileCeilingCrossing {
@@ -77,10 +90,13 @@ function scaleTrackValue(
 export function createSegmentedPath<T>(
   points: T[],
   position: (point: T) => { x: number; y: number } | null,
+  breaksBefore: (point: T, previous: T) => boolean = () => false,
 ) {
   let drawing = false
   return points
-    .map((point) => {
+    .map((point, index) => {
+      const previous = points[index - 1]
+      if (previous !== undefined && breaksBefore(point, previous)) drawing = false
       const positioned = position(point)
       if (!positioned) {
         drawing = false
@@ -92,6 +108,29 @@ export function createSegmentedPath<T>(
     })
     .filter(Boolean)
     .join(' ')
+}
+
+/** True when two adjacent samples sit either side of a surface interval. */
+function startsSegment(
+  point: { segmentIndex: number },
+  previous: { segmentIndex: number },
+) {
+  return point.segmentIndex !== previous.segmentIndex
+}
+
+/** Runs of consecutive samples belonging to one recorded dive. */
+function groupSegments<T extends { segmentIndex: number }>(points: T[]) {
+  const runs: T[][] = []
+  for (const point of points) {
+    const current = runs.at(-1)
+    const previous = current?.at(-1)
+    if (!current || (previous && startsSegment(point, previous))) {
+      runs.push([point])
+      continue
+    }
+    current.push(point)
+  }
+  return runs
 }
 
 function createCeilingPaths(points: PositionedDiveProfilePoint[]) {
@@ -113,7 +152,7 @@ function createCeilingPaths(points: PositionedDiveProfilePoint[]) {
 
     while (index < points.length) {
       const point = points[index]
-      if (!point || point.ceilingY === null) break
+      if (!point || point.ceilingY === null || startsSegment(point, previous)) break
       commands.push(`L ${point.x} ${previous.ceilingY}`, `L ${point.x} ${point.ceilingY}`)
       previous = point
       index += 1
@@ -138,6 +177,7 @@ function findCeilingCrossings(points: PositionedDiveProfilePoint[]) {
     const previous = points[index - 1]
     const current = points[index]
     if (!previous || !current || previous.ceilingY === null) continue
+    if (startsSegment(current, previous)) continue
 
     const previousDistance = previous.depthY - previous.ceilingY
     const currentDistance = current.depthY - previous.ceilingY
@@ -166,6 +206,7 @@ function createCeilingViolationPath(points: PositionedDiveProfilePoint[]) {
     const previous = points[index - 1]
     const current = points[index]
     if (!previous || !current || previous.ceilingY === null) continue
+    if (startsSegment(current, previous)) continue
 
     const previousDistance = previous.depthY - previous.ceilingY
     const currentDistance = current.depthY - previous.ceilingY
@@ -214,7 +255,11 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
       decoCeilingMeters: finiteOrNull(sample.decoCeilingMeters),
     }))
     .slice()
-    .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds)
+    .sort(
+      (left, right) =>
+        left.elapsedSeconds - right.elapsedSeconds ||
+        left.segmentIndex - right.segmentIndex,
+    )
   const plotWidth =
     PROFILE_CHART_VIEWBOX.width - PROFILE_CHART_VIEWBOX.left - PROFILE_CHART_VIEWBOX.right
   const maximumElapsedSeconds = Math.max(
@@ -281,33 +326,75 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
           (point.decoCeilingMeters / chartDepthMeters) *
             PROFILE_CHART_VIEWBOX.depthHeight,
   }))
-  const depthPath = createSegmentedPath(positionedPoints, (point) => ({
-    x: point.x,
-    y: point.depthY,
-  }))
-  const temperaturePath = createSegmentedPath(positionedPoints, (point) =>
-    point.temperatureY === null ? null : { x: point.x, y: point.temperatureY },
+  const temperaturePath = createSegmentedPath(
+    positionedPoints,
+    (point) =>
+      point.temperatureY === null ? null : { x: point.x, y: point.temperatureY },
+    startsSegment,
   )
-  const pressurePath = createSegmentedPath(positionedPoints, (point) =>
-    point.pressureY === null ||
-    (point.tankNumber === 1 && point.tank1PressureY !== null) ||
-    (point.tankNumber === 2 && point.tank2PressureY !== null)
-      ? null
-      : { x: point.x, y: point.pressureY },
+  const pressurePath = createSegmentedPath(
+    positionedPoints,
+    (point) =>
+      point.pressureY === null ||
+      (point.tankNumber === 1 && point.tank1PressureY !== null) ||
+      (point.tankNumber === 2 && point.tank2PressureY !== null)
+        ? null
+        : { x: point.x, y: point.pressureY },
+    startsSegment,
   )
-  const tank1PressurePath = createSegmentedPath(positionedPoints, (point) =>
-    point.tank1PressureY === null ? null : { x: point.x, y: point.tank1PressureY },
+  const tank1PressurePath = createSegmentedPath(
+    positionedPoints,
+    (point) =>
+      point.tank1PressureY === null ? null : { x: point.x, y: point.tank1PressureY },
+    startsSegment,
   )
-  const tank2PressurePath = createSegmentedPath(positionedPoints, (point) =>
-    point.tank2PressureY === null ? null : { x: point.x, y: point.tank2PressureY },
+  const tank2PressurePath = createSegmentedPath(
+    positionedPoints,
+    (point) =>
+      point.tank2PressureY === null ? null : { x: point.x, y: point.tank2PressureY },
+    startsSegment,
   )
+  const segmentRuns = groupSegments(positionedPoints)
+  // Each recorded dive gets its own closed outline and fill, so the surface
+  // interval between them stays empty instead of being shaded as a dive.
+  const closedDepthPath = segmentRuns
+    .map((run) => {
+      const start = run[0]
+      const end = run.at(-1)
+      if (!start || !end) return ''
+      const body = run.map((point) => `L ${point.x} ${point.depthY}`).join(' ')
+      return `M ${start.x} ${PROFILE_CHART_VIEWBOX.top} ${body} L ${end.x} ${PROFILE_CHART_VIEWBOX.top}`
+    })
+    .filter(Boolean)
+    .join(' ')
+  const depthAreaPath = segmentRuns
+    .map((run) => {
+      const start = run[0]
+      const end = run.at(-1)
+      if (!start || !end) return ''
+      const body = run.map((point) => `L ${point.x} ${point.depthY}`).join(' ')
+      return `M ${start.x} ${PROFILE_CHART_VIEWBOX.top} ${body} L ${end.x} ${PROFILE_CHART_VIEWBOX.top} Z`
+    })
+    .filter(Boolean)
+    .join(' ')
+  const surfaceGaps: DiveProfileSurfaceGap[] = segmentRuns.flatMap((run, index) => {
+    const previous = segmentRuns[index - 1]?.at(-1)
+    const start = run[0]
+    if (!previous || !start) return []
+    return [
+      {
+        startX: previous.x,
+        endX: start.x,
+        startElapsedSeconds: previous.elapsedSeconds,
+        endElapsedSeconds: start.elapsedSeconds,
+      },
+    ]
+  })
   const ceilingPaths = createCeilingPaths(positionedPoints)
   const ceilingPath = ceilingPaths.line
   const ceilingAreaPath = ceilingPaths.area
   const ceilingCrossings = findCeilingCrossings(positionedPoints)
   const ceilingViolationPath = createCeilingViolationPath(positionedPoints)
-  const firstPoint = positionedPoints[0]
-  const lastPoint = positionedPoints.at(-1)
   const deepestPoint = positionedPoints.reduce<PositionedDiveProfilePoint | null>(
     (deepest, point) =>
       deepest === null || point.depthMeters > deepest.depthMeters ? point : deepest,
@@ -324,14 +411,6 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
           : minimum,
       null,
     )
-  const closedDepthPath =
-    firstPoint && lastPoint
-      ? `M ${firstPoint.x} ${PROFILE_CHART_VIEWBOX.top} L ${firstPoint.x} ${firstPoint.depthY} ${depthPath.replace(/^M [^ ]+ [^ ]+/, '')} L ${lastPoint.x} ${PROFILE_CHART_VIEWBOX.top}`
-      : ''
-  const depthAreaPath =
-    firstPoint && lastPoint
-      ? `M ${firstPoint.x} ${PROFILE_CHART_VIEWBOX.top} ${depthPath.replace(/^M/, 'L')} L ${lastPoint.x} ${PROFILE_CHART_VIEWBOX.top} Z`
-      : ''
   const tankSwitches = positionedPoints.filter((point, index) => {
     if (point.tankNumber === null) return false
     const previousTankNumber = positionedPoints[index - 1]?.tankNumber ?? null
@@ -351,6 +430,7 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
     ceilingCrossings,
     ceilingViolationPath,
     tankSwitches,
+    surfaceGaps,
     maximumElapsedSeconds,
     maximumDepthMeters,
     deepestPoint,

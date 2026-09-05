@@ -279,6 +279,13 @@ async function applyDives(
     const link = record.canonicalLinks.find(
       (candidate) => candidate.canonicalEntityType === 'dive',
     )
+    // A matched dive belongs to the logbook rather than to this file — it was
+    // merged into another dive, or already existed here. Rewriting it, or
+    // replacing rows it now owns, would discard local work.
+    if (link && link.role === MATCHED_LINK_ROLE) {
+      counts.skipped += 1
+      continue
+    }
     const siteId = dive.siteExternalId ? (siteIds.get(dive.siteExternalId) ?? null) : null
     const diveTypeId = matchDiveTypeFromTags(dive.tags, knownDiveTypes)?.id ?? null
     const values = diveValues(dive, siteId, diveTypeId)

@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import {
   ArrowLeft,
   Clock3,
+  Combine,
   Database,
   Gauge,
   ImageIcon,
@@ -121,13 +122,22 @@ export function DivePage({ dive }: { dive: DiveData }) {
                 </span>
               ) : null}
             </div>
-            <Link
-              to="/dives/$diveId/edit"
-              params={{ diveId: dive.id }}
-              className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${heroPhoto ? 'border-white/30 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20' : 'border-border hover:bg-muted'}`}
-            >
-              <Pencil size={15} aria-hidden="true" /> Edit dive
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                to="/dives/$diveId/merge"
+                params={{ diveId: dive.id }}
+                className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${heroPhoto ? 'border-white/30 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20' : 'border-border hover:bg-muted'}`}
+              >
+                <Combine size={15} aria-hidden="true" /> Merge dives
+              </Link>
+              <Link
+                to="/dives/$diveId/edit"
+                params={{ diveId: dive.id }}
+                className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${heroPhoto ? 'border-white/30 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20' : 'border-border hover:bg-muted'}`}
+              >
+                <Pencil size={15} aria-hidden="true" /> Edit dive
+              </Link>
+            </div>
           </div>
           <h1
             className={`mt-3 text-balance text-4xl font-semibold tracking-tight md:text-5xl ${heroPhoto ? 'text-white drop-shadow-sm' : ''}`}
@@ -499,6 +509,12 @@ export function DivePage({ dive }: { dive: DiveData }) {
                   />
                 ))
               )}
+              {dive.merges.length > 0 ? (
+                <Value
+                  label="Merged from"
+                  value={dive.merges.map((merge) => merge.sourceLabel).join('; ')}
+                />
+              ) : null}
               <Value label="Last changed" value={formatRecordTime(dive.updatedAt)} />
             </dl>
           </section>

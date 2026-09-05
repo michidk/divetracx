@@ -186,7 +186,7 @@ scripts and backups.
 | Format | Endpoint | Best for | What it contains |
 | --- | --- | --- | --- |
 | **DiveMate backup** `.ddb` | `/api/export/divemate` | Opening your whole logbook in DiveMate again | A DiveMate-compatible SQLite database rebuilt from canonical data, including Garmin-imported and hand-logged dives |
-| **Divetracx backup** `.json` | `/api/export/json` | Complete, lossless backups | Every table in the database as versioned JSON (`divetracx-backup`, currently version 16) |
+| **Divetracx backup** `.json` | `/api/export/json` | Complete, lossless backups | Every table in the database as versioned JSON (`divetracx-backup`, currently version 17) |
 | **Dive spreadsheet** `.csv` | `/api/export/csv` | Spreadsheets and data analysis | One joined row per dive: site, buddies, equipment, tanks, conditions, notes, and the full profile as inline samples |
 | **Universal dive log** `.uddf` | `/api/export/uddf` | Other logbook software | UDDF 3.2.3 with diver, sites, and dives including depth profiles |
 | **Subsurface logbook** `.ssrf` | `/api/export/subsurface` | Opening the logbook in Subsurface, or a Subsurface ⇄ Divetracx round trip | Native Subsurface XML (format 3) with sites and GPS, cylinders, weights, buddies and dive team, tags, gas-change events, and full profiles with per-tank pressure and deco ceiling |
@@ -230,6 +230,25 @@ ones in the same canonical model.
 - **Photos** — upload pictures to dives, sites, and gear items; originals stay
   immutable and WebP thumbnails are generated.
 - **Settings** — maintain your own lists of dive types and agencies.
+
+### Merging a split dive
+
+Dive computers end a dive when you surface, so a short surface interval can
+leave one dive logged as two. Open either entry, choose **Merge dives**, and
+pick the ones that belong with it. The earliest entry is the one that is kept —
+that is where the dive began, so it keeps its dive number — and the rest are
+appended to it at their real clock times and deleted. The tanks you kept
+breathing are continued rather than duplicated, buddies, gear, photos, and notes
+move across, and the duration, depths, and temperatures are recomputed over the
+whole dive.
+
+The profile chart draws each recorded segment separately, with the surface
+interval between them shaded and left empty — no sample is invented to bridge
+the gap.
+
+A merged dive is an ordinary dive and keeps syncing. It holds the provenance of
+every entry that went into it, so later imports update it as they always would
+and never recreate the entries you merged in. Merging itself is not reversible.
 
 Because provenance is stored separately from the logbook, re-running an import
 never overwrites a field you edited yourself.

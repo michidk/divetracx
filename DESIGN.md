@@ -50,9 +50,13 @@ certifications for the Divetracx card. The card shows only starred certification
 one to three starred items use one column, while four to eight use two columns.
 Certification pill labels keep their full names and reduce their font size only
 as needed to fit the available width.
-When insurance details are recorded, the card footer shows the insurer, optional
-plan, and policy number. It also shows the diver's emergency-contact name, phone,
-and email when available.
+When insurance details are recorded and enabled for the card, the card footer
+shows the insurer, optional plan, and policy number. Emergency-contact name,
+phone, and email are likewise shown only when available and enabled. Both groups
+default to visible and have independent controls in their profile-form sections.
+The card is titled “Diver Profile”; its certification labels reduce their font
+size as needed to retain full names. Agency badges are visually prominent beneath
+a slightly smaller profile image.
 On desktop, the Divetracx card and certifications occupy the profile page's left
 column while the personal-details form occupies the right column.
 
@@ -202,6 +206,15 @@ categorical palette, and tank-switch markers drawn as labelled circles with
 connector lines and an `aria-label`. Axes use the mono face and gridlines use
 `--border`. Do not introduce a charting library for this chart.
 
+A merged dive holds more than one recorded profile on one timeline. Samples keep
+their true elapsed times, so the surface interval between segments is drawn to
+scale: a `--muted` band spanning the depth track, edged with dashed `--border`
+rules, and a legend entry reading “Surface interval · no recorded data”. Every
+series — depth, temperature, pressure, per-tank pressure, ceiling — lifts the pen
+at a segment boundary, and the depth outline and fill are closed once per
+segment. Nothing is interpolated across a gap that holds no samples, and no
+sample is invented to bridge one.
+
 ### Logbook dive diagram
 
 When a dive has no recorded samples, `manual-dive-diagram.tsx` replaces the
@@ -215,6 +228,23 @@ never scaled to the data — the kicker says "Schematic · not to scale" — and
 missing values render as an em dash in `--muted-foreground`, never as zero.
 The whole SVG is a single `role="img"` whose `aria-label` reads the numbers
 out in prose.
+
+### Merging dives
+
+`/dives/$diveId/merge` is a full page, not a dialog: a merge is destructive and
+its review needs room. The left column lists dives within a day of the one being
+merged, each row a checkbox, dive-type tile, identity, and mono duration and
+depth. The right column is a sticky review panel showing the resulting segment
+order — the surviving entry marked “kept”, with the surface gap between each
+pair — then the merged duration, depths, sample count and tank handling as mono
+values. When the survivor is not the dive being viewed, a `--warning` note says
+so before the confirmation does. Blocking problems — overlapping dives — show as
+red text with an alert icon and disable the action; consequences that are merely
+worth knowing use the `--warning` surface. Confirmation is `window.confirm`,
+matching dive deletion, and it names every dive that will be deleted.
+
+A dive that absorbed others lists them under “Merged from” in its Record panel,
+alongside the integration sources it still syncs from.
 
 ### Site map
 

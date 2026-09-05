@@ -354,6 +354,10 @@ export const diveProfileSamples = pgTable(
       .notNull()
       .references(() => dives.id, { onDelete: 'cascade' }),
     sampleIndex: integer('sample_index').notNull(),
+    // Segment 0 is the dive's own profile. Merging another dive in appends its
+    // samples under the next index so the chart can break the line across the
+    // surface interval instead of interpolating through it.
+    segmentIndex: integer('segment_index').notNull().default(0),
     elapsedSeconds: integer('elapsed_seconds').notNull(),
     depthMeters: numeric('depth_meters', { precision: 7, scale: 2 }).notNull(),
     temperatureCelsius: numeric('temperature_celsius', { precision: 5, scale: 2 }),
@@ -371,6 +375,28 @@ export const diveProfileSamples = pgTable(
       table.elapsedSeconds,
     ),
   ],
+)
+
+/**
+ * One segment of a merged dive. A dive computer that splits a single dive into
+ * several log entries leaves them to be recombined by hand; merging deletes the
+ * source dives, so this records what went into the surviving one.
+ */
+export const diveMerges = pgTable(
+  'dive_merges',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetDiveId: uuid('target_dive_id')
+      .notNull()
+      .references(() => dives.id, { onDelete: 'cascade' }),
+    segmentIndex: integer('segment_index').notNull(),
+    offsetSeconds: integer('offset_seconds').notNull(),
+    // The source dive row is gone by the time this is read, so no foreign key.
+    sourceDiveId: uuid('source_dive_id').notNull(),
+    sourceLabel: text('source_label').notNull(),
+    mergedAt: timestamp('merged_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('dive_merges_target_dive_id_index').on(table.targetDiveId)],
 )
 
 export const diveBuddies = pgTable(

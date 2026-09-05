@@ -288,6 +288,13 @@
       "when": 1788590713146,
       "tag": "0040_futuristic_squirrel_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1788594881142,
+      "tag": "0041_volatile_shaman",
+      "breakpoints": true
     }
   ]
 }
