@@ -28,6 +28,7 @@ import {
 } from '@/modules/dives/format'
 import type { getDive } from '@/modules/dives/server/queries'
 import { DiveProfileChart } from './dive-profile-chart'
+import { ManualDiveDiagram } from './manual-dive-diagram'
 
 type DiveData = NonNullable<Awaited<ReturnType<typeof getDive>>>
 
@@ -172,7 +173,11 @@ export function DivePage({ dive }: { dive: DiveData }) {
         />
       </section>
 
-      <DiveProfileChart samples={dive.profileSamples} tanks={dive.tanks} />
+      {dive.profileSamples.length > 0 ? (
+        <DiveProfileChart samples={dive.profileSamples} tanks={dive.tanks} />
+      ) : (
+        <ManualDiveDiagram dive={dive} />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(18rem,0.8fr)]">
         <div className="space-y-6">
@@ -206,6 +211,30 @@ export function DivePage({ dive }: { dive: DiveData }) {
               <Value
                 label="Decompression dive"
                 value={dive.decompressionDive ? 'Yes' : 'No'}
+              />
+              <Value
+                label="Safety stop"
+                value={
+                  dive.safetyStop
+                    ? dive.safetyStopSeconds === null
+                      ? 'Yes'
+                      : formatDuration(dive.safetyStopSeconds)
+                    : 'No'
+                }
+              />
+              <Value
+                label="Pressure groups"
+                value={
+                  dive.pressureGroupBeforeInterval ||
+                  dive.pressureGroupAfterInterval ||
+                  dive.pressureGroupEnd
+                    ? `${dive.pressureGroupBeforeInterval ?? '—'} → ${dive.pressureGroupAfterInterval ?? '—'} → ${dive.pressureGroupEnd ?? '—'}`
+                    : null
+                }
+              />
+              <Value
+                label="Residual nitrogen time"
+                value={formatDuration(dive.residualNitrogenSeconds)}
               />
               <Value label="Water" value={waterTypeLabel(dive.waterType)} />
               <Value label="Entry" value={entryTypeLabel(dive.entryType)} />

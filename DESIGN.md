@@ -157,7 +157,10 @@ existing taxonomy values; creating or renaming taxonomies belongs in Settings,
 not alongside the dive fields. Dive operator and boat are adjacent taxonomy
 selects in the main Dive section. The dive people picker is a searchable popover;
 selected people render as rows with a role select and remove action. New
-assignments default to Buddy. Field labels are `text-sm font-medium`;
+assignments default to Buddy. The Depth & time section carries the paper-logbook
+extras — a safety-stop toggle with an inline minutes input, and a Dive tables
+group with single-letter pressure-group inputs (upper-cased, mono) and residual
+nitrogen time; total bottom time is derived and displayed read-only. Field labels are `text-sm font-medium`;
 validation and server errors appear directly under the field in
 `text-sm text-red-600` with `aria-live="polite"`. Recorded dive profiles, import
 history, and external provenance are view-only and must not gain edit
@@ -198,6 +201,20 @@ temperature and decompression-ceiling series, per-tank pressure lines in the
 categorical palette, and tank-switch markers drawn as labelled circles with
 connector lines and an `aria-label`. Axes use the mono face and gridlines use
 `--border`. Do not introduce a charting library for this chart.
+
+### Logbook dive diagram
+
+When a dive has no recorded samples, `manual-dive-diagram.tsx` replaces the
+chart with a paper-logbook schematic: the surface line steps down to a flat
+bottom labelled with the bottom time, climbs back up through an optional
+safety-stop shelf, and returns to the surface. Boxed values above the line
+carry the pressure group before and after the surface interval, the interval
+itself, and the ending pressure group; the depth panel lists average and
+maximum depth; a sum line reads `RNT + ABT = TBT` in minutes. The sketch is
+never scaled to the data — the kicker says "Schematic · not to scale" — and
+missing values render as an em dash in `--muted-foreground`, never as zero.
+The whole SVG is a single `role="img"` whose `aria-label` reads the numbers
+out in prose.
 
 ### Site map
 

@@ -51,6 +51,14 @@ function minutesToSeconds(value: string, label: string) {
   return raw === null ? null : Math.round(Number(raw) * 60)
 }
 
+function pressureGroup(value: string, label: string) {
+  const raw = text(value)
+  if (raw === null) return null
+  const letter = raw.toUpperCase()
+  if (!/^[A-Z]$/.test(letter)) throw new Error(`${label} must be a single letter`)
+  return letter
+}
+
 function parseTanks(input: DiveEntryInput['tanks']) {
   return input.map((tank, index) => {
     const oxygenPercent = decimal(tank.oxygenPercent, 'Oxygen', { min: 0, max: 100 })
@@ -117,6 +125,23 @@ export async function saveDiveEntry(input: DiveEntryInput) {
     weightKg: decimal(dive.weightKg, 'Weight', { min: 0 }),
     equipmentWeightKg: decimal(dive.equipmentWeightKg, 'Equipment weight', { min: 0 }),
     decompressionDive: dive.decompressionDive,
+    safetyStop: dive.safetyStop,
+    safetyStopSeconds: dive.safetyStop
+      ? minutesToSeconds(dive.safetyStopMinutes, 'Safety stop')
+      : null,
+    pressureGroupBeforeInterval: pressureGroup(
+      dive.pressureGroupBeforeInterval,
+      'Pressure group before the surface interval',
+    ),
+    pressureGroupAfterInterval: pressureGroup(
+      dive.pressureGroupAfterInterval,
+      'Pressure group after the surface interval',
+    ),
+    pressureGroupEnd: pressureGroup(dive.pressureGroupEnd, 'Pressure group at the end'),
+    residualNitrogenSeconds: minutesToSeconds(
+      dive.residualNitrogenMinutes,
+      'Residual nitrogen time',
+    ),
     waterType: integer(dive.waterType, 'Water type', { min: 0 }),
     entryType: integer(dive.entryType, 'Entry type', { min: 0 }),
     visibility: text(dive.visibility),

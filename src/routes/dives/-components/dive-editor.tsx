@@ -57,6 +57,12 @@ function initialDiveState(data: DiveEditorData) {
     weightKg: numberString(dive?.weightKg ?? null),
     equipmentWeightKg: numberString(dive?.equipmentWeightKg ?? null),
     decompressionDive: dive?.decompressionDive ?? false,
+    safetyStop: dive?.safetyStop ?? false,
+    safetyStopMinutes: minutesString(dive?.safetyStopSeconds ?? null),
+    pressureGroupBeforeInterval: dive?.pressureGroupBeforeInterval ?? '',
+    pressureGroupAfterInterval: dive?.pressureGroupAfterInterval ?? '',
+    pressureGroupEnd: dive?.pressureGroupEnd ?? '',
+    residualNitrogenMinutes: minutesString(dive?.residualNitrogenSeconds ?? null),
     waterType: dive?.waterType ? String(dive.waterType) : '',
     entryType: dive?.entryType ? String(dive.entryType) : '',
     visibility: dive?.visibility ?? '',
@@ -127,6 +133,39 @@ function CodeSelect({
       </SelectContent>
     </Select>
   )
+}
+
+function PressureGroupInput({
+  id,
+  value,
+  onChange,
+}: {
+  id: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <Input
+      id={id}
+      type="text"
+      maxLength={1}
+      pattern="[A-Za-z]"
+      autoCapitalize="characters"
+      placeholder="A–Z"
+      value={value}
+      onChange={(event) => onChange(event.target.value.toUpperCase())}
+      className="mt-2 font-mono uppercase"
+    />
+  )
+}
+
+function totalBottomTimeLabel(residualNitrogenMinutes: string, durationMinutes: string) {
+  const residual =
+    residualNitrogenMinutes.trim() === '' ? null : Number(residualNitrogenMinutes)
+  const duration = durationMinutes.trim() === '' ? null : Number(durationMinutes)
+  if (residual === null || duration === null) return '—'
+  if (!Number.isFinite(residual) || !Number.isFinite(duration)) return '—'
+  return `${Math.round(residual)} + ${Math.round(duration)} = ${Math.round(residual + duration)} min`
 }
 
 function Field({
@@ -508,17 +547,103 @@ export function DiveEditor({
             )}
           </Field>
         </div>
-        <label
-          htmlFor="dive-decompression"
-          className="mt-5 flex min-h-11 max-w-xs items-center gap-3 rounded-xl border border-border bg-background px-4 text-sm font-medium"
-        >
-          <Checkbox
-            id="dive-decompression"
-            checked={dive.decompressionDive}
-            onCheckedChange={(checked) => update('decompressionDive', checked === true)}
-          />
-          Decompression dive
-        </label>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <label
+            htmlFor="dive-decompression"
+            className="flex min-h-11 items-center gap-3 rounded-xl border border-border bg-background px-4 text-sm font-medium"
+          >
+            <Checkbox
+              id="dive-decompression"
+              checked={dive.decompressionDive}
+              onCheckedChange={(checked) => update('decompressionDive', checked === true)}
+            />
+            Decompression dive
+          </label>
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="dive-safety-stop"
+              className="flex min-h-11 items-center gap-3 rounded-xl border border-border bg-background px-4 text-sm font-medium"
+            >
+              <Checkbox
+                id="dive-safety-stop"
+                checked={dive.safetyStop}
+                onCheckedChange={(checked) => update('safetyStop', checked === true)}
+              />
+              Safety stop
+            </label>
+            <Input
+              type="number"
+              min={0}
+              step="1"
+              inputMode="numeric"
+              aria-label="Safety stop minutes"
+              disabled={!dive.safetyStop}
+              value={dive.safetyStopMinutes}
+              placeholder="3"
+              onChange={(event) => update('safetyStopMinutes', event.target.value)}
+              className="w-20 text-center"
+            />
+            <span className="text-sm text-muted-foreground">min</span>
+          </div>
+        </div>
+        <fieldset className="mt-6 border-t border-border pt-5">
+          <legend className="sr-only">Dive tables</legend>
+          <p className="text-sm font-semibold">Dive tables</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Pressure-group letters and residual nitrogen time from a paper logbook. Total
+            bottom time is residual nitrogen time plus the dive duration.
+          </p>
+          <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+            <Field label="PG before interval">
+              {(id) => (
+                <PressureGroupInput
+                  id={id}
+                  value={dive.pressureGroupBeforeInterval}
+                  onChange={(value) => update('pressureGroupBeforeInterval', value)}
+                />
+              )}
+            </Field>
+            <Field label="PG after interval">
+              {(id) => (
+                <PressureGroupInput
+                  id={id}
+                  value={dive.pressureGroupAfterInterval}
+                  onChange={(value) => update('pressureGroupAfterInterval', value)}
+                />
+              )}
+            </Field>
+            <Field label="PG at end">
+              {(id) => (
+                <PressureGroupInput
+                  id={id}
+                  value={dive.pressureGroupEnd}
+                  onChange={(value) => update('pressureGroupEnd', value)}
+                />
+              )}
+            </Field>
+            <Field label="Residual nitrogen (min)">
+              {(id) => (
+                <Input
+                  id={id}
+                  type="number"
+                  min={0}
+                  step="1"
+                  value={dive.residualNitrogenMinutes}
+                  onChange={(event) =>
+                    update('residualNitrogenMinutes', event.target.value)
+                  }
+                  className="mt-2"
+                />
+              )}
+            </Field>
+            <div className="text-sm font-semibold">
+              Total bottom time
+              <p className="mt-2 flex min-h-11 items-center rounded-xl bg-muted/60 px-4 font-mono text-sm font-medium">
+                {totalBottomTimeLabel(dive.residualNitrogenMinutes, dive.durationMinutes)}
+              </p>
+            </div>
+          </div>
+        </fieldset>
       </EditorSection>
 
       <EditorSection title="Conditions">

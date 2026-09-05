@@ -5,6 +5,11 @@ const nullableText = z.string().max(10_000).nullable().optional()
 const nullableShortText = z.string().max(500).nullable().optional()
 const nullableNumber = z.number().finite().nullable().optional()
 const nullableInteger = z.number().int().nullable().optional()
+const pressureGroupLetter = z
+  .string()
+  .regex(/^[A-Za-z]$/, 'Pressure groups are a single table letter')
+  .nullable()
+  .optional()
 const nullableDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -41,6 +46,12 @@ const diveFields = {
   weightKg: z.number().min(0).nullable().optional(),
   equipmentWeightKg: z.number().min(0).nullable().optional(),
   decompressionDive: z.boolean().optional(),
+  safetyStop: z.boolean().optional(),
+  safetyStopSeconds: z.number().int().min(0).nullable().optional(),
+  pressureGroupBeforeInterval: pressureGroupLetter,
+  pressureGroupAfterInterval: pressureGroupLetter,
+  pressureGroupEnd: pressureGroupLetter,
+  residualNitrogenSeconds: z.number().int().min(0).nullable().optional(),
   waterType: z.number().int().min(0).nullable().optional(),
   entryType: z.number().int().min(0).nullable().optional(),
   visibility: nullableShortText,

@@ -319,6 +319,15 @@ export const dives = pgTable(
     equipmentWeightKg: numeric('equipment_weight_kg', { precision: 7, scale: 3 }),
     maximumPpo2: numeric('maximum_ppo2', { precision: 8, scale: 6 }),
     decompressionDive: boolean('decompression_dive').notNull().default(false),
+    safetyStop: boolean('safety_stop').notNull().default(false),
+    safetyStopSeconds: integer('safety_stop_seconds'),
+    // Dive-table bookkeeping from paper logbooks: the repetitive-group letter
+    // before and after the surface interval, the letter at the end of this
+    // dive, and the residual nitrogen time the tables assigned to it.
+    pressureGroupBeforeInterval: text('pressure_group_before_interval'),
+    pressureGroupAfterInterval: text('pressure_group_after_interval'),
+    pressureGroupEnd: text('pressure_group_end'),
+    residualNitrogenSeconds: integer('residual_nitrogen_seconds'),
     visibility: text('visibility'),
     current: text('current'),
     waves: text('waves'),

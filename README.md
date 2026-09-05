@@ -61,7 +61,10 @@ choice.
   transactional. Incremental imports skip unchanged records and never delete a
   dive just because it disappeared from a later feed.
 - ✍️ **Log anything by hand.** Dives, tanks, sites, buddies, gear, and
-  certifications have full editors in the UI. No dive computer required.
+  certifications have full editors in the UI. No dive computer required —
+  manual dives take paper-logbook fields (pressure groups, surface interval,
+  safety stop, residual nitrogen time) and render a logbook-style schematic
+  instead of an empty profile chart.
 - 🧩 **One canonical record.** Different source schemas map into one durable
   model with full provenance. Vendor IDs and raw payloads stay in a separate
   integration layer, so your manual edits survive every re-import.

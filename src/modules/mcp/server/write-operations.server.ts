@@ -75,6 +75,12 @@ function existingDiveInput(
       weightKg: diveText(dive.weightKg),
       equipmentWeightKg: diveText(dive.equipmentWeightKg),
       decompressionDive: dive.decompressionDive,
+      safetyStop: dive.safetyStop,
+      safetyStopMinutes: secondsAsMinutes(dive.safetyStopSeconds),
+      pressureGroupBeforeInterval: diveText(dive.pressureGroupBeforeInterval),
+      pressureGroupAfterInterval: diveText(dive.pressureGroupAfterInterval),
+      pressureGroupEnd: diveText(dive.pressureGroupEnd),
+      residualNitrogenMinutes: secondsAsMinutes(dive.residualNitrogenSeconds),
       waterType: diveText(dive.waterType),
       entryType: diveText(dive.entryType),
       visibility: diveText(dive.visibility),
@@ -126,6 +132,9 @@ function applyDiveChanges(
     'current',
     'waves',
     'weather',
+    'pressureGroupBeforeInterval',
+    'pressureGroupAfterInterval',
+    'pressureGroupEnd',
     'computer',
     'suit',
     'notes',
@@ -145,6 +154,13 @@ function applyDiveChanges(
   }
   if (changes.decompressionDive !== undefined) {
     next.dive.decompressionDive = changes.decompressionDive
+  }
+  if (changes.safetyStop !== undefined) next.dive.safetyStop = changes.safetyStop
+  if (changes.safetyStopSeconds !== undefined) {
+    next.dive.safetyStopMinutes = secondsAsMinutes(changes.safetyStopSeconds)
+  }
+  if (changes.residualNitrogenSeconds !== undefined) {
+    next.dive.residualNitrogenMinutes = secondsAsMinutes(changes.residualNitrogenSeconds)
   }
   if (changes.rating !== undefined) next.dive.rating = changes.rating ?? 0
   if (changes.buddyAssignments !== undefined) {
@@ -183,6 +199,12 @@ export async function createDiveFromMcp(input: CreateDiveToolInput) {
       weightKg: '',
       equipmentWeightKg: '',
       decompressionDive: false,
+      safetyStop: false,
+      safetyStopMinutes: '',
+      pressureGroupBeforeInterval: '',
+      pressureGroupAfterInterval: '',
+      pressureGroupEnd: '',
+      residualNitrogenMinutes: '',
       waterType: '',
       entryType: '',
       visibility: '',

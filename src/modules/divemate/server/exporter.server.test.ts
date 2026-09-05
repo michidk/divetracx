@@ -62,7 +62,7 @@ describe('canonical DiveMate export', () => {
     const now = new Date('2026-09-01T12:00:00Z')
     const snapshot = {
       format: 'divetracx-backup',
-      version: 16,
+      version: 17,
       exportedAt: now.toISOString(),
       data: {
         agencies: [
@@ -226,6 +226,12 @@ describe('canonical DiveMate export', () => {
             equipmentWeightKg: null,
             maximumPpo2: null,
             decompressionDive: false,
+            safetyStop: false,
+            safetyStopSeconds: null,
+            pressureGroupBeforeInterval: null,
+            pressureGroupAfterInterval: null,
+            pressureGroupEnd: null,
+            residualNitrogenSeconds: null,
             visibility: null,
             current: null,
             waves: null,
