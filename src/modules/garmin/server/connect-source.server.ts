@@ -9,19 +9,26 @@ import {
   buildActivityDetails,
   type GarminConnectActivity,
   type GarminConnectBatch,
+  type GarminConnectGear,
   isAfterWatermark,
   isDiveActivity,
   nextAdapterState,
   parseAdapterState,
 } from '../connect-envelope'
+import { createGarminDiveClient, exchangeForDiveToken } from '../dive-api'
 import { loadGarminTokens, saveGarminTokens } from './credentials.server'
 
 export type GarminConnectMode = 'full' | 'incremental'
+
+export interface GarminConnectFetchOptions {
+  includeGear?: boolean
+}
 
 export interface GarminConnectBatchSource {
   fetchBatch(
     mode: GarminConnectMode,
     state: Record<string, unknown>,
+    options?: GarminConnectFetchOptions,
   ): Promise<GarminConnectBatch>
 }
 
@@ -89,6 +96,7 @@ export class GarminConnectSource implements GarminConnectBatchSource {
   async fetchBatch(
     mode: GarminConnectMode,
     state: Record<string, unknown>,
+    options: GarminConnectFetchOptions = {},
   ): Promise<GarminConnectBatch> {
     const environment = getServerEnv()
     const watermark = parseAdapterState(state)
@@ -144,10 +152,23 @@ export class GarminConnectSource implements GarminConnectBatchSource {
       )
       activities.push({
         activityDetails: buildActivityDetails(item.raw),
-        fitBase64: Buffer.from(fitBytes).toString('base64'),
+        fitBytes,
         fitFileName: `${item.activityId}.fit`,
         fitContentType: 'application/vnd.ant.fit',
       })
+    }
+
+    // Gear and certifications live in the Garmin Dive app's own backend, not
+    // in Connect. A failure there must not cost the dive import, so it is
+    // reported in diagnostics and the gear list is left out of the batch.
+    let gear: GarminConnectGear[] | undefined
+    let gearError: string | undefined
+    if (options.includeGear) {
+      try {
+        gear = await fetchDiveGear(client)
+      } catch (error) {
+        gearError = error instanceof Error ? error.message : String(error)
+      }
     }
 
     // Persist tokens that the client may have refreshed during the batch.
@@ -159,6 +180,7 @@ export class GarminConnectSource implements GarminConnectBatchSource {
 
     return {
       activities,
+      ...(gear ? { gear } : {}),
       nextState: nextAdapterState(
         watermark,
         collected.map((item) => item.startEpochSeconds),
@@ -168,10 +190,27 @@ export class GarminConnectSource implements GarminConnectBatchSource {
       diagnostics: {
         activitiesScanned: scanned,
         diveActivitiesSelected: collected.length,
+        ...(gear ? { gearItems: gear.length } : {}),
+        ...(gearError ? { gearError } : {}),
         ...(truncated
           ? { truncatedAt: environment.GARMIN_FULL_IMPORT_MAX_ACTIVITIES }
           : {}),
       },
     }
   }
+}
+
+async function fetchDiveGear(client: GarminConnect): Promise<GarminConnectGear[]> {
+  const accessToken = client.exportToken().oauth2.access_token
+  if (typeof accessToken !== 'string') {
+    throw new Error('Garmin Connect session has no OAuth2 access token')
+  }
+  const dive = createGarminDiveClient(await exchangeForDiveToken(accessToken))
+  const summaries = await dive.listGear()
+  const gear: GarminConnectGear[] = []
+  for (const summary of summaries) {
+    const detail = await dive.getGear(summary.gearId)
+    gear.push({ gearId: String(summary.gearId), type: detail.type, detail: detail.raw })
+  }
+  return gear
 }

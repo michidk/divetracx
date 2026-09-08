@@ -4,19 +4,28 @@ import { createHash } from 'node:crypto'
 import { and, eq, inArray } from 'drizzle-orm'
 import type { DatabaseTransaction } from '@/db'
 import {
+  certifications,
   diveProfileSamples,
   dives,
+  equipment,
   externalRecordLinks,
   externalRecords,
   tanks,
 } from '@/db/schema'
 import {
+  type ApplyImportContext,
   type ExternalRecordInput,
   type IntegrationConnector,
   MATCHED_LINK_ROLE,
 } from '@/modules/integrations/types'
 import { parseGarminActivityDetails } from '../activity-details'
 import { GARMIN_ENTITIES } from '../entities'
+import {
+  isGarminCertification,
+  mapGarminCertification,
+  mapGarminEquipment,
+  normalizedGearName,
+} from '../gear-mapping'
 import { mapGarminActivity } from '../mapping'
 import { adjacentDiveDates, selectNearestDive } from '../matching'
 import type {
@@ -24,6 +33,7 @@ import type {
   GarminSourceActivity,
   GarminSourceBatch,
   GarminSourceClient,
+  GarminSourceGear,
 } from '../types'
 import { createGarminSourceClient } from './client.server'
 
@@ -36,6 +46,7 @@ interface PreparedGarminActivity {
 
 interface PreparedGarminData {
   activities: Map<string, PreparedGarminActivity>
+  gear: Map<string, GarminSourceGear>
 }
 
 function numeric(value: number | null) {
@@ -142,7 +153,26 @@ async function diveHasTanks(transaction: DatabaseTransaction, diveId: string) {
 
 function prepareBatch(batch: GarminSourceBatch) {
   const activities = new Map<string, PreparedGarminActivity>()
+  const gear = new Map<string, GarminSourceGear>()
   const records: ExternalRecordInput[] = []
+  for (const item of batch.gear ?? []) {
+    if (gear.has(item.gearId)) {
+      throw new Error(`Garmin batch contains duplicate gear ${item.gearId}`)
+    }
+    gear.set(item.gearId, item)
+    records.push({
+      entityType: isGarminCertification(item) ? 'certification' : 'gear',
+      identityKey: item.gearId,
+      externalId: item.gearId,
+      rawPayload: item.detail,
+      externalUpdatedAt: validDate(
+        typeof item.detail.lastModifiedTs === 'string'
+          ? item.detail.lastModifiedTs
+          : null,
+      ),
+      mapperVersion: 1,
+    })
+  }
   for (const source of batch.activities) {
     const details = parseGarminActivityDetails(source.activityDetails)
     if (activities.has(details.activityId)) {
@@ -181,7 +211,210 @@ function prepareBatch(batch: GarminSourceBatch) {
       ),
     )
     .digest('hex')
-  return { activities, records, fingerprint }
+  return { activities, gear, records, fingerprint }
+}
+
+/**
+ * Gear and certifications from the Garmin Dive app. A record already linked
+ * is updated in place; otherwise an existing row with the same name is
+ * matched (and only enriched) so a DiveMate import of the same item is not
+ * duplicated; anything else is created.
+ */
+async function applyGear(
+  context: ApplyImportContext<PreparedGarminData>,
+  counts: { created: number; updated: number; skipped: number; matched: number },
+) {
+  const byEntity: Record<string, number> = {}
+  const equipmentRecords = context.records.filter(
+    (record) => record.input.entityType === 'gear',
+  )
+  const certificationRecords = context.records.filter(
+    (record) => record.input.entityType === 'certification',
+  )
+  if (equipmentRecords.length === 0 && certificationRecords.length === 0) return byEntity
+
+  const existingEquipment = await context.transaction
+    .select({ id: equipment.id, name: equipment.name })
+    .from(equipment)
+  const equipmentByName = new Map(
+    existingEquipment.map((row) => [normalizedGearName(row.name), row.id]),
+  )
+  for (const record of equipmentRecords) {
+    context.signal.throwIfAborted()
+    const source = context.prepared.data.gear.get(record.input.identityKey)
+    if (!source)
+      throw new Error(`Prepared Garmin gear ${record.input.identityKey} is missing`)
+    const link = record.canonicalLinks.find(
+      (candidate) => candidate.canonicalEntityType === 'equipment',
+    )
+    if (record.change === 'unchanged' && link) {
+      counts.skipped += 1
+      continue
+    }
+    const mapped = mapGarminEquipment(source)
+    if (!mapped) {
+      counts.skipped += 1
+      continue
+    }
+    const values = {
+      name: mapped.name,
+      category: mapped.category,
+      manufacturer: mapped.manufacturer,
+      model: mapped.model,
+      serialNumber: mapped.serialNumber,
+      purchasedAt: mapped.purchasedAt,
+      purchasePrice: mapped.purchasePrice,
+      purchaseShop: mapped.purchaseShop,
+      retiredAt: mapped.retiredAt,
+      serviceDueAt: mapped.serviceDueAt,
+      inactive: mapped.inactive,
+      weightKg: mapped.weightKg,
+      notes: mapped.notes,
+      updatedAt: new Date(),
+    }
+    if (link && link.role !== MATCHED_LINK_ROLE) {
+      await context.transaction
+        .update(equipment)
+        .set(values)
+        .where(eq(equipment.id, link.canonicalEntityId))
+      counts.updated += 1
+      byEntity.gearUpdated = (byEntity.gearUpdated ?? 0) + 1
+      continue
+    }
+    const matchedId =
+      link?.canonicalEntityId ?? equipmentByName.get(normalizedGearName(mapped.name))
+    if (matchedId) {
+      // A locally owned item keeps its values; Garmin only fills gaps.
+      const [current] = await context.transaction
+        .select({
+          manufacturer: equipment.manufacturer,
+          model: equipment.model,
+          serialNumber: equipment.serialNumber,
+          purchasedAt: equipment.purchasedAt,
+          serviceDueAt: equipment.serviceDueAt,
+        })
+        .from(equipment)
+        .where(eq(equipment.id, matchedId))
+        .limit(1)
+      await context.transaction
+        .update(equipment)
+        .set({
+          updatedAt: new Date(),
+          ...(current?.manufacturer === null
+            ? { manufacturer: mapped.manufacturer }
+            : {}),
+          ...(current?.model === null ? { model: mapped.model } : {}),
+          ...(current?.serialNumber === null
+            ? { serialNumber: mapped.serialNumber }
+            : {}),
+          ...(current?.purchasedAt === null ? { purchasedAt: mapped.purchasedAt } : {}),
+          ...(current?.serviceDueAt === null
+            ? { serviceDueAt: mapped.serviceDueAt }
+            : {}),
+        })
+        .where(eq(equipment.id, matchedId))
+      if (!link) {
+        await context.linkCanonicalRecord(
+          record.id,
+          'equipment',
+          matchedId,
+          MATCHED_LINK_ROLE,
+        )
+        counts.matched += 1
+        byEntity.gearMatched = (byEntity.gearMatched ?? 0) + 1
+      } else {
+        counts.updated += 1
+      }
+      continue
+    }
+    const [inserted] = await context.transaction
+      .insert(equipment)
+      .values(values)
+      .returning({ id: equipment.id })
+    if (!inserted) throw new Error(`Could not store Garmin gear ${mapped.name}`)
+    equipmentByName.set(normalizedGearName(mapped.name), inserted.id)
+    await context.linkCanonicalRecord(record.id, 'equipment', inserted.id)
+    counts.created += 1
+    byEntity.gearCreated = (byEntity.gearCreated ?? 0) + 1
+  }
+
+  const existingCertifications = await context.transaction
+    .select({ id: certifications.id, name: certifications.name })
+    .from(certifications)
+  const certificationByName = new Map(
+    existingCertifications.map((row) => [normalizedGearName(row.name), row.id]),
+  )
+  for (const record of certificationRecords) {
+    context.signal.throwIfAborted()
+    const source = context.prepared.data.gear.get(record.input.identityKey)
+    if (!source)
+      throw new Error(
+        `Prepared Garmin certification ${record.input.identityKey} is missing`,
+      )
+    const link = record.canonicalLinks.find(
+      (candidate) => candidate.canonicalEntityType === 'certification',
+    )
+    if (record.change === 'unchanged' && link) {
+      counts.skipped += 1
+      continue
+    }
+    const mapped = mapGarminCertification(source)
+    if (!mapped) {
+      counts.skipped += 1
+      continue
+    }
+    if (link && link.role !== MATCHED_LINK_ROLE) {
+      await context.transaction
+        .update(certifications)
+        .set({
+          name: mapped.name,
+          certifiedAt: mapped.certifiedAt,
+          updatedAt: new Date(),
+        })
+        .where(eq(certifications.id, link.canonicalEntityId))
+      counts.updated += 1
+      byEntity.certificationsUpdated = (byEntity.certificationsUpdated ?? 0) + 1
+      continue
+    }
+    const matchedId =
+      link?.canonicalEntityId ?? certificationByName.get(normalizedGearName(mapped.name))
+    if (matchedId) {
+      const [current] = await context.transaction
+        .select({ certifiedAt: certifications.certifiedAt })
+        .from(certifications)
+        .where(eq(certifications.id, matchedId))
+        .limit(1)
+      if (current?.certifiedAt === null && mapped.certifiedAt) {
+        await context.transaction
+          .update(certifications)
+          .set({ certifiedAt: mapped.certifiedAt, updatedAt: new Date() })
+          .where(eq(certifications.id, matchedId))
+      }
+      if (!link) {
+        await context.linkCanonicalRecord(
+          record.id,
+          'certification',
+          matchedId,
+          MATCHED_LINK_ROLE,
+        )
+        counts.matched += 1
+        byEntity.certificationsMatched = (byEntity.certificationsMatched ?? 0) + 1
+      } else {
+        counts.updated += 1
+      }
+      continue
+    }
+    const [inserted] = await context.transaction
+      .insert(certifications)
+      .values({ name: mapped.name, certifiedAt: mapped.certifiedAt })
+      .returning({ id: certifications.id })
+    if (!inserted) throw new Error(`Could not store Garmin certification ${mapped.name}`)
+    certificationByName.set(normalizedGearName(mapped.name), inserted.id)
+    await context.linkCanonicalRecord(record.id, 'certification', inserted.id)
+    counts.created += 1
+    byEntity.certificationsCreated = (byEntity.certificationsCreated ?? 0) + 1
+  }
+  return byEntity
 }
 
 export function createGarminConnector(
@@ -195,15 +428,21 @@ export function createGarminConnector(
       entities: GARMIN_ENTITIES,
     },
     async prepareImport(context) {
+      const options = {
+        signal: context.signal,
+        includeGear:
+          context.isEntityEnabled('equipment') ||
+          context.isEntityEnabled('certifications'),
+      }
       const batch =
         context.mode === 'full'
-          ? await client.fetchFull(context.state, context.signal)
-          : await client.fetchIncremental(context.state, context.signal)
+          ? await client.fetchFull(context.state, options)
+          : await client.fetchIncremental(context.state, options)
       context.signal.throwIfAborted()
       const prepared = prepareBatch(batch)
       return {
         records: prepared.records,
-        data: { activities: prepared.activities },
+        data: { activities: prepared.activities, gear: prepared.gear },
         nextState: batch.nextState,
         validation: {
           complete: batch.complete ?? true,
@@ -215,14 +454,17 @@ export function createGarminConnector(
           activitiesReceived: batch.activities.length,
           divesReceived: [...prepared.activities.values()].filter((item) => item.mapped)
             .length,
+          gearReceived: prepared.gear.size,
         },
       }
     },
     async applyImport(context) {
-      let created = 0
-      let updated = 0
-      let skipped = 0
-      let matched = 0
+      const gearCounts = { created: 0, updated: 0, skipped: 0, matched: 0 }
+      const gearByEntity = await applyGear(context, gearCounts)
+      let created = gearCounts.created
+      let updated = gearCounts.updated
+      let skipped = gearCounts.skipped
+      let matched = gearCounts.matched
       let profileSamplesCreated = 0
       let tanksCreated = 0
 
@@ -244,6 +486,7 @@ export function createGarminConnector(
       const reservedDiveIds = new Set(linkedDives.map((row) => row.diveId))
 
       for (const record of context.records) {
+        if (record.input.entityType !== 'activity') continue
         context.signal.throwIfAborted()
         if (record.change === 'unchanged') {
           skipped += 1
@@ -403,11 +646,12 @@ export function createGarminConnector(
         updated,
         skipped,
         byEntity: {
-          divesCreated: created,
-          divesUpdated: updated,
-          divesMatched: matched,
+          divesCreated: created - gearCounts.created,
+          divesUpdated: updated - gearCounts.updated,
+          divesMatched: matched - gearCounts.matched,
           profileSamplesCreated,
           tanksCreated,
+          ...gearByEntity,
         },
       }
     },

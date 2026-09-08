@@ -15,13 +15,15 @@ export function createGarminSourceClient(
   source: GarminConnectBatchSource = new GarminConnectSource(),
 ): GarminSourceClient {
   return {
-    fetchFull(state, signal) {
-      signal?.throwIfAborted()
-      return source.fetchBatch('full', state)
+    fetchFull(state, options) {
+      options?.signal?.throwIfAborted()
+      return source.fetchBatch('full', state, { includeGear: options?.includeGear })
     },
-    fetchIncremental(state, signal) {
-      signal?.throwIfAborted()
-      return source.fetchBatch('incremental', state)
+    fetchIncremental(state, options) {
+      options?.signal?.throwIfAborted()
+      return source.fetchBatch('incremental', state, {
+        includeGear: options?.includeGear,
+      })
     },
   }
 }

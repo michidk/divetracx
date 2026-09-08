@@ -34,6 +34,6 @@ describe('Garmin main-app transport', () => {
       },
     })
 
-    expect(() => client.fetchFull({}, controller.signal)).toThrow('cancelled')
+    expect(() => client.fetchFull({}, { signal: controller.signal })).toThrow('cancelled')
   })
 })

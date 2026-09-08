@@ -1,8 +1,9 @@
 /**
- * Proof-of-concept client for the undocumented Garmin Dive API that backs the
- * Garmin Dive mobile app. Everything here was reverse-engineered by others
- * from captured app traffic (see robemmerson/ha-garmin-dive and
- * se0wtf/go-garminconnect); Garmin may change it at any time.
+ * Client for the undocumented Garmin Dive API that backs the Garmin Dive mobile
+ * app: gear, certifications, dive metadata, and devices that never reach the
+ * FIT file. The endpoints were reverse-engineered by others from captured app
+ * traffic (see robemmerson/ha-garmin-dive and se0wtf/go-garminconnect), so
+ * Garmin may change them at any time; callers treat failures as non-fatal.
  *
  * A Connect OAuth2 access token — the one the FIT sync already holds — is
  * exchanged for a bearer scoped to the Dive audience, which the

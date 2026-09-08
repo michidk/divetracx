@@ -20,13 +20,25 @@ export interface GarminConnectState {
 
 export interface GarminConnectActivity {
   activityDetails: Record<string, unknown>
-  fitBase64: string
+  fitBytes: Uint8Array
   fitFileName: string
   fitContentType: string
 }
 
+/**
+ * One item from the Garmin Dive app's gear list. Garmin files certifications
+ * under gear too (`type: 'CERTIFICATION'`), carrying only a name and date.
+ */
+export interface GarminConnectGear {
+  gearId: string
+  type: string
+  detail: Record<string, unknown>
+}
+
 export interface GarminConnectBatch {
   activities: GarminConnectActivity[]
+  /** Absent when the gear entities are switched off or the Dive API failed. */
+  gear?: GarminConnectGear[]
   nextState: Record<string, unknown>
   sourceDescription: string
   complete: boolean

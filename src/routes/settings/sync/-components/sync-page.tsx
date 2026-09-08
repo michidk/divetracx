@@ -42,9 +42,9 @@ type GarminDiveProbe = Awaited<ReturnType<typeof probeGarminDive>>
 type ImportSummary = Awaited<ReturnType<typeof runIncrementalImport>>
 
 /**
- * Proof of concept: exercises the undocumented Garmin Dive API (gear,
- * certifications, dive metadata) with the connected account and shows what
- * each endpoint returned. Read-only.
+ * Exercises the undocumented Garmin Dive API (gear, certifications, dive
+ * metadata) with the connected account and shows what each endpoint returned,
+ * so a Garmin-side change can be diagnosed without an import. Read-only.
  */
 function GarminDiveProbeSection() {
   const [running, setRunning] = useState(false)
@@ -65,10 +65,11 @@ function GarminDiveProbeSection() {
 
   return (
     <div className="mt-5 border-t border-border pt-4">
-      <h3 className="text-sm font-semibold">Garmin Dive API (experimental)</h3>
+      <h3 className="text-sm font-semibold">Garmin Dive API</h3>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">
-        Checks whether the Dive app’s gear, certification, and dive-log endpoints answer
-        for this account. Nothing is imported; token exchange and reads only.
+        Gear and certifications come from the Garmin Dive app’s own service, which is
+        undocumented. This checks whether its endpoints still answer for this account.
+        Nothing is imported; token exchange and reads only.
       </p>
       <div className="mt-3">
         <Button

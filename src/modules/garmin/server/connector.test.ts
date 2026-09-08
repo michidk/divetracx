@@ -56,3 +56,75 @@ describe('Garmin connector contract', () => {
     expect(prepared.validation.complete).toBe(false)
   })
 })
+
+describe('Garmin gear and certification records', () => {
+  const gear = [
+    {
+      gearId: '141548',
+      type: 'REGULATOR',
+      detail: {
+        name: 'Atomic B2',
+        type: 'REGULATOR',
+        lastModifiedTs: '2025-01-02T00:00:00Z',
+      },
+    },
+    {
+      gearId: '463947',
+      type: 'CERTIFICATION',
+      detail: { name: 'Deep Diver', type: 'CERTIFICATION', dateOfFirstUse: '2025-01-01' },
+    },
+  ]
+
+  function connectorWith(seen: Array<boolean | undefined>) {
+    return createGarminConnector({
+      async fetchFull(_state, options) {
+        seen.push(options?.includeGear)
+        return {
+          activities: [],
+          gear: options?.includeGear ? gear : undefined,
+          nextState: {},
+          sourceDescription: 'test full feed',
+        }
+      },
+      async fetchIncremental() {
+        throw new Error('not used')
+      },
+    })
+  }
+
+  test('asks the source for gear only when gear or certifications are switched on', async () => {
+    const seen: Array<boolean | undefined> = []
+    const connector = connectorWith(seen)
+
+    const withGear = await connector.prepareImport({
+      mode: 'full',
+      state: {},
+      signal: new AbortController().signal,
+      isEntityEnabled: (key) => key !== 'certifications',
+    })
+    expect(
+      withGear.records.map((record) => `${record.entityType}:${record.identityKey}`),
+    ).toEqual(['gear:141548', 'certification:463947'])
+    expect(withGear.diagnostics).toMatchObject({ gearReceived: 2 })
+
+    const withoutGear = await connector.prepareImport({
+      mode: 'full',
+      state: {},
+      signal: new AbortController().signal,
+      isEntityEnabled: (key) => key !== 'equipment' && key !== 'certifications',
+    })
+    expect(withoutGear.records).toEqual([])
+    expect(seen).toEqual([true, false])
+  })
+
+  test('declares gear and certifications as independent, switchable entities', () => {
+    const connector = connectorWith([])
+    const byKey = new Map(
+      connector.descriptor.entities.map((entity) => [entity.key, entity]),
+    )
+    expect(byKey.get('equipment')).toMatchObject({ recordTypes: ['gear'] })
+    expect(byKey.get('equipment')?.dependsOn).toBeUndefined()
+    expect(byKey.get('certifications')).toMatchObject({ recordTypes: ['certification'] })
+    expect(byKey.get('dives')?.required).toBe(true)
+  })
+})

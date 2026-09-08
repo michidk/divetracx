@@ -94,7 +94,7 @@ new, changed, unchanged, and failed source records.
 | Source | Full import | Incremental sync | What comes across | How it connects |
 | --- | :---: | :---: | --- | --- |
 | **DiveMate** `.ddb` | ✅ | ✅ | Dives, profiles, tanks, sites, buddies, equipment, equipment sets, certifications with card images, shops, dive types, diver profile, pictures | Reads `DiveMate.ddb` plus its `Media` and `Cards` files from a Google Drive folder via a service account |
-| **Garmin** dive computers | ✅ | ✅ | Dives, profiles, tanks, gases | Divetracx signs in with your account (MFA supported) and pulls FIT activities |
+| **Garmin** dive computers | ✅ | ✅ | Dives, profiles, tanks, gases; gear and certifications from the Garmin Dive app | Divetracx signs in with your account (MFA supported), pulls FIT activities from Garmin Connect, and reads gear from the Garmin Dive service |
 | **Subsurface** `.ssrf` / `.xml` | — | ✅ | Dives, profiles, cylinders, gas changes, sites with GPS, buddies and dive guides, weights, tags | Upload a logbook file from the browser or the CLI |
 
 > [!NOTE]
@@ -157,6 +157,22 @@ are retained in Divetracx’s server-only database for later imports.
 Activities are reconciled against existing log entries by start time within
 45 minutes, so a computer-recorded profile attaches to the dive you already
 logged instead of creating a duplicate.
+
+Gear and certifications you keep in the **Garmin Dive** app come across too.
+They live in a separate, undocumented Garmin service (the one the Dive app
+talks to), which Divetracx reaches by exchanging the stored Connect token for a
+Dive-scoped one — no second login. Gear brings brand, model, serial number,
+purchase date, price and shop, weight, retirement, and the next service date;
+Garmin stores certifications as a kind of gear, so those arrive with name and
+date only. Both are matched to existing gear and certifications by name before
+anything new is created, so a DiveMate import of the same item is enriched, not
+duplicated. Because this API is unofficial, a failure there is recorded in the
+run's diagnostics and never blocks the dive import. Switch either off under
+**What to sync** to skip the Dive service entirely.
+
+The **Probe Dive API** button under the Garmin account exercises those endpoints
+read-only and shows what each returned, which is useful when Garmin changes
+something.
 
 ```bash
 bun run import:incremental --integration=garmin

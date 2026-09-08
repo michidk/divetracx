@@ -27,8 +27,15 @@ export interface GarminSourceActivity {
   fitContentType?: string | null
 }
 
+export interface GarminSourceGear {
+  gearId: string
+  type: string
+  detail: Record<string, unknown>
+}
+
 export interface GarminSourceBatch {
   activities: GarminSourceActivity[]
+  gear?: GarminSourceGear[]
   nextState: Record<string, unknown>
   sourceDescription: string
   /** A full import must not replace canonical data from a truncated source. */
@@ -36,14 +43,20 @@ export interface GarminSourceBatch {
   diagnostics?: Record<string, unknown>
 }
 
+export interface GarminFetchOptions {
+  signal?: AbortSignal
+  /** Fetch the Dive app's gear and certification list alongside activities. */
+  includeGear?: boolean
+}
+
 export interface GarminSourceClient {
   fetchFull(
     state: Record<string, unknown>,
-    signal?: AbortSignal,
+    options?: GarminFetchOptions,
   ): Promise<GarminSourceBatch>
   fetchIncremental(
     state: Record<string, unknown>,
-    signal?: AbortSignal,
+    options?: GarminFetchOptions,
   ): Promise<GarminSourceBatch>
 }
 

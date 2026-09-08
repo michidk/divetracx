@@ -26,7 +26,7 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "test:integration:divemate-export": "RUN_DIVEMATE_INTEGRATION_TESTS=true bun test src/modules/divemate/server/writeback.integration.test.ts",
-    "test:integration:imports": "RUN_IMPORT_INTEGRATION_TESTS=true bun test src/modules/integrations/server/import-service.integration.test.ts src/modules/divemate/server/sync.integration.test.ts",
+    "test:integration:imports": "RUN_IMPORT_INTEGRATION_TESTS=true bun test src/modules/integrations/server/import-service.integration.test.ts src/modules/divemate/server/sync.integration.test.ts src/modules/garmin/server/gear.integration.test.ts",
     "check:helm": "bash scripts/verify-helm.sh",
     "lint:deadcode": "knip",
     "verify": "bun run check && bun run typecheck && bun run test && bun run lint:deadcode && bun run build && bun run check:helm",
