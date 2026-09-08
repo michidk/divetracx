@@ -65,6 +65,7 @@ export interface GarminProfileSample {
   depthMeters: number
   temperatureCelsius: number | null
   decoCeilingMeters: number | null
+  heartRateBpm: number | null
 }
 
 export interface GarminGas {
@@ -87,6 +88,8 @@ export interface GarminMappedDive {
   averageDepthMeters: number | null
   waterTemperatureCelsius: number | null
   maximumPpo2: number | null
+  averageHeartRateBpm: number | null
+  maximumHeartRateBpm: number | null
   number: number | null
   computer: string | null
   notes: string | null

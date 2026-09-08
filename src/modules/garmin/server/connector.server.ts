@@ -38,6 +38,8 @@ import type {
 import { createGarminSourceClient } from './client.server'
 
 const SOURCE_KEY = 'garmin'
+/** Bumped when the FIT mapping learns a field so stored activities re-process. */
+const ACTIVITY_MAPPER_VERSION = 2
 
 interface PreparedGarminActivity {
   source: GarminSourceActivity
@@ -72,6 +74,8 @@ function garminDiveValues(mapped: GarminMappedDive) {
     averageDepthMeters: numeric(mapped.averageDepthMeters),
     waterTemperatureCelsius: numeric(mapped.waterTemperatureCelsius),
     maximumPpo2: numeric(mapped.maximumPpo2),
+    averageHeartRateBpm: mapped.averageHeartRateBpm,
+    maximumHeartRateBpm: mapped.maximumHeartRateBpm,
     computer: mapped.computer,
     notes: mapped.notes,
     updatedAt: new Date(),
@@ -79,8 +83,9 @@ function garminDiveValues(mapped: GarminMappedDive) {
 }
 
 /**
- * A matched log entry stays authoritative: Garmin values only fill fields the
- * dive does not have yet, and the dive is marked as computer-captured.
+ * A dive that already exists keeps what it has: Garmin values only fill fields
+ * the dive does not have yet, whichever source recorded the rest, and the dive
+ * is marked as computer-captured.
  */
 async function enrichMatchedDive(
   transaction: DatabaseTransaction,
@@ -95,6 +100,8 @@ async function enrichMatchedDive(
       averageDepthMeters: dives.averageDepthMeters,
       waterTemperatureCelsius: dives.waterTemperatureCelsius,
       maximumPpo2: dives.maximumPpo2,
+      averageHeartRateBpm: dives.averageHeartRateBpm,
+      maximumHeartRateBpm: dives.maximumHeartRateBpm,
       utcOffsetMinutes: dives.utcOffsetMinutes,
       computer: dives.computer,
     })
@@ -125,6 +132,12 @@ async function enrichMatchedDive(
       ...(current.maximumPpo2 === null
         ? { maximumPpo2: numeric(mapped.maximumPpo2) }
         : {}),
+      ...(current.averageHeartRateBpm === null
+        ? { averageHeartRateBpm: mapped.averageHeartRateBpm }
+        : {}),
+      ...(current.maximumHeartRateBpm === null
+        ? { maximumHeartRateBpm: mapped.maximumHeartRateBpm }
+        : {}),
       ...(current.utcOffsetMinutes === null
         ? { utcOffsetMinutes: mapped.utcOffsetMinutes }
         : {}),
@@ -140,6 +153,63 @@ async function diveHasProfileSamples(transaction: DatabaseTransaction, diveId: s
     .where(eq(diveProfileSamples.diveId, diveId))
     .limit(1)
   return Boolean(row)
+}
+
+/**
+ * A dive whose profile came from another computer keeps that profile, but a
+ * reading only Garmin recorded — heart rate — is added to the existing samples
+ * where they have none. Garmin samples are matched to the dive's own by
+ * elapsed time, nearest within half the Garmin sampling interval.
+ */
+async function fillHeartRateFromGarmin(
+  transaction: DatabaseTransaction,
+  diveId: string,
+  garminSamples: GarminMappedDive['profileSamples'],
+) {
+  const readings = garminSamples.filter((sample) => sample.heartRateBpm !== null)
+  if (readings.length === 0) return 0
+  const existing = await transaction
+    .select({
+      id: diveProfileSamples.id,
+      elapsedSeconds: diveProfileSamples.elapsedSeconds,
+      heartRateBpm: diveProfileSamples.heartRateBpm,
+    })
+    .from(diveProfileSamples)
+    .where(
+      and(eq(diveProfileSamples.diveId, diveId), eq(diveProfileSamples.segmentIndex, 0)),
+    )
+  const targets = existing.filter((sample) => sample.heartRateBpm === null)
+  if (targets.length === 0) return 0
+  const intervals = readings
+    .slice(1)
+    .map(
+      (sample, index) => sample.elapsedSeconds - (readings[index]?.elapsedSeconds ?? 0),
+    )
+    .filter((value) => value > 0)
+  const tolerance = Math.max(
+    1,
+    Math.ceil((intervals.length > 0 ? Math.min(...intervals) : 10) / 2),
+  )
+  let filled = 0
+  let cursor = 0
+  for (const target of targets.sort((a, b) => a.elapsedSeconds - b.elapsedSeconds)) {
+    while (
+      cursor + 1 < readings.length &&
+      Math.abs((readings[cursor + 1]?.elapsedSeconds ?? 0) - target.elapsedSeconds) <=
+        Math.abs((readings[cursor]?.elapsedSeconds ?? 0) - target.elapsedSeconds)
+    ) {
+      cursor += 1
+    }
+    const nearest = readings[cursor]
+    if (!nearest || Math.abs(nearest.elapsedSeconds - target.elapsedSeconds) > tolerance)
+      continue
+    await transaction
+      .update(diveProfileSamples)
+      .set({ heartRateBpm: nearest.heartRateBpm, updatedAt: new Date() })
+      .where(eq(diveProfileSamples.id, target.id))
+    filled += 1
+  }
+  return filled
 }
 
 async function diveHasTanks(transaction: DatabaseTransaction, diveId: string) {
@@ -197,7 +267,7 @@ function prepareBatch(batch: GarminSourceBatch) {
           }
         : null,
       externalUpdatedAt: validDate(details.insertedDate),
-      mapperVersion: 1,
+      mapperVersion: ACTIVITY_MAPPER_VERSION,
     })
   }
   const fingerprint = createHash('sha256')
@@ -466,6 +536,7 @@ export function createGarminConnector(
       let skipped = gearCounts.skipped
       let matched = gearCounts.matched
       let profileSamplesCreated = 0
+      let heartRateSamplesFilled = 0
       let tanksCreated = 0
 
       // Dives that already carry a Garmin activity must not be matched again
@@ -587,14 +658,22 @@ export function createGarminConnector(
           ownsDive ? 'produced' : MATCHED_LINK_ROLE,
         )
 
-        // A matched log entry keeps its existing profile and cylinders; Garmin
-        // data fills those in only when the dive has none of its own.
-        const insertSamples =
-          syncSamples &&
-          (ownsDive || !(await diveHasProfileSamples(context.transaction, diveId)))
+        // Whatever data the dive already has stays; Garmin contributes what is
+        // missing. A dive with a profile from another computer keeps that
+        // profile and gains heart rate; one without gets the Garmin profile.
+        const hasProfile =
+          !ownsDive && (await diveHasProfileSamples(context.transaction, diveId))
+        const insertSamples = syncSamples && !hasProfile
         const insertTanks =
           syncTanks && (ownsDive || !(await diveHasTanks(context.transaction, diveId)))
 
+        if (syncSamples && hasProfile) {
+          heartRateSamplesFilled += await fillHeartRateFromGarmin(
+            context.transaction,
+            diveId,
+            mapped.profileSamples,
+          )
+        }
         if (insertSamples) {
           for (const [sampleIndex, sample] of mapped.profileSamples.entries()) {
             context.signal.throwIfAborted()
@@ -607,6 +686,7 @@ export function createGarminConnector(
                 depthMeters: String(sample.depthMeters),
                 temperatureCelsius: numeric(sample.temperatureCelsius),
                 decoCeilingMeters: numeric(sample.decoCeilingMeters),
+                heartRateBpm: sample.heartRateBpm,
               })
               .returning({ id: diveProfileSamples.id })
             if (inserted) {
@@ -650,6 +730,7 @@ export function createGarminConnector(
           divesUpdated: updated - gearCounts.updated,
           divesMatched: matched - gearCounts.matched,
           profileSamplesCreated,
+          ...(heartRateSamplesFilled > 0 ? { heartRateSamplesFilled } : {}),
           tanksCreated,
           ...gearByEntity,
         },

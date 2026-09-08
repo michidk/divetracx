@@ -16,6 +16,7 @@ function sample(
     tank2PressureBar: number | null
     decoCeilingMeters: number | null
     tankNumber: number | null
+    heartRateBpm: number | null
     segmentIndex: number
   }> = {},
 ) {
@@ -29,6 +30,7 @@ function sample(
     tank2PressureBar: null,
     decoCeilingMeters: null,
     tankNumber: null,
+    heartRateBpm: null,
     ...values,
   }
 }
@@ -196,6 +198,30 @@ describe('dive profile chart geometry', () => {
 
     expect(geometry.ceilingCrossings).toHaveLength(0)
     expect(geometry.ceilingPath.match(/M/g)).toHaveLength(1)
+  })
+
+  test('draws heart rate in the temperature band and marks its peak', () => {
+    const geometry = createProfileGeometry([
+      sample(0, 0, { heartRateBpm: 80 }),
+      sample(60, 10, { heartRateBpm: 110 }),
+      sample(120, 12, { heartRateBpm: null }),
+      sample(180, 5, { heartRateBpm: 95 }),
+    ])
+
+    expect(geometry.heartRateRange).toEqual({ minimum: 80 - 2.4, maximum: 110 + 2.4 })
+    expect(geometry.maximumHeartRatePoint?.heartRateBpm).toBe(110)
+    expect(geometry.heartRatePath).toContain('M')
+    const withReading = geometry.points.filter((point) => point.heartRateY !== null)
+    expect(withReading).toHaveLength(3)
+    for (const point of withReading) {
+      expect(point.heartRateY).toBeGreaterThanOrEqual(
+        PROFILE_CHART_VIEWBOX.temperatureTop,
+      )
+      expect(point.heartRateY).toBeLessThanOrEqual(
+        PROFILE_CHART_VIEWBOX.temperatureTop + PROFILE_CHART_VIEWBOX.temperatureHeight,
+      )
+    }
+    expect(createProfileGeometry([sample(0, 0), sample(60, 10)]).heartRatePath).toBe('')
   })
 
   test('breaks every track at a segment boundary', () => {

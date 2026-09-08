@@ -4,14 +4,11 @@ import { unzipSync } from 'fflate'
 import { GarminConnect } from 'garmin-connect-2fa'
 import { getServerEnv } from '@/env'
 import {
-  activityIdentity,
-  activityStartEpochSeconds,
-  buildActivityDetails,
+  buildDiveActivityDetails,
   type GarminConnectActivity,
   type GarminConnectBatch,
   type GarminConnectGear,
   isAfterWatermark,
-  isDiveActivity,
   nextAdapterState,
   parseAdapterState,
 } from '../connect-envelope'
@@ -48,29 +45,15 @@ async function createClient() {
   return client
 }
 
-function toBytes(payload: unknown): Uint8Array {
-  if (payload instanceof Uint8Array) return payload
-  if (payload instanceof ArrayBuffer) return new Uint8Array(payload)
-  throw new Error('Garmin Connect returned an unexpected FIT download payload')
-}
-
-async function downloadOriginalFit(
-  client: GarminConnect,
-  activityId: string,
-  maximumFitBytes: number,
-) {
-  const payload = await client.client.get<unknown>(
-    `${client.client.url.DOWNLOAD_ZIP}${activityId}`,
-    { responseType: 'arraybuffer' },
-  )
-  const archive = unzipSync(toBytes(payload))
-  const fitEntry = Object.keys(archive).find((name) =>
+function unzipFit(archive: Uint8Array, activityId: string, maximumFitBytes: number) {
+  const entries = unzipSync(archive)
+  const fitEntry = Object.keys(entries).find((name) =>
     name.toLowerCase().endsWith('.fit'),
   )
   if (!fitEntry) {
     throw new Error(`Garmin activity ${activityId} download contains no FIT file`)
   }
-  const bytes = archive[fitEntry]
+  const bytes = entries[fitEntry]
   if (!bytes) {
     throw new Error(`Garmin activity ${activityId} FIT entry is empty`)
   }
@@ -80,17 +63,26 @@ async function downloadOriginalFit(
   return bytes
 }
 
-interface CollectedActivity {
+interface CollectedDive {
   raw: Record<string, unknown>
-  activityId: string
+  connectActivityId: string | null
   startEpochSeconds: number | null
 }
 
+function diveStartEpochSeconds(raw: Record<string, unknown>): number | null {
+  const text = typeof raw.startTime === 'string' ? raw.startTime : null
+  if (!text) return null
+  const parsed = Date.parse(text)
+  return Number.isNaN(parsed) ? null : Math.round(parsed / 1_000)
+}
+
 /**
- * Fetches dive activities from Garmin Connect and converts them into the
- * transactional batch the Garmin connector consumes. The unofficial consumer
- * API lists activities newest-first; incremental mode stops paging once a page
- * ends below the stored watermark minus the overlap.
+ * Lists dives through the Garmin Dive service — the backend of the Garmin Dive
+ * app — and downloads each dive's original FIT file from Connect with the same
+ * Dive-scoped token. The dive list is newest-first and paged; incremental mode
+ * stops paging once a page ends below the stored watermark minus the overlap.
+ * Dives logged by hand in the app have no Connect activity and no FIT file;
+ * they are still imported from their summary.
  */
 export class GarminConnectSource implements GarminConnectBatchSource {
   async fetchBatch(
@@ -101,22 +93,28 @@ export class GarminConnectSource implements GarminConnectBatchSource {
     const environment = getServerEnv()
     const watermark = parseAdapterState(state)
     const client = await createClient()
-    const collected: CollectedActivity[] = []
+    // Any request through the Connect client refreshes an expired token first;
+    // the Dive exchange below needs a live one.
+    await client.getUserProfile()
+    const connectAccessToken = client.exportToken().oauth2.access_token
+    if (typeof connectAccessToken !== 'string') {
+      throw new Error('Garmin Connect session has no OAuth2 access token')
+    }
+    const dive = createGarminDiveClient(await exchangeForDiveToken(connectAccessToken))
+
+    const collected: CollectedDive[] = []
     const seen = new Set<string>()
     let scanned = 0
-    let start = 0
+    let page = 0
     let truncated = false
-
     while (true) {
-      const page = (await client.getActivities(
-        start,
-        environment.GARMIN_ACTIVITY_PAGE_SIZE,
-      )) as unknown as Record<string, unknown>[]
-      if (page.length === 0) break
-      scanned += page.length
+      const result = await dive.listDives(page, environment.GARMIN_ACTIVITY_PAGE_SIZE)
+      const entries = result.dives
+      if (entries.length === 0) break
+      scanned += entries.length
       let pageEndedBelowWatermark = false
-      for (const raw of page) {
-        const startEpochSeconds = activityStartEpochSeconds(raw)
+      for (const entry of entries) {
+        const startEpochSeconds = diveStartEpochSeconds(entry.raw)
         const inWindow =
           mode === 'full' ||
           isAfterWatermark(
@@ -128,44 +126,64 @@ export class GarminConnectSource implements GarminConnectBatchSource {
           pageEndedBelowWatermark = true
           continue
         }
-        if (!isDiveActivity(raw)) continue
-        const activityId = activityIdentity(raw)
-        if (!activityId || seen.has(activityId)) continue
-        seen.add(activityId)
-        collected.push({ raw, activityId, startEpochSeconds })
+        const identity = String(buildDiveActivityDetails(entry.raw).activityId)
+        if (seen.has(identity)) continue
+        seen.add(identity)
+        collected.push({
+          raw: entry.raw,
+          connectActivityId:
+            entry.connectActivityId !== null ? String(entry.connectActivityId) : null,
+          startEpochSeconds,
+        })
       }
       if (mode === 'incremental' && pageEndedBelowWatermark) break
-      start += page.length
-      if (mode === 'full' && start >= environment.GARMIN_FULL_IMPORT_MAX_ACTIVITIES) {
+      page += 1
+      if (
+        mode === 'full' &&
+        page * environment.GARMIN_ACTIVITY_PAGE_SIZE >=
+          environment.GARMIN_FULL_IMPORT_MAX_ACTIVITIES
+      ) {
         truncated = true
         break
       }
-      if (page.length < environment.GARMIN_ACTIVITY_PAGE_SIZE) break
+      if (
+        entries.length < environment.GARMIN_ACTIVITY_PAGE_SIZE ||
+        (result.totalCount !== null && scanned >= result.totalCount)
+      ) {
+        break
+      }
     }
 
     const activities: GarminConnectActivity[] = []
+    let manualDives = 0
     for (const item of collected) {
-      const fitBytes = await downloadOriginalFit(
-        client,
-        item.activityId,
+      const activityDetails = buildDiveActivityDetails(item.raw)
+      if (item.connectActivityId === null) {
+        manualDives += 1
+        activities.push({ activityDetails })
+        continue
+      }
+      const fitBytes = unzipFit(
+        await dive.downloadFitArchive(item.connectActivityId),
+        item.connectActivityId,
         environment.GARMIN_MAX_FIT_BYTES,
       )
       activities.push({
-        activityDetails: buildActivityDetails(item.raw),
+        activityDetails,
         fitBytes,
-        fitFileName: `${item.activityId}.fit`,
+        fitFileName: `${item.connectActivityId}.fit`,
         fitContentType: 'application/vnd.ant.fit',
       })
     }
 
-    // Gear and certifications live in the Garmin Dive app's own backend, not
-    // in Connect. A failure there must not cost the dive import, so it is
-    // reported in diagnostics and the gear list is left out of the batch.
+    // Gear and certifications live in the same Dive service. A failure there
+    // must not cost the dive import, so it is reported in diagnostics and the
+    // gear list is left out of the batch.
     let gear: GarminConnectGear[] | undefined
     let gearError: string | undefined
     if (options.includeGear) {
       try {
-        gear = await fetchDiveGear(client)
+        gear = await fetchDiveGear(dive)
       } catch (error) {
         gearError = error instanceof Error ? error.message : String(error)
       }
@@ -185,11 +203,12 @@ export class GarminConnectSource implements GarminConnectBatchSource {
         watermark,
         collected.map((item) => item.startEpochSeconds),
       ),
-      sourceDescription: `Garmin Connect ${mode} activity sweep`,
+      sourceDescription: `Garmin Dive ${mode} dive sweep`,
       complete: !truncated,
       diagnostics: {
-        activitiesScanned: scanned,
-        diveActivitiesSelected: collected.length,
+        divesScanned: scanned,
+        divesSelected: collected.length,
+        ...(manualDives > 0 ? { manualDives } : {}),
         ...(gear ? { gearItems: gear.length } : {}),
         ...(gearError ? { gearError } : {}),
         ...(truncated
@@ -200,12 +219,9 @@ export class GarminConnectSource implements GarminConnectBatchSource {
   }
 }
 
-async function fetchDiveGear(client: GarminConnect): Promise<GarminConnectGear[]> {
-  const accessToken = client.exportToken().oauth2.access_token
-  if (typeof accessToken !== 'string') {
-    throw new Error('Garmin Connect session has no OAuth2 access token')
-  }
-  const dive = createGarminDiveClient(await exchangeForDiveToken(accessToken))
+async function fetchDiveGear(
+  dive: ReturnType<typeof createGarminDiveClient>,
+): Promise<GarminConnectGear[]> {
   const summaries = await dive.listGear()
   const gear: GarminConnectGear[] = []
   for (const summary of summaries) {

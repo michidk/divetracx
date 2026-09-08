@@ -141,6 +141,7 @@ function sampleXml(samples: Sample[], tanks: Tank[]) {
   let lastTemperature: number | null = null
   let lastPressure = new Map<number, number>()
   let lastCeiling: number | null = null
+  let lastHeartRate: number | null = null
   const sensorFor = (tankNumber: number) => {
     const index = tanks.findIndex((tank) => tank.computerTankNumber === tankNumber)
     return index >= 0 ? index : tankNumber - 1
@@ -167,6 +168,10 @@ function sampleXml(samples: Sample[], tanks: Tank[]) {
       line += ` pressure${sensor}='${formatMilli(pressure, 'bar')}'`
     }
     lastPressure = pressures
+    if (sample.heartRateBpm !== null && sample.heartRateBpm !== lastHeartRate) {
+      line += ` heartbeat='${sample.heartRateBpm}'`
+      lastHeartRate = sample.heartRateBpm
+    }
     const ceiling = positive(sample.decoCeilingMeters)
     if (ceiling !== lastCeiling) {
       line += ` in_deco='${ceiling === null ? 0 : 1}'`

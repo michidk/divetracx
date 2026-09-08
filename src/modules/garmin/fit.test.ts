@@ -57,9 +57,33 @@ describe('Garmin FIT mapping', () => {
       depthMeters: 12.5,
       temperatureCelsius: 22,
       decoCeilingMeters: 3,
+      heartRateBpm: null,
     })
     expect(mapped.gases[0]?.oxygenPercent).toBe(32)
     expect(mapped.maximumPpo2).toBe(1.35)
+  })
+
+  test('reads wrist heart rate and drops the FIT no-reading sentinels', () => {
+    const startedAt = new Date('2026-09-01T10:00:00Z')
+    const at = (seconds: number) => new Date(startedAt.getTime() + seconds * 1_000)
+    const mapped = mapDecodedGarminFit({
+      sessionMesgs: [{ sport: 'diving', startTime: startedAt, totalTimerTime: 40 }],
+      recordMesgs: [
+        { timestamp: at(0), depth: 0, heartRate: 0 },
+        { timestamp: at(10), depth: 5, heartRate: 92 },
+        { timestamp: at(20), depth: 8, heartRate: 255 },
+        { timestamp: at(30), depth: 9, heartRate: 88 },
+        { timestamp: at(40), depth: 9 },
+      ],
+    } as FitMessages)
+
+    expect(mapped.profileSamples.map((sample) => sample.heartRateBpm)).toEqual([
+      null,
+      92,
+      null,
+      88,
+      null,
+    ])
   })
 
   test('decodes a real FIT binary using the official Garmin SDK', () => {

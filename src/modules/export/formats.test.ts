@@ -6,7 +6,7 @@ function fixture(): ExportSnapshot {
   const timestamp = new Date('2026-08-29T10:15:00.000Z')
   return {
     format: 'divetracx-backup',
-    version: 17,
+    version: 18,
     exportedAt: timestamp.toISOString(),
     data: {
       agencies: [],
@@ -97,6 +97,8 @@ function fixture(): ExportSnapshot {
           weightKg: '6.500',
           equipmentWeightKg: '12.400',
           maximumPpo2: '1.176000',
+          averageHeartRateBpm: null,
+          maximumHeartRateBpm: null,
           decompressionDive: true,
           safetyStop: true,
           safetyStopSeconds: 180,
@@ -134,6 +136,7 @@ function fixture(): ExportSnapshot {
           tank2PressureBar: '198.00',
           decoCeilingMeters: null,
           tankNumber: 1,
+          heartRateBpm: null,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
@@ -150,6 +153,7 @@ function fixture(): ExportSnapshot {
           tank2PressureBar: '198.50',
           decoCeilingMeters: '3.00',
           tankNumber: 2,
+          heartRateBpm: null,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
@@ -171,7 +175,7 @@ describe('export formats', () => {
     }
 
     expect(parsed.format).toBe('divetracx-backup')
-    expect(parsed.version).toBe(17)
+    expect(parsed.version).toBe(18)
     expect(parsed.data.dives).toHaveLength(1)
     expect(parsed.data.divers[0]?.createdAt).toBe('2026-08-29T10:15:00.000Z')
   })
@@ -184,7 +188,7 @@ describe('export formats', () => {
     expect(output).toContain('"\'=HYPERLINK(""bad"")\notherwise memorable"')
     expect(output).toContain('"-24.1234567"')
     expect(output).toContain(
-      '"2","0:0.00:22.00:205.00:205.00:198.00::1;30:12.30:19.50:198.50:194.00:198.50:3.00:2"',
+      '"2","0:0.00:22.00:205.00:205.00:198.00::1:;30:12.30:19.50:198.50:194.00:198.50:3.00:2:"',
     )
     expect(output).toEndWith('\r\n')
   })

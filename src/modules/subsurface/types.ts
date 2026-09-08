@@ -33,6 +33,7 @@ export interface SubsurfaceSample {
   decoCeilingMeters: number | null
   /** One-based cylinder in use; only set for dives with gas changes. */
   tankNumber: number | null
+  heartRateBpm: number | null
 }
 
 export interface SubsurfacePerson {

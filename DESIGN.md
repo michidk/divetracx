@@ -214,6 +214,10 @@ categorical palette, and tank-switch markers drawn as labelled circles with
 connector lines and an `aria-label`. Axes use the mono face and gridlines use
 `--border`. Do not introduce a charting library for this chart.
 
+Heart rate, when a computer recorded it, shares the temperature band as a dashed
+rose (`rose-500`) line with its own scale and a peak marker in `bpm`; it appears
+in the legend and the selected-sample panel only when the dive has readings.
+
 A merged dive holds more than one recorded profile on one timeline. Samples keep
 their true elapsed times, so the surface interval between segments is drawn to
 scale: a `--muted` band spanning the depth track, edged with dashed `--border`

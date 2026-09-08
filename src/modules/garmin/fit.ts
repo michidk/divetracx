@@ -69,11 +69,15 @@ function mapProfile(
       0,
       Math.round((timestamp.getTime() - startedAt.getTime()) / 1_000),
     )
+    const heartRate = finite(item.heartRate)
     byElapsed.set(elapsedSeconds, {
       elapsedSeconds,
       depthMeters: depth,
       temperatureCelsius: finite(item.temperature),
       decoCeilingMeters: finite(item.nextStopDepth),
+      // 0 and 255 are the FIT "no reading" sentinels for optical wrist HR.
+      heartRateBpm:
+        heartRate !== null && heartRate > 0 && heartRate < 255 ? heartRate : null,
     })
   }
   return [...byElapsed.values()].sort(

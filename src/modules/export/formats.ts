@@ -165,7 +165,7 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
     'equipment',
     'tanks',
     'profile_sample_count',
-    'profile_samples_seconds_depth_meters_temperature_celsius_active_pressure_bar_tank_1_pressure_bar_tank_2_pressure_bar_deco_ceiling_meters_tank_channel',
+    'profile_samples_seconds_depth_meters_temperature_celsius_active_pressure_bar_tank_1_pressure_bar_tank_2_pressure_bar_deco_ceiling_meters_tank_channel_heart_rate_bpm',
     'notes',
   ]
 
@@ -272,6 +272,7 @@ export function buildCsvExport(snapshot: ExportSnapshot) {
                 sample.tank2PressureBar ?? '',
                 sample.decoCeilingMeters ?? '',
                 sample.tankNumber ?? '',
+                sample.heartRateBpm ?? '',
               ].join(':'),
             )
             .join(';'),
@@ -367,6 +368,9 @@ export function buildUddfExport(snapshot: ExportSnapshot) {
                 '          <waypoint>',
                 `            <divetime>${sample.elapsedSeconds}</divetime>`,
                 `            <depth>${xml(sample.depthMeters)}</depth>`,
+                ...(sample.heartRateBpm !== null
+                  ? [`            <heartrate>${sample.heartRateBpm}</heartrate>`]
+                  : []),
                 '          </waypoint>',
               ]),
               '        </samples>',

@@ -7,7 +7,7 @@ function fixture(): ExportSnapshot {
   const timestamp = new Date('2026-08-29T10:15:00.000Z')
   return {
     format: 'divetracx-backup',
-    version: 17,
+    version: 18,
     exportedAt: timestamp.toISOString(),
     data: {
       agencies: [],
@@ -130,6 +130,8 @@ function fixture(): ExportSnapshot {
           weightKg: '6.500',
           equipmentWeightKg: null,
           maximumPpo2: null,
+          averageHeartRateBpm: null,
+          maximumHeartRateBpm: null,
           decompressionDive: true,
           safetyStop: false,
           safetyStopSeconds: null,
@@ -171,6 +173,8 @@ function fixture(): ExportSnapshot {
           weightKg: null,
           equipmentWeightKg: null,
           maximumPpo2: null,
+          averageHeartRateBpm: null,
+          maximumHeartRateBpm: null,
           decompressionDive: false,
           safetyStop: false,
           safetyStopSeconds: null,
@@ -211,6 +215,7 @@ function fixture(): ExportSnapshot {
           tank2PressureBar: '198.00',
           decoCeilingMeters: null,
           tankNumber: 1,
+          heartRateBpm: null,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
@@ -227,6 +232,7 @@ function fixture(): ExportSnapshot {
           tank2PressureBar: '198.50',
           decoCeilingMeters: '3.00',
           tankNumber: 2,
+          heartRateBpm: null,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
@@ -243,6 +249,7 @@ function fixture(): ExportSnapshot {
           tank2PressureBar: null,
           decoCeilingMeters: null,
           tankNumber: 2,
+          heartRateBpm: null,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
@@ -386,6 +393,7 @@ describe('buildSubsurfaceExport', () => {
         tank2PressureBar: 198,
         decoCeilingMeters: null,
         tankNumber: 1,
+        heartRateBpm: null,
       },
       {
         elapsedSeconds: 30,
@@ -396,6 +404,7 @@ describe('buildSubsurfaceExport', () => {
         tank2PressureBar: 198.5,
         decoCeilingMeters: 3,
         tankNumber: 2,
+        heartRateBpm: null,
       },
       {
         elapsedSeconds: 2910,
@@ -406,6 +415,7 @@ describe('buildSubsurfaceExport', () => {
         tank2PressureBar: null,
         decoCeilingMeters: null,
         tankNumber: 2,
+        heartRateBpm: null,
       },
     ])
     expect(minimal).toMatchObject({

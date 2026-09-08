@@ -3,6 +3,7 @@ import {
   activityStartEpochSeconds,
   activityUtcOffsetSeconds,
   buildActivityDetails,
+  buildDiveActivityDetails,
   isAfterWatermark,
   isDiveActivity,
   nextAdapterState,
@@ -92,5 +93,44 @@ describe('Garmin Connect state', () => {
     expect(isAfterWatermark(6_400, watermark, 3_600)).toBe(false)
     expect(isAfterWatermark(null, watermark, 3_600)).toBe(true)
     expect(isAfterWatermark(1, { lastActivityStartSeconds: null }, 3_600)).toBe(true)
+  })
+})
+
+describe('buildDiveActivityDetails', () => {
+  test('maps a Garmin Dive summary entry onto the activity-details shape', () => {
+    const details = buildDiveActivityDetails({
+      id: 10000001,
+      connectActivityId: 99000001,
+      name: 'Test Site Alpha',
+      diveType: 'SINGLE_GAS',
+      number: 68,
+      startTime: '2025-06-15T10:00:00+02:00',
+      totalTime: 2807.98,
+      entryLoc: { latitude: 1.5, longitude: 2.5 },
+    })
+    expect(details).toMatchObject({
+      activityId: '99000001',
+      activityType: 'single_gas_diving',
+      activityName: 'Test Site Alpha',
+      startTimeInSeconds: Date.parse('2025-06-15T08:00:00Z') / 1_000,
+      startTimeOffsetInSeconds: 7_200,
+      durationInSeconds: 2_808,
+      startingLatitudeInDegree: 1.5,
+      startingLongitudeInDegree: 2.5,
+    })
+  })
+
+  test('a dive logged by hand has no Connect activity and keys off its own id', () => {
+    const details = buildDiveActivityDetails({
+      id: 42,
+      activitySource: 'MANUAL',
+      diveType: 'APNEA',
+      startTime: '2025-06-15T10:00:00Z',
+    })
+    expect(details).toMatchObject({
+      activityId: 'dive-42',
+      activityType: 'apnea_diving',
+      startTimeOffsetInSeconds: 0,
+    })
   })
 })

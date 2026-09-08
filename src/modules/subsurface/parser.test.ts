@@ -81,11 +81,13 @@ describe('parseSubsurfaceLogbook', () => {
         tank2PressureBar: null,
         decoCeilingMeters: null,
         tankNumber: 1,
+        heartRateBpm: null,
       })
       expect(dive?.samples[8]).toMatchObject({
         elapsedSeconds: 540,
         temperatureCelsius: 23,
         tankNumber: 1,
+        heartRateBpm: null,
       })
       expect(dive?.samples[9]).toMatchObject({ elapsedSeconds: 600, tankNumber: 2 })
       const tankNumbers = dive?.samples.map((sample) => sample.tankNumber) ?? []
@@ -291,6 +293,7 @@ describe('parseSubsurfaceLogbook', () => {
         tank2PressureBar: 159.407,
         pressureBar: 109.213,
         tankNumber: 1,
+        heartRateBpm: null,
       })
       expect(dive?.samples.at(-1)?.tankNumber).toBe(3)
     })

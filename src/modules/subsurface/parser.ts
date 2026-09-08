@@ -257,6 +257,12 @@ function parseGasChanges(events: XmlElement[], cylinders: SubsurfaceCylinder[]) 
   return changes.sort((left, right) => left.elapsedSeconds - right.elapsedSeconds)
 }
 
+/** Subsurface writes `heartbeat="72"`; anything outside a plausible range is a sensor dropout. */
+function heartRate(value: string | undefined) {
+  const parsed = parseInteger(value)
+  return parsed !== null && parsed > 0 && parsed < 255 ? parsed : null
+}
+
 function activeCylinder(changes: GasChange[], elapsedSeconds: number) {
   let active = 0
   for (const change of changes) {
@@ -318,6 +324,7 @@ function parseSamples(
       tank2PressureBar: pressures.get(1) ?? null,
       decoCeilingMeters: inDeco && stopDepth !== null && stopDepth > 0 ? stopDepth : null,
       tankNumber: gasChanges.length > 0 && cylinders.length > 0 ? active + 1 : null,
+      heartRateBpm: heartRate(attributes.heartbeat),
     })
   }
   return samples

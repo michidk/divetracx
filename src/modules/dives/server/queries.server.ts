@@ -356,6 +356,7 @@ export async function loadDive(diveId: string) {
           tank2PressureBar: diveProfileSamples.tank2PressureBar,
           decoCeilingMeters: diveProfileSamples.decoCeilingMeters,
           tankNumber: diveProfileSamples.tankNumber,
+          heartRateBpm: diveProfileSamples.heartRateBpm,
         })
         .from(diveProfileSamples)
         .where(eq(diveProfileSamples.diveId, diveId))

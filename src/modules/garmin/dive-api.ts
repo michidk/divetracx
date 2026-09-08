@@ -262,6 +262,33 @@ export function createGarminDiveClient(
         }
       })
     },
+    /**
+     * The original FIT file for a dive, as recorded by the watch. It lives on
+     * Connect's download service, which the Dive bearer reaches through its
+     * CONNECT_READ scope; the response is a zip holding the single .fit entry.
+     */
+    async downloadFitArchive(connectActivityId: number | string): Promise<Uint8Array> {
+      // The download service answers 406 to the JSON Accept header the other
+      // endpoints want; it serves a zip.
+      const response = await fetchImpl(
+        `${GARMIN_DIVE_HOSTS.connectApi}/download-service/files/activity/${connectActivityId}`,
+        {
+          headers: {
+            ...APP_HEADERS,
+            Accept: '*/*',
+            Authorization: `bearer ${token.accessToken}`,
+          },
+        },
+      )
+      if (!response.ok) {
+        throw new GarminDiveApiError(
+          response.status,
+          `download-service/files/activity/${connectActivityId}`,
+          await response.text(),
+        )
+      }
+      return new Uint8Array(await response.arrayBuffer())
+    },
     async listTags(): Promise<Record<string, number>> {
       const payload = object(await get<unknown>('/diving/v1/dive/tags'))
       return Object.fromEntries(

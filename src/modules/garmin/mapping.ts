@@ -24,6 +24,24 @@ function maximum(values: Array<number | null>) {
   return present.length > 0 ? Math.max(...present) : null
 }
 
+/**
+ * The session's own average/maximum when the watch recorded one, otherwise
+ * derived from the samples so a computer that omits the summary still counts.
+ */
+function heartRateSummary(fit: DecodedGarminFit | null, kind: 'avg' | 'max') {
+  const fromSession = finite(
+    kind === 'avg' ? fit?.session?.avgHeartRate : fit?.session?.maxHeartRate,
+  )
+  if (fromSession !== null && fromSession > 0) return Math.round(fromSession)
+  const readings = (fit?.profileSamples ?? [])
+    .map((sample) => sample.heartRateBpm)
+    .filter((value): value is number => value !== null)
+  if (readings.length === 0) return null
+  return kind === 'max'
+    ? Math.max(...readings)
+    : Math.round(readings.reduce((sum, value) => sum + value, 0) / readings.length)
+}
+
 function minimum(values: Array<number | null>) {
   const present = values.filter((value): value is number => value !== null)
   return present.length > 0 ? Math.min(...present) : null
@@ -83,6 +101,8 @@ export function mapGarminActivity(source: GarminSourceActivity): GarminMappedDiv
     averageDepthMeters,
     waterTemperatureCelsius: minimum(temperatures),
     maximumPpo2: fit?.maximumPpo2 ?? null,
+    averageHeartRateBpm: heartRateSummary(fit, 'avg'),
+    maximumHeartRateBpm: heartRateSummary(fit, 'max'),
     number:
       finite(fit?.summary?.diveNumber) === null
         ? null

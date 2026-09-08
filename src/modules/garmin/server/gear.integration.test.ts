@@ -1,8 +1,12 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import type { FileIdMesg, RecordMesg, SessionMesg } from '@garmin/fitsdk'
+import { Encoder, Profile } from '@garmin/fitsdk'
 import { eq } from 'drizzle-orm'
 import { closeDb, getDb } from '@/db'
 import {
   certifications,
+  diveProfileSamples,
+  dives,
   equipment,
   externalRecordLinks,
   externalRecords,
@@ -16,6 +20,12 @@ import type { GarminSourceBatch, GarminSourceGear } from '../types'
 import { createGarminConnector } from './connector.server'
 
 const enabled = process.env.RUN_IMPORT_INTEGRATION_TESTS === 'true'
+
+function messageNumber(name: string) {
+  const value = Profile.MesgNum[name]
+  if (value === undefined) throw new Error(`FIT profile is missing ${name}`)
+  return value
+}
 
 function regulator(overrides: Record<string, unknown> = {}): GarminSourceGear {
   return {
@@ -156,3 +166,115 @@ describe.skipIf(!enabled)('Garmin gear and certification import', () => {
     await saveIntegrationEntitySelection('garmin', [])
   })
 })
+
+describe.skipIf(!enabled)(
+  'Garmin heart rate on a dive recorded by another computer',
+  () => {
+    test('keeps the existing profile and adds heart rate where samples have none', async () => {
+      const db = getDb()
+      await db.delete(dives)
+      await db.delete(externalRecords).where(eq(externalRecords.integrationKey, 'garmin'))
+      const startedAt = new Date('2026-09-05T09:00:00Z')
+      const [existing] = await db
+        .insert(dives)
+        .values({
+          diveDate: '2026-09-05',
+          entryTime: '09:00:00',
+          utcOffsetMinutes: 0,
+          durationSeconds: 40,
+          maximumDepthMeters: '9.00',
+        })
+        .returning({ id: dives.id })
+      if (!existing) throw new Error('fixture dive missing')
+      await db.insert(diveProfileSamples).values(
+        [0, 10, 20, 30, 40].map((seconds, index) => ({
+          diveId: existing.id,
+          sampleIndex: index,
+          elapsedSeconds: seconds,
+          depthMeters: String(index * 2),
+        })),
+      )
+
+      const encoder = new Encoder()
+      encoder.onMesg(messageNumber('FILE_ID'), {
+        type: 'activity',
+        manufacturer: 'development',
+        product: 1,
+        timeCreated: startedAt,
+      } as FileIdMesg)
+      encoder.onMesg(messageNumber('SESSION'), {
+        sport: 'diving',
+        subSport: 'singleGasDiving',
+        startTime: startedAt,
+        timestamp: new Date(startedAt.getTime() + 40_000),
+        totalTimerTime: 40,
+        avgHeartRate: 90,
+        maxHeartRate: 110,
+        event: 'session',
+        eventType: 'stop',
+      } as SessionMesg)
+      for (const [seconds, heartRate] of [
+        [0, 80],
+        [10, 100],
+        [20, 0],
+        [30, 110],
+        [40, 85],
+      ] as const) {
+        encoder.onMesg(messageNumber('RECORD'), {
+          timestamp: new Date(startedAt.getTime() + seconds * 1_000),
+          depth: 3,
+          heartRate,
+        } as RecordMesg)
+      }
+      batch = {
+        activities: [
+          {
+            activityDetails: {
+              activityId: '555',
+              activityType: 'single_gas_diving',
+              startTimeInSeconds: startedAt.getTime() / 1_000,
+              startTimeOffsetInSeconds: 0,
+              durationInSeconds: 40,
+            },
+            fitBytes: encoder.close(),
+            fitFileName: '555.fit',
+            fitContentType: 'application/vnd.ant.fit',
+          },
+        ],
+        nextState: {},
+        sourceDescription: 'Garmin test feed',
+      }
+      const result = await performIncrementalImport(connector, { trigger: 'manual' })
+      expect(result.canonical.byEntity).toMatchObject({
+        divesMatched: 1,
+        profileSamplesCreated: 0,
+        heartRateSamplesFilled: 4,
+      })
+
+      const samples = await db
+        .select({
+          elapsedSeconds: diveProfileSamples.elapsedSeconds,
+          depthMeters: diveProfileSamples.depthMeters,
+          heartRateBpm: diveProfileSamples.heartRateBpm,
+        })
+        .from(diveProfileSamples)
+        .where(eq(diveProfileSamples.diveId, existing.id))
+        .orderBy(diveProfileSamples.elapsedSeconds)
+      // The other computer's depths are untouched; the 0 bpm dropout stays empty.
+      expect(samples).toEqual([
+        { elapsedSeconds: 0, depthMeters: '0.00', heartRateBpm: 80 },
+        { elapsedSeconds: 10, depthMeters: '2.00', heartRateBpm: 100 },
+        { elapsedSeconds: 20, depthMeters: '4.00', heartRateBpm: null },
+        { elapsedSeconds: 30, depthMeters: '6.00', heartRateBpm: 110 },
+        { elapsedSeconds: 40, depthMeters: '8.00', heartRateBpm: 85 },
+      ])
+      const [dive] = await db.select().from(dives).where(eq(dives.id, existing.id))
+      expect(dive).toMatchObject({
+        maximumDepthMeters: '9.00',
+        averageHeartRateBpm: 90,
+        maximumHeartRateBpm: 110,
+        captureSource: 'computer',
+      })
+    })
+  },
+)

@@ -320,6 +320,8 @@ export const dives = pgTable(
     weightKg: numeric('weight_kg', { precision: 7, scale: 3 }),
     equipmentWeightKg: numeric('equipment_weight_kg', { precision: 7, scale: 3 }),
     maximumPpo2: numeric('maximum_ppo2', { precision: 8, scale: 6 }),
+    averageHeartRateBpm: integer('average_heart_rate_bpm'),
+    maximumHeartRateBpm: integer('maximum_heart_rate_bpm'),
     decompressionDive: boolean('decompression_dive').notNull().default(false),
     safetyStop: boolean('safety_stop').notNull().default(false),
     safetyStopSeconds: integer('safety_stop_seconds'),
@@ -368,6 +370,7 @@ export const diveProfileSamples = pgTable(
     tank2PressureBar: numeric('tank_2_pressure_bar', { precision: 7, scale: 2 }),
     decoCeilingMeters: numeric('deco_ceiling_meters', { precision: 7, scale: 2 }),
     tankNumber: integer('tank_number'),
+    heartRateBpm: integer('heart_rate_bpm'),
     ...auditColumns,
   },
   (table) => [

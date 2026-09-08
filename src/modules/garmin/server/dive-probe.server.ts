@@ -159,6 +159,18 @@ export async function probeGarminDiveApi(): Promise<GarminDiveProbeResult> {
     }
   })
 
+  await attempt('FIT download with the Dive token', async () => {
+    const page = await dive.listDives(0, 5)
+    const withActivity = page.dives.find((item) => item.connectActivityId !== null)
+    if (!withActivity?.connectActivityId) {
+      return { detail: 'No dive with a Connect activity to download.' }
+    }
+    const archive = await dive.downloadFitArchive(withActivity.connectActivityId)
+    return {
+      detail: `Downloaded ${archive.byteLength} bytes for activity ${withActivity.connectActivityId}.`,
+    }
+  })
+
   await attempt('Gear summary', async () => {
     const gear = await dive.listGear()
     const byType = gear.reduce<Record<string, number>>((counts, item) => {

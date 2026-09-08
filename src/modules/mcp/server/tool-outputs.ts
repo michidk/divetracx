@@ -325,6 +325,7 @@ export const getDiveOutput = z.looseObject({
         tank2PressureBar: decimalString('bar'),
         decoCeilingMeters: decimalString('metres'),
         tankNumber: z.number().int().nullable(),
+        heartRateBpm: z.number().int().nullable(),
       }),
     ),
   }),

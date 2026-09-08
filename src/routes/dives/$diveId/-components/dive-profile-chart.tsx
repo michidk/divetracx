@@ -18,6 +18,7 @@ interface ProfileSample {
   tank2PressureBar: string | null
   decoCeilingMeters: string | null
   tankNumber: number | null
+  heartRateBpm: number | null
   segmentIndex: number
 }
 
@@ -528,6 +529,7 @@ export function DiveProfileChart({
             sample.tank1PressureBar === null ? null : Number(sample.tank1PressureBar),
           tank2PressureBar:
             sample.tank2PressureBar === null ? null : Number(sample.tank2PressureBar),
+          heartRateBpm: sample.heartRateBpm,
           decoCeilingMeters:
             sample.decoCeilingMeters === null ? null : Number(sample.decoCeilingMeters),
           tankNumber: sample.tankNumber,
@@ -646,6 +648,11 @@ export function DiveProfileChart({
             {geometry.temperaturePath ? (
               <span className="inline-flex items-center gap-2">
                 <span className="h-0.5 w-5 bg-orange-500" /> Temperature
+              </span>
+            ) : null}
+            {geometry.heartRatePath ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="h-0.5 w-5 bg-rose-500" /> Heart rate
               </span>
             ) : null}
             {geometry.tank1PressurePath ? (
@@ -825,6 +832,27 @@ export function DiveProfileChart({
                   vectorEffect="non-scaling-stroke"
                 />
               ) : null}
+              {geometry.heartRatePath ? (
+                <path
+                  d={geometry.heartRatePath}
+                  fill="none"
+                  className="stroke-rose-500"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                  strokeDasharray="6 4"
+                  vectorEffect="non-scaling-stroke"
+                />
+              ) : null}
+              {geometry.maximumHeartRatePoint?.heartRateY === null ||
+              !geometry.maximumHeartRatePoint ? null : (
+                <ChartValueMarker
+                  x={geometry.maximumHeartRatePoint.x}
+                  pointY={geometry.maximumHeartRatePoint.heartRateY}
+                  label={`${geometry.maximumHeartRatePoint.heartRateBpm} bpm`}
+                  ariaLabel={`Maximum heart rate ${geometry.maximumHeartRatePoint.heartRateBpm} beats per minute`}
+                  color="#f43f5e"
+                />
+              )}
               {geometry.minimumTemperaturePoint?.temperatureY === null ||
               !geometry.minimumTemperaturePoint ? null : (
                 <ChartValueMarker
@@ -1017,6 +1045,16 @@ export function DiveProfileChart({
                   : `${selectedPoint.temperatureCelsius.toFixed(1)} °C`}
               </span>
             </p>
+            {geometry.heartRatePath ? (
+              <p className="rounded-lg bg-muted/60 px-3 py-2">
+                <span className="block text-xs text-muted-foreground">Heart rate</span>
+                <span className="font-mono font-semibold">
+                  {selectedPoint?.heartRateBpm === null || !selectedPoint
+                    ? '—'
+                    : `${selectedPoint.heartRateBpm} bpm`}
+                </span>
+              </p>
+            ) : null}
             <p className="rounded-lg bg-muted/60 px-3 py-2">
               <span className="block text-xs text-muted-foreground">Tank pressure</span>
               {selectedPoint &&

@@ -13,12 +13,14 @@ export interface DiveProfilePoint {
   tank2PressureBar: number | null
   decoCeilingMeters: number | null
   tankNumber: number | null
+  heartRateBpm: number | null
 }
 
 export interface PositionedDiveProfilePoint extends DiveProfilePoint {
   x: number
   depthY: number
   temperatureY: number | null
+  heartRateY: number | null
   pressureY: number | null
   tank1PressureY: number | null
   tank2PressureY: number | null
@@ -253,6 +255,7 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
       tank1PressureBar: finiteOrNull(sample.tank1PressureBar),
       tank2PressureBar: finiteOrNull(sample.tank2PressureBar),
       decoCeilingMeters: finiteOrNull(sample.decoCeilingMeters),
+      heartRateBpm: finiteOrNull(sample.heartRateBpm),
     }))
     .slice()
     .sort(
@@ -273,6 +276,12 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
       point.temperatureCelsius === null ? [] : [point.temperatureCelsius],
     ),
     2,
+  )
+  // Heart rate shares the temperature band; both are slow-moving context
+  // lines under the depth curve rather than a track of their own.
+  const heartRateRange = paddedRange(
+    points.flatMap((point) => (point.heartRateBpm === null ? [] : [point.heartRateBpm])),
+    5,
   )
   const maximumPressureBar = Math.max(
     0,
@@ -298,6 +307,12 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
     temperatureY: scaleTrackValue(
       point.temperatureCelsius,
       temperatureRange,
+      PROFILE_CHART_VIEWBOX.temperatureTop,
+      PROFILE_CHART_VIEWBOX.temperatureHeight,
+    ),
+    heartRateY: scaleTrackValue(
+      point.heartRateBpm,
+      heartRateRange,
       PROFILE_CHART_VIEWBOX.temperatureTop,
       PROFILE_CHART_VIEWBOX.temperatureHeight,
     ),
@@ -330,6 +345,11 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
     positionedPoints,
     (point) =>
       point.temperatureY === null ? null : { x: point.x, y: point.temperatureY },
+    startsSegment,
+  )
+  const heartRatePath = createSegmentedPath(
+    positionedPoints,
+    (point) => (point.heartRateY === null ? null : { x: point.x, y: point.heartRateY }),
     startsSegment,
   )
   const pressurePath = createSegmentedPath(
@@ -411,6 +431,17 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
           : minimum,
       null,
     )
+  const maximumHeartRatePoint =
+    positionedPoints.reduce<PositionedDiveProfilePoint | null>(
+      (maximum, point) =>
+        point.heartRateBpm !== null &&
+        (maximum === null ||
+          maximum.heartRateBpm === null ||
+          point.heartRateBpm > maximum.heartRateBpm)
+          ? point
+          : maximum,
+      null,
+    )
   const tankSwitches = positionedPoints.filter((point, index) => {
     if (point.tankNumber === null) return false
     const previousTankNumber = positionedPoints[index - 1]?.tankNumber ?? null
@@ -422,6 +453,7 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
     depthPath: closedDepthPath,
     depthAreaPath,
     temperaturePath,
+    heartRatePath,
     pressurePath,
     tank1PressurePath,
     tank2PressurePath,
@@ -435,8 +467,10 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
     maximumDepthMeters,
     deepestPoint,
     minimumTemperaturePoint,
+    maximumHeartRatePoint,
     chartDepthMeters,
     temperatureRange,
+    heartRateRange,
     pressureRange,
     plotWidth,
     xTicks: Array.from({ length: X_TICK_COUNT + 1 }, (_, index) => {

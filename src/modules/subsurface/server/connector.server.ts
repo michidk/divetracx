@@ -398,6 +398,7 @@ async function applyDives(
             tank2PressureBar: numeric(sample.tank2PressureBar, 2),
             decoCeilingMeters: numeric(sample.decoCeilingMeters, 2),
             tankNumber: sample.tankNumber,
+            heartRateBpm: sample.heartRateBpm,
           })),
         )
         .returning({ id: diveProfileSamples.id })

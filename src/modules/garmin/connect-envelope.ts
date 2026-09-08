@@ -20,9 +20,10 @@ export interface GarminConnectState {
 
 export interface GarminConnectActivity {
   activityDetails: Record<string, unknown>
-  fitBytes: Uint8Array
-  fitFileName: string
-  fitContentType: string
+  /** Absent for dives logged by hand in the Garmin Dive app. */
+  fitBytes?: Uint8Array
+  fitFileName?: string
+  fitContentType?: string
 }
 
 /**
@@ -122,6 +123,71 @@ export function buildActivityDetails(
     startingLatitudeInDegree: numberValue(raw.startLatitude),
     startingLongitudeInDegree: numberValue(raw.startLongitude),
   }
+}
+
+/**
+ * Normalizes one entry of the Garmin Dive app's dive list into the Activity
+ * Details shape `parseGarminActivityDetails` understands. The Dive service
+ * knows the dive's own name, number, and tags, which Connect's activity list
+ * does not; depths are still left to the FIT file.
+ */
+export function buildDiveActivityDetails(
+  raw: Record<string, unknown>,
+): Record<string, unknown> {
+  // A dive logged by hand in the app has no Connect activity; its own Dive
+  // id is prefixed so it can never collide with an activity id.
+  const activityId =
+    stringValue(raw.connectActivityId) ??
+    (stringValue(raw.id) ? `dive-${stringValue(raw.id)}` : null)
+  if (!activityId) {
+    throw new Error('Garmin Dive summary entry is missing an id')
+  }
+  const startTimeInSeconds = (() => {
+    const text = stringValue(raw.startTime)
+    if (!text) return null
+    const parsed = Date.parse(text)
+    return Number.isNaN(parsed) ? null : Math.round(parsed / 1_000)
+  })()
+  const totalTime = numberValue(raw.totalTime)
+  return {
+    ...raw,
+    activityId,
+    activityType: connectActivityTypeForDiveType(stringValue(raw.diveType)),
+    activityName: stringValue(raw.name),
+    startTimeInSeconds,
+    startTimeOffsetInSeconds: utcOffsetSecondsFromIso(stringValue(raw.startTime)),
+    durationInSeconds: totalTime === null ? null : Math.round(totalTime),
+    startingLatitudeInDegree: numberValue(record(raw.entryLoc)?.latitude),
+    startingLongitudeInDegree: numberValue(record(raw.entryLoc)?.longitude),
+  }
+}
+
+/** The Dive service names dive types differently from Connect's activity type keys. */
+const CONNECT_TYPE_BY_DIVE_TYPE: Record<string, string> = {
+  SINGLE_GAS: 'single_gas_diving',
+  MULTI_GAS: 'multi_gas_diving',
+  GAUGE: 'gauge_diving',
+  APNEA: 'apnea_diving',
+  APNEA_HUNT: 'apnea_hunting',
+  APNEA_HUNTING: 'apnea_hunting',
+  CCR: 'ccr_diving',
+  DYNAMIC_APNEA: 'dynamic_apnea',
+}
+
+function connectActivityTypeForDiveType(diveType: string | null) {
+  if (!diveType) return 'diving'
+  return CONNECT_TYPE_BY_DIVE_TYPE[diveType.toUpperCase()] ?? 'diving'
+}
+
+/** `2025-06-15T10:00:00+02:00` → 7200; `Z` or no designator → 0 / null. */
+function utcOffsetSecondsFromIso(value: string | null): number | null {
+  if (!value) return null
+  const match = /(Z|[+-]\d{2}:?\d{2})$/.exec(value)
+  if (!match?.[1]) return null
+  if (match[1] === 'Z') return 0
+  const sign = match[1].startsWith('-') ? -1 : 1
+  const digits = match[1].slice(1).replace(':', '')
+  return sign * (Number(digits.slice(0, 2)) * 3_600 + Number(digits.slice(2)) * 60)
 }
 
 export function parseAdapterState(state: Record<string, unknown>): GarminConnectState {

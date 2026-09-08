@@ -154,6 +154,13 @@ account once from **Settings → Integrations**; MFA is supported. Passwords and
 verification codes are used only for the login, while the resulting OAuth tokens
 are retained in Divetracx’s server-only database for later imports.
 
+Dives are listed through the Garmin Dive service (the backend of the Garmin Dive
+app), so dives you logged by hand in the app come across too, and each dive’s
+original FIT file is downloaded for the full profile: depth, temperature,
+decompression ceiling, ppO₂, gases, and — when the watch recorded it — heart
+rate. Wrist heart rate underwater is off by default on Descent computers; enable
+it in the watch’s dive settings if you want it in your profiles.
+
 Activities are reconciled against existing log entries by start time within
 45 minutes, so a computer-recorded profile attaches to the dive you already
 logged instead of creating a duplicate.
