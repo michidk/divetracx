@@ -26,7 +26,9 @@ describe('Garmin connector contract', () => {
       export: false,
     })
     expect(connector.export).toBeUndefined()
-    expect(connector.descriptor.supportedEntities).toContain('profile_samples')
+    expect(connector.descriptor.entities.map((entity) => entity.key)).toContain(
+      'profile_samples',
+    )
   })
 
   test('marks a truncated full source as incomplete', async () => {
@@ -48,6 +50,7 @@ describe('Garmin connector contract', () => {
       mode: 'full',
       state: {},
       signal: new AbortController().signal,
+      isEntityEnabled: () => true,
     })
 
     expect(prepared.validation.complete).toBe(false)

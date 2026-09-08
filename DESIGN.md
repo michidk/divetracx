@@ -182,6 +182,14 @@ switch pauses the endpoint without discarding clients or history. Destructive
 tools and scopes use the destructive badge treatment; connected clients show
 their live scopes and require confirmation before revocation.
 
+Each integration card on the Integrations page ends with a “What to sync” list
+using the same switch rows: label, one-line description, and a mono `on/total`
+count in the heading. A required entity shows a disabled switch and says why
+it is always synced. A row that depends on a switched-off row is shown off and
+disabled with a `--warning` “Off because …” note, and a row with dependants
+warns what else switches off with it before it is toggled. The list saves with
+a small outline `SaveButton` that is disabled until something changed.
+
 ### Media
 
 `PictureGallery` is a `sm:grid-cols-2` grid of `aspect-[4/3]` images in

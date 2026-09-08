@@ -1,0 +1,1 @@
+ALTER TABLE "integrations" ADD COLUMN "disabled_entities" jsonb DEFAULT '[]'::jsonb NOT NULL;

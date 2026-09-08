@@ -114,6 +114,16 @@ new, changed, unchanged, and failed source records.
   stable source identities and content hashes, applies only new or changed
   records, and never deletes anything.
 
+Each integration card has a **What to sync** list where you can switch off the
+kinds of data you don't want brought across — say, certifications from DiveMate
+while you keep its dives. Everything is on by default. A switched-off kind is
+left out of later imports but nothing already imported is removed, and dives
+keep pointing at sites, people, and gear that came across earlier. Some kinds
+are tied together and the list says so: profiles and tanks belong to dives, gear
+sets are made of gear, and a Garmin activity or Subsurface dive is the thing its
+profile and people are read from, so those dives are always on. Switching an
+entity back on imports its records as new.
+
 <details>
 <summary><b>DiveMate details</b></summary>
 

@@ -4,6 +4,7 @@ import {
   loadImportLogs,
   loadIntegrationStatus,
   runIntegrationImportForUi,
+  saveIntegrationEntitySelection,
 } from './operations.server'
 
 const integrationKey = z.enum(['divemate', 'garmin', 'subsurface'])
@@ -17,6 +18,17 @@ export const getImportLogs = createServerFn({ method: 'GET' }).handler(loadImpor
 export const runIncrementalImport = createServerFn({ method: 'POST' })
   .validator(z.object({ integrationKey }))
   .handler(({ data }) => runIntegrationImportForUi(data.integrationKey, 'incremental'))
+
+export const updateIntegrationEntities = createServerFn({ method: 'POST' })
+  .validator(
+    z.object({
+      integrationKey,
+      disabledEntities: z.array(z.string().min(1).max(64)).max(64),
+    }),
+  )
+  .handler(({ data }) =>
+    saveIntegrationEntitySelection(data.integrationKey, data.disabledEntities),
+  )
 
 export const runFullImport = createServerFn({ method: 'POST' })
   .validator(

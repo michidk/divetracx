@@ -8,11 +8,31 @@ export interface IntegrationCapabilities {
   export: boolean
 }
 
+/**
+ * One kind of data an integration can bring across. The owner may switch any
+ * entity off unless it is `required`; switching one off also switches off
+ * every entity that `dependsOn` it.
+ */
+export interface IntegrationEntity {
+  key: string
+  label: string
+  description: string
+  required?: boolean
+  dependsOn?: readonly string[]
+  /**
+   * External record types that carry this entity. The import service never
+   * persists or applies those records while the entity is off. Entities without
+   * record types are derived inside another record and are gated by the
+   * connector.
+   */
+  recordTypes?: readonly string[]
+}
+
 export interface IntegrationDescriptor {
   key: string
   displayName: string
   capabilities: IntegrationCapabilities
-  supportedEntities: string[]
+  entities: readonly IntegrationEntity[]
 }
 
 export interface ExternalRecordInput {
@@ -65,6 +85,8 @@ export interface PrepareImportContext {
   mode: ImportMode
   state: Record<string, unknown>
   signal: AbortSignal
+  /** False for an entity the owner switched off, or one that depends on it. */
+  isEntityEnabled(entityKey: string): boolean
 }
 
 export interface CanonicalChangeCounts {
@@ -80,7 +102,9 @@ export interface ApplyImportContext<TData> {
   runId: string
   signal: AbortSignal
   prepared: PreparedImport<TData>
+  /** Only records whose entity is switched on; switched-off records are never observed. */
   records: ObservedExternalRecord[]
+  isEntityEnabled(entityKey: string): boolean
   findRecord(entityType: string, identityKey: string): ObservedExternalRecord
   findCanonicalId(
     entityType: string,

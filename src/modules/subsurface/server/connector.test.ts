@@ -22,6 +22,7 @@ describe('Subsurface connector contract', () => {
         mode: 'incremental',
         state: {},
         signal,
+        isEntityEnabled: () => true,
       }),
     ).rejects.toThrow(/Choose a Subsurface logbook/)
   })
@@ -37,6 +38,7 @@ describe('Subsurface connector contract', () => {
       mode: 'incremental',
       state: { files: ['older.ssrf:abc'] },
       signal,
+      isEntityEnabled: () => true,
     })
 
     expect(
@@ -67,7 +69,12 @@ describe('Subsurface connector contract', () => {
       xml: '<uddf version="3.2.0"/>',
     })
     await expect(
-      connector.prepareImport({ mode: 'incremental', state: {}, signal }),
+      connector.prepareImport({
+        mode: 'incremental',
+        state: {},
+        signal,
+        isEntityEnabled: () => true,
+      }),
     ).rejects.toThrow(/UDDF/)
   })
 })

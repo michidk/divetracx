@@ -16,6 +16,7 @@ import {
   MATCHED_LINK_ROLE,
 } from '@/modules/integrations/types'
 import { parseGarminActivityDetails } from '../activity-details'
+import { GARMIN_ENTITIES } from '../entities'
 import { mapGarminActivity } from '../mapping'
 import { adjacentDiveDates, selectNearestDive } from '../matching'
 import type {
@@ -191,7 +192,7 @@ export function createGarminConnector(
       key: SOURCE_KEY,
       displayName: 'Garmin',
       capabilities: { fullImport: true, incrementalImport: true, export: false },
-      supportedEntities: ['dives', 'profile_samples', 'tanks', 'gases'],
+      entities: GARMIN_ENTITIES,
     },
     async prepareImport(context) {
       const batch =
@@ -288,6 +289,10 @@ export function createGarminConnector(
           }
         }
 
+        // Switched-off derived rows stay as they are: replacing them with
+        // nothing would delete data the owner asked the import not to touch.
+        const syncSamples = context.isEntityEnabled('profile_samples')
+        const syncTanks = context.isEntityEnabled('tanks')
         if (diveId) {
           // Re-imported records replace only their own derived rows.
           const importedSampleIds = record.canonicalLinks
@@ -296,17 +301,20 @@ export function createGarminConnector(
           const importedTankIds = record.canonicalLinks
             .filter((link) => link.canonicalEntityType === 'tank')
             .map((link) => link.canonicalEntityId)
-          if (importedSampleIds.length > 0) {
+          if (syncSamples && importedSampleIds.length > 0) {
             await context.transaction
               .delete(diveProfileSamples)
               .where(inArray(diveProfileSamples.id, importedSampleIds))
           }
-          if (importedTankIds.length > 0) {
+          if (syncTanks && importedTankIds.length > 0) {
             await context.transaction
               .delete(tanks)
               .where(inArray(tanks.id, importedTankIds))
           }
-          await context.unlinkCanonicalRecords(record.id, ['profile_sample', 'tank'])
+          await context.unlinkCanonicalRecords(record.id, [
+            ...(syncSamples ? ['profile_sample'] : []),
+            ...(syncTanks ? ['tank'] : []),
+          ])
         }
 
         if (diveId && ownsDive) {
@@ -339,8 +347,10 @@ export function createGarminConnector(
         // A matched log entry keeps its existing profile and cylinders; Garmin
         // data fills those in only when the dive has none of its own.
         const insertSamples =
-          ownsDive || !(await diveHasProfileSamples(context.transaction, diveId))
-        const insertTanks = ownsDive || !(await diveHasTanks(context.transaction, diveId))
+          syncSamples &&
+          (ownsDive || !(await diveHasProfileSamples(context.transaction, diveId)))
+        const insertTanks =
+          syncTanks && (ownsDive || !(await diveHasTanks(context.transaction, diveId)))
 
         if (insertSamples) {
           for (const [sampleIndex, sample] of mapped.profileSamples.entries()) {

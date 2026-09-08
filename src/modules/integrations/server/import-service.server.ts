@@ -10,6 +10,7 @@ import {
 } from '@/db/schema'
 import { getServerEnv } from '@/env'
 import { restoreMergedDiveProfiles } from '@/modules/dives/server/merge.server'
+import { disabledRecordTypes, normalizeDisabledEntities } from '../entity-selection'
 import { externalRecordKey } from '../record-classification'
 import type {
   ApplyImportContext,
@@ -83,25 +84,34 @@ function safeError(error: unknown) {
   return message.slice(0, 4_000)
 }
 
+/**
+ * Registers the connector and returns the entities the owner switched off,
+ * already widened to everything that depends on them.
+ */
 async function ensureIntegration(connector: IntegrationConnector<unknown>) {
   const descriptor = connector.descriptor
-  await getDb()
+  const supportedEntities = descriptor.entities.map((entity) => entity.key)
+  const [row] = await getDb()
     .insert(integrations)
     .values({
       key: descriptor.key,
       displayName: descriptor.displayName,
       capabilities: descriptor.capabilities,
-      supportedEntities: descriptor.supportedEntities,
+      supportedEntities,
     })
     .onConflictDoUpdate({
       target: integrations.key,
       set: {
         displayName: descriptor.displayName,
         capabilities: descriptor.capabilities,
-        supportedEntities: descriptor.supportedEntities,
+        supportedEntities,
         updatedAt: new Date(),
       },
     })
+    .returning({ disabledEntities: integrations.disabledEntities })
+  return new Set(
+    normalizeDisabledEntities(descriptor.entities, row?.disabledEntities ?? []),
+  )
 }
 
 function assertSupported(
@@ -134,7 +144,12 @@ async function performLockedImport<TData>(
   signal.throwIfAborted()
   await expireTimedOutImportRuns(timeoutMs)
   signal.throwIfAborted()
-  await ensureIntegration(connector)
+  const disabledEntities = await ensureIntegration(connector)
+  const isEntityEnabled = (entityKey: string) => !disabledEntities.has(entityKey)
+  const skippedRecordTypes = disabledRecordTypes(
+    connector.descriptor.entities,
+    disabledEntities,
+  )
   signal.throwIfAborted()
   const db = getDb()
   const [run] = await db
@@ -161,14 +176,21 @@ async function performLockedImport<TData>(
       mode,
       state: storedState?.state ?? {},
       signal,
+      isEntityEnabled,
     })
     signal.throwIfAborted()
-    discovered = prepared.records.length
     if (!prepared.validation.complete) {
       throw new Error(
         `${prepared.validation.sourceDescription} was not validated as a complete import source`,
       )
     }
+    // A switched-off record is not observed at all, so switching the entity
+    // back on later imports it as new instead of treating it as unchanged.
+    const enabledRecords = prepared.records.filter(
+      (record) => !skippedRecordTypes.has(record.entityType),
+    )
+    discovered = enabledRecords.length
+    const recordsSkippedByEntity = prepared.records.length - enabledRecords.length
 
     const result = await db.transaction(async (transaction) => {
       signal.throwIfAborted()
@@ -183,7 +205,7 @@ async function performLockedImport<TData>(
         transaction,
         connector.descriptor.key,
         run.id,
-        prepared.records,
+        enabledRecords,
         signal,
       )
       const recordByKey = new Map(
@@ -260,6 +282,7 @@ async function performLockedImport<TData>(
         signal,
         prepared,
         records: observed,
+        isEntityEnabled,
         findRecord,
         findCanonicalId,
         linkCanonicalRecord,
@@ -278,6 +301,12 @@ async function performLockedImport<TData>(
       const diagnostics = {
         ...(prepared.diagnostics ?? {}),
         source: prepared.validation.sourceDescription,
+        ...(disabledEntities.size > 0
+          ? {
+              disabledEntities: [...disabledEntities],
+              recordsSkippedByEntity,
+            }
+          : {}),
         canonical: {
           created: canonical.created,
           updated: canonical.updated,

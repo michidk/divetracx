@@ -32,6 +32,7 @@ import { createThumbnail, thumbnailPathFor } from '@/lib/server/thumbnail.server
 import { getStorage } from '@/lib/storage'
 import type { StorageProvider } from '@/lib/storage/types'
 import type { DiveBuddyRole } from '@/modules/dives/buddy-role'
+import { loadLinkedCanonicalRecords } from '@/modules/integrations/server/import-repository.server'
 import { performIncrementalImport } from '@/modules/integrations/server/import-service.server'
 import type {
   ExternalRecordInput,
@@ -41,6 +42,7 @@ import { MATCHED_LINK_ROLE } from '@/modules/integrations/types'
 import { resolveAgencyId } from '@/modules/profile/server/agencies.server'
 import { parseDiveMateDiveTeam } from '../dive-team'
 import { DEFAULT_DIVEMATE_DIVE_TYPES } from '../dive-type'
+import { DIVEMATE_ENTITIES } from '../entities'
 import {
   cleanDiveMateInstructorName,
   formatDiveMateInstructor,
@@ -160,6 +162,16 @@ async function pruneDiscardedDives(
 
 interface SnapshotApplyContext {
   signal: AbortSignal
+  isEntityEnabled(entityKey: string): boolean
+  /**
+   * Canonical IDs by external ID for a record type this run did not observe,
+   * so dives keep pointing at sites, people, or gear imported earlier.
+   */
+  previouslyLinkedIds(
+    entityType: string,
+    canonicalEntityType: string,
+    options?: { excludeMatched?: boolean },
+  ): Promise<Map<string, string>>
   shouldApply(entityType: string, externalId: string): boolean
   canonicalRole(
     entityType: string,
@@ -233,6 +245,7 @@ async function resolveNamedBuddy(
   transaction: DatabaseTransaction,
   index: Map<string, string>,
   importedName: string | null,
+  createMissing = true,
 ) {
   const name = cleanDiveMateInstructorName(importedName)
   const normalizedName = normalizeDiveMateInstructorName(name)
@@ -240,6 +253,7 @@ async function resolveNamedBuddy(
 
   const existingId = index.get(normalizedName)
   if (existingId) return existingId
+  if (!createMissing) return null
 
   const [buddy] = await transaction
     .insert(buddies)
@@ -354,8 +368,16 @@ async function applySnapshot(
 ) {
   const storedPictures = storedMedia.pictures
   const storedCertificationScans = storedMedia.certificationScans
-  const diverIds = new Map<string, string>()
-  for (const item of snapshot.divers) {
+  const enabled = context.isEntityEnabled
+  // A switched-off entity still resolves for the records that point at it, but
+  // only to rows an earlier run already linked; nothing new is created for it.
+  const referenceIds = (entityKey: string, entityType: string) =>
+    enabled(entityKey)
+      ? Promise.resolve(new Map<string, string>())
+      : context.previouslyLinkedIds(entityType, entityType)
+
+  const diverIds = await referenceIds('divers', 'diver')
+  for (const item of enabled('divers') ? snapshot.divers : []) {
     context.signal.throwIfAborted()
     const existingId = context.canonicalId('diver', item.externalId, 'diver')
     if (!context.shouldApply('diver', item.externalId) && existingId) {
@@ -394,8 +416,8 @@ async function applySnapshot(
     }
   }
 
-  const siteIds = new Map<string, string>()
-  for (const item of snapshot.sites) {
+  const siteIds = await referenceIds('dive_sites', 'dive_site')
+  for (const item of enabled('dive_sites') ? snapshot.sites : []) {
     context.signal.throwIfAborted()
     const existingId = context.canonicalId('dive_site', item.externalId, 'dive_site')
     if (!context.shouldApply('dive_site', item.externalId) && existingId) {
@@ -430,8 +452,8 @@ async function applySnapshot(
     }
   }
 
-  const buddyIds = new Map<string, string>()
-  for (const item of snapshot.buddies) {
+  const buddyIds = await referenceIds('buddies', 'buddy')
+  for (const item of enabled('buddies') ? snapshot.buddies : []) {
     context.signal.throwIfAborted()
     const existingId = context.canonicalId('buddy', item.externalId, 'buddy')
     if (!context.shouldApply('buddy', item.externalId) && existingId) {
@@ -465,9 +487,16 @@ async function applySnapshot(
   }
 
   const buddyIdsByName = await loadBuddyNameIndex(tx)
+  // With buddies switched off, a name on a dive or certification still attaches
+  // to a person already in the logbook but never creates a new one.
+  const namedBuddy = (importedName: string | null) =>
+    resolveNamedBuddy(tx, buddyIdsByName, importedName, enabled('buddies'))
 
-  const equipmentIds = new Map<string, string>()
-  for (const item of snapshot.equipment.filter((candidate) => !candidate.isSet)) {
+  const equipmentIds = await referenceIds('equipment', 'equipment')
+  const equipmentItems = enabled('equipment')
+    ? snapshot.equipment.filter((candidate) => !candidate.isSet)
+    : []
+  for (const item of equipmentItems) {
     context.signal.throwIfAborted()
     const existingId = context.canonicalId('equipment', item.externalId, 'equipment')
     if (!context.shouldApply('equipment', item.externalId) && existingId) {
@@ -505,7 +534,10 @@ async function applySnapshot(
     }
   }
 
-  for (const item of snapshot.equipment.filter((candidate) => candidate.isSet)) {
+  const equipmentSetSources = enabled('equipment_sets')
+    ? snapshot.equipment.filter((candidate) => candidate.isSet)
+    : []
+  for (const item of equipmentSetSources) {
     context.signal.throwIfAborted()
     const existingId = context.canonicalId(
       'equipment_set',
@@ -543,8 +575,8 @@ async function applySnapshot(
     }
   }
 
-  const shopIds = new Map<string, string>()
-  for (const item of snapshot.shops) {
+  const shopIds = await referenceIds('shops', 'shop')
+  for (const item of enabled('shops') ? snapshot.shops : []) {
     context.signal.throwIfAborted()
     const existingId = context.canonicalId('shop', item.externalId, 'shop')
     if (!context.shouldApply('shop', item.externalId) && existingId) {
@@ -573,8 +605,8 @@ async function applySnapshot(
         .orderBy(asc(diveTypes.createdAt))
     ).map((diveType) => [diveType.name.trim().toLocaleLowerCase('en-US'), diveType.id]),
   )
-  const diveTypeIds = new Map<string, string>()
-  for (const item of snapshot.diveTypes) {
+  const diveTypeIds = await referenceIds('dive_types', 'dive_type')
+  for (const item of enabled('dive_types') ? snapshot.diveTypes : []) {
     context.signal.throwIfAborted()
     const linkedId = context.canonicalId('dive_type', item.externalId, 'dive_type')
     if (!context.shouldApply('dive_type', item.externalId) && linkedId) {
@@ -610,7 +642,7 @@ async function applySnapshot(
     }
   }
 
-  for (const item of snapshot.certifications) {
+  for (const item of enabled('certifications') ? snapshot.certifications : []) {
     context.signal.throwIfAborted()
     if (!context.shouldApply('certification', item.externalId)) continue
     const existingId = context.canonicalId(
@@ -619,11 +651,7 @@ async function applySnapshot(
       'certification',
     )
     const scans = storedCertificationScans.get(item.externalId)
-    const instructorBuddyId = await resolveNamedBuddy(
-      tx,
-      buddyIdsByName,
-      item.instructorName,
-    )
+    const instructorBuddyId = await namedBuddy(item.instructorName)
     const agencyId = await resolveAgencyId(tx, item.organization)
     const referenceValues = {
       diverId: item.diverExternalId ? (diverIds.get(item.diverExternalId) ?? null) : null,
@@ -684,16 +712,20 @@ async function applySnapshot(
       boat.id,
     ]),
   )
-  const diveIds = new Map<string, string>()
+  // A matched dive was merged away or existed before the import, so tanks and
+  // pictures must not land on it; that holds for dives linked in earlier runs.
+  const diveIds = enabled('dives')
+    ? new Map<string, string>()
+    : await context.previouslyLinkedIds('dive', 'dive', { excludeMatched: true })
   const profileSamplesByDive = new Map<string, DiveMateSnapshot['profileSamples']>()
-  for (const sample of snapshot.profileSamples) {
+  for (const sample of enabled('profile_samples') ? snapshot.profileSamples : []) {
     context.signal.throwIfAborted()
     const samples = profileSamplesByDive.get(sample.diveExternalId) ?? []
     samples.push(sample)
     profileSamplesByDive.set(sample.diveExternalId, samples)
   }
 
-  for (const item of snapshot.dives) {
+  for (const item of enabled('dives') ? snapshot.dives : []) {
     context.signal.throwIfAborted()
     // A matched dive belongs to the logbook rather than to this backup — it
     // was merged into another dive, or already existed here. Leaving it out of
@@ -780,10 +812,10 @@ async function applySnapshot(
         .filter((id): id is string => Boolean(id))
         .map((buddyId) => [buddyId, 'buddy' as const]),
     )
-    const namedBuddyId = await resolveNamedBuddy(tx, buddyIdsByName, item.buddyName)
+    const namedBuddyId = await namedBuddy(item.buddyName)
     if (namedBuddyId) importedBuddyRoles.set(namedBuddyId, 'buddy')
     for (const member of parseDiveMateDiveTeam(item.divemaster)) {
-      const staffBuddyId = await resolveNamedBuddy(tx, buddyIdsByName, member.name)
+      const staffBuddyId = await namedBuddy(member.name)
       if (staffBuddyId) importedBuddyRoles.set(staffBuddyId, member.role)
     }
     if (importedBuddyRoles.size > 0) {
@@ -833,6 +865,9 @@ async function applySnapshot(
       }
     }
 
+    // With profiles switched off a changed dive keeps the samples it already
+    // has; replacing them with nothing would be a deletion.
+    if (!enabled('profile_samples')) continue
     const oldProfileSamples = context.canonicalIds(
       'dive',
       item.externalId,
@@ -867,7 +902,7 @@ async function applySnapshot(
     }
   }
 
-  for (const item of snapshot.tanks) {
+  for (const item of enabled('tanks') ? snapshot.tanks : []) {
     context.signal.throwIfAborted()
     if (!context.shouldApply('tank', item.externalId)) continue
     const diveId = diveIds.get(item.diveExternalId)
@@ -898,7 +933,12 @@ async function applySnapshot(
     if (row) await context.link('tank', item.externalId, 'tank', row.id)
   }
 
-  for (const item of snapshot.pictures) {
+  const ownerMissing = (
+    entityKey: string,
+    externalId: string | null,
+    ids: Map<string, string>,
+  ) => externalId !== null && !enabled(entityKey) && !ids.has(externalId)
+  for (const item of enabled('pictures') ? snapshot.pictures : []) {
     context.signal.throwIfAborted()
     const stored = storedPictures.get(item.externalId)
     const existingId = context.canonicalId('picture', item.externalId, 'picture')
@@ -911,6 +951,16 @@ async function applySnapshot(
     // A picture of a dive that was not applied — a merge already took it — must
     // not be recreated loose in the gallery.
     if (item.diveExternalId && !diveIds.has(item.diveExternalId)) continue
+    // Likewise a picture of a site, person, gear item, or profile that is
+    // switched off and was never imported has nowhere to attach.
+    if (
+      ownerMissing('dive_sites', item.siteExternalId, siteIds) ||
+      ownerMissing('buddies', item.buddyExternalId, buddyIds) ||
+      ownerMissing('equipment', item.equipmentExternalId, equipmentIds) ||
+      ownerMissing('divers', item.diverExternalId, diverIds)
+    ) {
+      continue
+    }
     const referenceValues = {
       diveId: item.diveExternalId ? (diveIds.get(item.diveExternalId) ?? null) : null,
       siteId: item.siteExternalId ? (siteIds.get(item.siteExternalId) ?? null) : null,
@@ -1076,21 +1126,7 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
     key: SOURCE_KEY,
     displayName: 'DiveMate',
     capabilities: { fullImport: true, incrementalImport: true, export: true },
-    supportedEntities: [
-      'divers',
-      'dive_sites',
-      'buddies',
-      'equipment',
-      'equipment_sets',
-      'certifications',
-      'shops',
-      'boats',
-      'dive_types',
-      'dives',
-      'profile_samples',
-      'tanks',
-      'pictures',
-    ],
+    entities: DIVEMATE_ENTITIES,
   },
   async prepareImport(context) {
     const environment = getServerEnv()
@@ -1111,14 +1147,23 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
       await writeFile(databasePath, drive.database)
       const snapshot = await parseDiveMateDatabase(databasePath)
       context.signal.throwIfAborted()
+      // Media is fetched and stored before the transaction, so skip it for
+      // entities that will not be applied rather than download it for nothing.
+      const mediaSnapshot = {
+        ...snapshot,
+        pictures: context.isEntityEnabled('pictures') ? snapshot.pictures : [],
+        certifications: context.isEntityEnabled('certifications')
+          ? snapshot.certifications
+          : [],
+      }
       const externalImages = await loadGoogleDriveImages(
-        snapshot,
+        mediaSnapshot,
         drive,
         environment.DIVEMATE_MAX_IMAGE_BYTES,
         context.signal,
       )
       const storedMedia = await storeSnapshotMedia(
-        snapshot,
+        mediaSnapshot,
         context.signal,
         externalImages,
       )
@@ -1157,21 +1202,41 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
     }
   },
   async applyImport(context) {
-    const discardedDivesRemoved = await pruneDiscardedDives(
-      context.transaction,
-      context.prepared.data.snapshot.discardedDiveExternalIds,
-      context.signal,
-    )
+    const discardedDivesRemoved = context.isEntityEnabled('dives')
+      ? await pruneDiscardedDives(
+          context.transaction,
+          context.prepared.data.snapshot.discardedDiveExternalIds,
+          context.signal,
+        )
+      : 0
     const changedRecords = context.records.filter(
       (record) => record.change !== 'unchanged',
     )
-    await ensureDiveMateDiveTypes(context.transaction)
+    if (context.isEntityEnabled('dive_types')) {
+      await ensureDiveMateDiveTypes(context.transaction)
+    }
     const counts = await applySnapshot(
       context.transaction,
       context.prepared.data.snapshot,
       context.prepared.data.storedMedia,
       {
         signal: context.signal,
+        isEntityEnabled: context.isEntityEnabled,
+        previouslyLinkedIds: async (entityType, canonicalEntityType, options) => {
+          const links = await loadLinkedCanonicalRecords(
+            context.transaction,
+            SOURCE_KEY,
+            entityType,
+            canonicalEntityType,
+          )
+          return new Map(
+            links
+              .filter(
+                (link) => !options?.excludeMatched || link.role !== MATCHED_LINK_ROLE,
+              )
+              .map((link) => [link.identityKey, link.canonicalEntityId]),
+          )
+        },
         shouldApply: (entityType, externalId) =>
           context.findRecord(entityType, externalId).change !== 'unchanged',
         canonicalRole: (entityType, externalId, canonicalEntityType) =>
@@ -1213,10 +1278,12 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
       context.signal.throwIfAborted()
       byEntity[record.input.entityType] = (byEntity[record.input.entityType] ?? 0) + 1
     }
-    byEntity.profileSamples = context.prepared.data.snapshot.profileSamples.filter(
-      (sample) =>
-        context.findRecord('dive', sample.diveExternalId).change !== 'unchanged',
-    ).length
+    byEntity.profileSamples = context.isEntityEnabled('profile_samples')
+      ? context.prepared.data.snapshot.profileSamples.filter(
+          (sample) =>
+            context.findRecord('dive', sample.diveExternalId).change !== 'unchanged',
+        ).length
+      : 0
     if (discardedDivesRemoved > 0) {
       byEntity.discardedDivesRemoved = discardedDivesRemoved
     }

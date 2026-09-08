@@ -30,6 +30,7 @@ import {
   runFullImport,
   runIncrementalImport,
 } from '@/modules/integrations/server/operations'
+import { EntitySelection } from './entity-selection'
 
 type Integrations = Awaited<ReturnType<typeof getIntegrationStatus>>
 type Integration = Integrations[number]
@@ -470,9 +471,6 @@ export function SyncPage({
               <p className="mt-4 text-sm leading-6 text-muted-foreground">
                 {integration.configurationHint}
               </p>
-              <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                Entities: {integration.descriptor.supportedEntities.join(', ')}
-              </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
                 {key === 'subsurface' ? (
@@ -560,6 +558,13 @@ export function SyncPage({
               ) : null}
               {messages[key] ? <p className="mt-4 text-sm">{messages[key]}</p> : null}
               {key === 'garmin' ? <GarminAccountSection account={garminAccount} /> : null}
+              <EntitySelection
+                integrationKey={key as IntegrationKey}
+                displayName={integration.descriptor.displayName}
+                entities={integration.descriptor.entities}
+                disabledEntities={integration.disabledEntities}
+                disabled={running !== null}
+              />
               <div className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">
                 {integration.latestRun
                   ? `${integration.latestRun.mode} import · ${integration.latestRun.status} · ${integration.latestRun.startedAt.toLocaleString()}`

@@ -18,12 +18,14 @@ import {
   normalizeDiveMateInstructorName,
 } from '@/modules/divemate/instructor'
 import { buildExportFile } from '@/modules/export/server/files.server'
+import { loadLinkedCanonicalRecords } from '@/modules/integrations/server/import-repository.server'
 import type {
   ApplyImportContext,
   ExternalRecordInput,
   IntegrationConnector,
 } from '@/modules/integrations/types'
 import { MATCHED_LINK_ROLE } from '@/modules/integrations/types'
+import { SUBSURFACE_ENTITIES } from '../entities'
 import { matchDiveTypeFromTags } from '../mapping'
 import { parseSubsurfaceLogbook } from '../parser'
 import type { SubsurfaceDive, SubsurfaceLogbook, SubsurfaceSite } from '../types'
@@ -130,6 +132,16 @@ async function applySites(
   context: ApplyImportContext<PreparedSubsurfaceData>,
   counts: { created: number; updated: number; skipped: number; matched: number },
 ) {
+  if (!context.isEntityEnabled('dive_sites')) {
+    // Dives keep pointing at sites an earlier upload created; none are added.
+    const links = await loadLinkedCanonicalRecords(
+      context.transaction,
+      SUBSURFACE_INTEGRATION_KEY,
+      'dive_site',
+      'dive_site',
+    )
+    return new Map(links.map((link) => [link.identityKey, link.canonicalEntityId]))
+  }
   const siteIds = new Map<string, string>()
   const index = await loadSiteIndex(context.transaction)
   for (const record of context.records) {
@@ -227,32 +239,42 @@ function diveValues(
   }
 }
 
+/**
+ * Replaces the rows this record produced for the derived entities that are
+ * switched on. Switched-off rows stay: replacing them with nothing would delete
+ * data the owner asked the import not to touch.
+ */
 async function replaceDerivedRows(
   context: ApplyImportContext<PreparedSubsurfaceData>,
   recordId: string,
   links: Array<{ canonicalEntityType: string; canonicalEntityId: string }>,
+  sync: { samples: boolean; tanks: boolean; buddies: boolean },
 ) {
   const ids = (entityType: string) =>
     links
       .filter((link) => link.canonicalEntityType === entityType)
       .map((link) => link.canonicalEntityId)
-  const sampleIds = ids('profile_sample')
+  const sampleIds = sync.samples ? ids('profile_sample') : []
   if (sampleIds.length > 0) {
     await context.transaction
       .delete(diveProfileSamples)
       .where(inArray(diveProfileSamples.id, sampleIds))
   }
-  const tankIds = ids('tank')
+  const tankIds = sync.tanks ? ids('tank') : []
   if (tankIds.length > 0) {
     await context.transaction.delete(tanks).where(inArray(tanks.id, tankIds))
   }
-  const buddyLinkIds = ids('dive_buddy')
+  const buddyLinkIds = sync.buddies ? ids('dive_buddy') : []
   if (buddyLinkIds.length > 0) {
     await context.transaction
       .delete(diveBuddies)
       .where(inArray(diveBuddies.id, buddyLinkIds))
   }
-  await context.unlinkCanonicalRecords(recordId, ['profile_sample', 'tank', 'dive_buddy'])
+  await context.unlinkCanonicalRecords(recordId, [
+    ...(sync.samples ? ['profile_sample'] : []),
+    ...(sync.tanks ? ['tank'] : []),
+    ...(sync.buddies ? ['dive_buddy'] : []),
+  ])
 }
 
 async function applyDives(
@@ -265,6 +287,11 @@ async function applyDives(
   const knownDiveTypes = await context.transaction
     .select({ id: diveTypes.id, name: diveTypes.name })
     .from(diveTypes)
+  const sync = {
+    samples: context.isEntityEnabled('profile_samples'),
+    tanks: context.isEntityEnabled('tanks'),
+    buddies: context.isEntityEnabled('buddies'),
+  }
   for (const record of context.records) {
     if (record.input.entityType !== 'dive') continue
     context.signal.throwIfAborted()
@@ -297,7 +324,7 @@ async function applyDives(
         .set(values)
         .where(eq(dives.id, link.canonicalEntityId))
       diveId = link.canonicalEntityId
-      await replaceDerivedRows(context, record.id, record.canonicalLinks)
+      await replaceDerivedRows(context, record.id, record.canonicalLinks, sync)
       counts.updated += 1
     } else {
       const [inserted] = await context.transaction
@@ -310,7 +337,7 @@ async function applyDives(
       counts.created += 1
     }
 
-    for (const person of dive.people) {
+    for (const person of sync.buddies ? dive.people : []) {
       context.signal.throwIfAborted()
       const buddyId = await resolveBuddy(context.transaction, buddyIndex, person.name)
       if (!buddyId) continue
@@ -333,7 +360,7 @@ async function applyDives(
       }
     }
 
-    for (const cylinder of dive.cylinders) {
+    for (const cylinder of sync.tanks ? dive.cylinders : []) {
       context.signal.throwIfAborted()
       const [inserted] = await context.transaction
         .insert(tanks)
@@ -356,7 +383,7 @@ async function applyDives(
       }
     }
 
-    if (dive.samples.length > 0) {
+    if (sync.samples && dive.samples.length > 0) {
       const inserted = await context.transaction
         .insert(diveProfileSamples)
         .values(
@@ -400,7 +427,7 @@ export function createSubsurfaceConnector(
       key: SUBSURFACE_INTEGRATION_KEY,
       displayName: 'Subsurface',
       capabilities: { fullImport: false, incrementalImport: true, export: true },
-      supportedEntities: ['dives', 'dive_sites', 'buddies', 'tanks', 'profile_samples'],
+      entities: SUBSURFACE_ENTITIES,
     },
     async prepareImport(context) {
       if (!upload) {

@@ -38,7 +38,14 @@ const connector: IntegrationConnector = {
     key: INTEGRATION_KEY,
     displayName: 'Test import',
     capabilities: { fullImport: true, incrementalImport: true, export: false },
-    supportedEntities: ['dives'],
+    entities: [
+      {
+        key: 'dives',
+        label: 'Dives',
+        description: 'Synthetic dives',
+        recordTypes: ['dive'],
+      },
+    ],
   },
   async prepareImport(context) {
     batch.prepareStarted?.()
@@ -119,6 +126,7 @@ function diveRecord(
 describe.skipIf(!enabled)('generic import service database contract', () => {
   beforeAll(async () => {
     const db = getDb()
+    await db.delete(dives)
     await db
       .delete(integrationState)
       .where(eq(integrationState.integrationKey, INTEGRATION_KEY))
@@ -276,6 +284,43 @@ describe.skipIf(!enabled)('generic import service database contract', () => {
       MATCHED_LINK_ROLE,
       'produced',
     ])
+  })
+
+  test('leaves switched-off entities out of the import until they are switched back on', async () => {
+    await getDb().delete(dives)
+    await getDb()
+      .delete(externalRecords)
+      .where(eq(externalRecords.integrationKey, INTEGRATION_KEY))
+    await getDb()
+      .update(integrations)
+      .set({ disabledEntities: ['dives'] })
+      .where(eq(integrations.key, INTEGRATION_KEY))
+
+    batch = { records: [diveRecord('hidden-1', 15)], cursor: 'selection-1' }
+    const withoutDives = await performIncrementalImport(connector, { trigger: 'manual' })
+    expect(withoutDives.records).toMatchObject({ discovered: 0, created: 0 })
+    expect(withoutDives.diagnostics).toMatchObject({
+      disabledEntities: ['dives'],
+      recordsSkippedByEntity: 1,
+    })
+    expect(await getDb().select().from(dives)).toHaveLength(0)
+    expect(
+      await getDb()
+        .select()
+        .from(externalRecords)
+        .where(eq(externalRecords.integrationKey, INTEGRATION_KEY)),
+    ).toHaveLength(0)
+
+    // Switching the entity back on imports the record as new, not as unchanged.
+    await getDb()
+      .update(integrations)
+      .set({ disabledEntities: [] })
+      .where(eq(integrations.key, INTEGRATION_KEY))
+    batch = { records: [diveRecord('hidden-1', 15)], cursor: 'selection-2' }
+    const withDives = await performIncrementalImport(connector, { trigger: 'manual' })
+    expect(withDives.records).toMatchObject({ discovered: 1, created: 1 })
+    expect(withDives.diagnostics).not.toHaveProperty('disabledEntities')
+    expect(await getDb().select().from(dives)).toHaveLength(1)
   })
 
   test('allows only one import job to run at a time', async () => {

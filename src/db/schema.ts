@@ -506,6 +506,7 @@ export const integrations = pgTable('integrations', {
   displayName: text('display_name').notNull(),
   capabilities: jsonb('capabilities').$type<IntegrationCapabilities>().notNull(),
   supportedEntities: jsonb('supported_entities').$type<string[]>().notNull(),
+  disabledEntities: jsonb('disabled_entities').$type<string[]>().notNull().default([]),
   ...auditColumns,
 })
 

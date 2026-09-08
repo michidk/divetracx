@@ -1,6 +1,6 @@
 import '@tanstack/react-start/server-only'
 
-import { eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import type { DatabaseTransaction } from '@/db'
 import {
   boats,
@@ -270,6 +270,38 @@ export async function observeExternalRecords(
     observedById.get(link.externalRecordId)?.canonicalLinks.push(link)
   }
   return observed
+}
+
+/**
+ * Canonical rows this integration already linked for one record type, whether
+ * or not the current run observed those records. Connectors use it to keep
+ * references to a switched-off entity intact instead of severing them.
+ */
+export async function loadLinkedCanonicalRecords(
+  transaction: DatabaseTransaction,
+  integrationKey: string,
+  entityType: string,
+  canonicalEntityType: string,
+): Promise<Array<CanonicalRecordLink & { identityKey: string }>> {
+  return transaction
+    .select({
+      identityKey: externalRecords.identityKey,
+      canonicalEntityType: externalRecordLinks.canonicalEntityType,
+      canonicalEntityId: externalRecordLinks.canonicalEntityId,
+      role: externalRecordLinks.role,
+    })
+    .from(externalRecordLinks)
+    .innerJoin(
+      externalRecords,
+      eq(externalRecordLinks.externalRecordId, externalRecords.id),
+    )
+    .where(
+      and(
+        eq(externalRecords.integrationKey, integrationKey),
+        eq(externalRecords.entityType, entityType),
+        eq(externalRecordLinks.canonicalEntityType, canonicalEntityType),
+      ),
+    )
 }
 
 export async function markExternalRecordsProcessed(

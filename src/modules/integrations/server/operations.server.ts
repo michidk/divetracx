@@ -8,6 +8,7 @@ import {
   createSubsurfaceConnector,
   type SubsurfaceUpload,
 } from '@/modules/subsurface/server/connector.server'
+import { selectableDisabledEntities } from '../entity-selection'
 import { getIntegrationConnector, listIntegrationConnectors } from '../registry.server'
 import type { ImportMode, ImportResult, ImportTrigger } from '../types'
 import {
@@ -29,7 +30,7 @@ export async function loadIntegrationStatus() {
   const environment = getServerEnv()
   return Promise.all(
     listIntegrationConnectors().map(async (connector) => {
-      const [latestRun, storedState] = await Promise.all([
+      const [latestRun, storedState, registration] = await Promise.all([
         getDb()
           .select({
             id: importRuns.id,
@@ -56,6 +57,12 @@ export async function loadIntegrationStatus() {
           .where(eq(integrationState.integrationKey, connector.descriptor.key))
           .limit(1)
           .then((rows) => rows[0] ?? null),
+        getDb()
+          .select({ disabledEntities: integrations.disabledEntities })
+          .from(integrations)
+          .where(eq(integrations.key, connector.descriptor.key))
+          .limit(1)
+          .then((rows) => rows[0] ?? null),
       ])
       const configured =
         connector.descriptor.key === 'divemate'
@@ -71,11 +78,43 @@ export async function loadIntegrationStatus() {
         descriptor: connector.descriptor,
         configured,
         configurationHint: CONFIGURATION_HINTS[connector.descriptor.key] ?? '',
+        disabledEntities: selectableDisabledEntities(
+          connector.descriptor.entities,
+          registration?.disabledEntities ?? [],
+        ),
         latestRun,
         stateUpdatedAt: storedState?.updatedAt ?? null,
       }
     }),
   )
+}
+
+/**
+ * Stores which of an integration's entities stay out of its imports. The list
+ * is stored as chosen; dependants are widened at import time so a later change
+ * to the dependency graph applies without re-saving.
+ */
+export async function saveIntegrationEntitySelection(
+  integrationKey: string,
+  disabledEntities: string[],
+) {
+  const connector = getIntegrationConnector(integrationKey)
+  const descriptor = connector.descriptor
+  const selection = selectableDisabledEntities(descriptor.entities, disabledEntities)
+  await getDb()
+    .insert(integrations)
+    .values({
+      key: descriptor.key,
+      displayName: descriptor.displayName,
+      capabilities: descriptor.capabilities,
+      supportedEntities: descriptor.entities.map((entity) => entity.key),
+      disabledEntities: selection,
+    })
+    .onConflictDoUpdate({
+      target: integrations.key,
+      set: { disabledEntities: selection, updatedAt: new Date() },
+    })
+  return { disabledEntities: selection }
 }
 
 export async function loadImportLogs() {
