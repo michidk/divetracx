@@ -5,6 +5,7 @@ FROM oven/bun:1.4.0 AS builder
 WORKDIR /app
 
 COPY package.json bun.lock ./
+COPY patches ./patches
 RUN apt-get update && \
     apt-get install --yes --no-install-recommends python3 make g++ && \
     bun install --frozen-lockfile && \
@@ -22,6 +23,7 @@ RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 --gid 1001 --create-home --shell /usr/sbin/nologin app
 
 COPY --from=builder --chown=app:nodejs /app/package.json /app/bun.lock ./
+COPY --from=builder --chown=app:nodejs /app/patches ./patches
 RUN apt-get update && \
     apt-get install --yes --no-install-recommends python3 make g++ && \
     bun install --frozen-lockfile --production && \

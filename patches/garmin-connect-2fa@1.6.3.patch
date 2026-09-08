@@ -1,0 +1,19 @@
+diff --git a/lib/common/HttpClient.js b/lib/common/HttpClient.js
+index 66f241f1e8fc412dbbfe12694306cd2170eac71c..b472db9610d7e6a3a44f9025b7586c51c57c29b1 100644
+--- a/lib/common/HttpClient.js
++++ b/lib/common/HttpClient.js
+@@ -358,7 +358,13 @@ var HttpClient = /** @class */ (function () {
+     };
+     HttpClient.prototype.handleMFA = function (htmlStr) {
+         if (!htmlStr) return;
+-        if (htmlStr.indexOf('MFA') !== -1 || htmlStr.indexOf('mfa') !== -1 || htmlStr.indexOf('Mfa') !== -1) {
++        // A successful sign-in page still mentions MFA in its embedded script
++        // (for example "accepts-mfa-tokens" and other config), so a bare
++        // substring match misreports a completed login as a challenge. Only
++        // treat the response as an MFA challenge when it carries no ticket
++        // and renders the code-entry form.
++        if (TICKET_RE.test(htmlStr)) return;
++        if (htmlStr.indexOf('mfa-code') !== -1 || htmlStr.indexOf('loginEnterMfaCode') !== -1 || htmlStr.indexOf('setupEnterMfaCode') !== -1) {
+             throw new Error('MFA_REQUIRED_SESSION');
+         }
+     };
