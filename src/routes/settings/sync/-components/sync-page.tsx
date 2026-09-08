@@ -194,9 +194,6 @@ function SubsurfaceUploadButton({
 
 function GarminAccountSection({ account }: { account: GarminAccount }) {
   const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [mfaCode, setMfaCode] = useState('')
   const [mfaChallenge, setMfaChallenge] = useState<{
     challengeId: string
     expiresAt: string
@@ -206,26 +203,35 @@ function GarminAccountSection({ account }: { account: GarminAccount }) {
 
   if (!account.configured) return null
 
+  // Values are read from the form on submit rather than from controlled
+  // state: password managers on some mobile browsers fill the fields without
+  // firing input events, which left the button disabled with both fields full.
   async function connect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const form = event.currentTarget
+    const data = new FormData(form)
+    const email = String(data.get('email') ?? '').trim()
+    const password = String(data.get('password') ?? '')
+    if (!email || !password) {
+      setMessage('Enter your Garmin Connect email and password.')
+      return
+    }
     setBusy(true)
     setMessage('')
     try {
       const result = await connectGarmin({ data: { email, password } })
+      form.reset()
       if (result.mfaRequired) {
         setMfaChallenge({
           challengeId: result.challengeId,
           expiresAt: result.expiresAt,
         })
-        setPassword('')
         setMessage('Garmin accepted your credentials. Enter the verification code.')
         return
       }
       setMessage(
         `Connected${result.displayName ? ` as ${result.displayName}` : ''}. Tokens are stored by Divetracx; your password was not saved.`,
       )
-      setEmail('')
-      setPassword('')
       await router.invalidate()
     } catch (error) {
       setMessage(
@@ -239,20 +245,23 @@ function GarminAccountSection({ account }: { account: GarminAccount }) {
   async function verifyMfa(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!mfaChallenge) return
+    const code = String(new FormData(event.currentTarget).get('code') ?? '').trim()
+    if (!code) {
+      setMessage('Enter the verification code Garmin sent you.')
+      return
+    }
     setBusy(true)
     setMessage('')
     try {
       const result = await completeGarminMfa({
         data: {
           challengeId: mfaChallenge.challengeId,
-          code: mfaCode,
+          code,
         },
       })
       setMessage(
         `Connected${result.displayName ? ` as ${result.displayName}` : ''}. Tokens are stored by Divetracx; your password and verification code were not saved.`,
       )
-      setEmail('')
-      setMfaCode('')
       setMfaChallenge(null)
       await router.invalidate()
     } catch (error) {
@@ -318,15 +327,14 @@ function GarminAccountSection({ account }: { account: GarminAccount }) {
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
+            name="code"
             placeholder="Verification code"
             aria-label="Garmin verification code"
-            value={mfaCode}
-            onChange={(event) => setMfaCode(event.target.value)}
             required
             autoFocus
           />
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" disabled={busy || !mfaCode.trim()}>
+            <Button type="submit" disabled={busy}>
               <Link2 size={16} aria-hidden="true" />
               {busy ? 'Verifying…' : 'Verify and connect'}
             </Button>
@@ -336,7 +344,6 @@ function GarminAccountSection({ account }: { account: GarminAccount }) {
               disabled={busy}
               onClick={() => {
                 setMfaChallenge(null)
-                setMfaCode('')
                 setMessage('')
               }}
             >
@@ -357,22 +364,20 @@ function GarminAccountSection({ account }: { account: GarminAccount }) {
           <Input
             type="email"
             autoComplete="username"
+            name="email"
             placeholder="Garmin Connect email"
             aria-label="Garmin Connect email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
             required
           />
           <Input
             type="password"
             autoComplete="current-password"
+            name="password"
             placeholder="Password"
             aria-label="Garmin Connect password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
             required
           />
-          <Button type="submit" disabled={busy || !email || !password}>
+          <Button type="submit" disabled={busy}>
             <Link2 size={16} aria-hidden="true" />
             {busy ? 'Connecting…' : 'Connect account'}
           </Button>
