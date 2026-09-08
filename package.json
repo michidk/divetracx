@@ -40,6 +40,7 @@
     "media:refresh-thumbnails": "bun run scripts/refresh-thumbnails.ts",
     "import:incremental": "bun run scripts/import-integration.ts",
     "import:subsurface": "bun run scripts/import-subsurface.ts",
+    "probe:garmin-dive": "bun run scripts/probe-garmin-dive.ts",
     "export:divemate": "bun run scripts/export-divemate.ts"
   },
   "dependencies": {

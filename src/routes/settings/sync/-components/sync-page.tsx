@@ -4,6 +4,7 @@ import {
   CircleAlert,
   Database,
   Download,
+  FlaskConical,
   Link2,
   Link2Off,
   RefreshCw,
@@ -24,6 +25,7 @@ import {
   completeGarminMfa,
   connectGarmin,
   disconnectGarmin,
+  probeGarminDive,
 } from '@/modules/garmin/server/account'
 import type { getIntegrationStatus } from '@/modules/integrations/server/operations'
 import {
@@ -36,7 +38,99 @@ type Integrations = Awaited<ReturnType<typeof getIntegrationStatus>>
 type Integration = Integrations[number]
 type IntegrationKey = 'divemate' | 'garmin' | 'subsurface'
 type GarminAccount = Awaited<ReturnType<typeof getGarminAccountStatus>>
+type GarminDiveProbe = Awaited<ReturnType<typeof probeGarminDive>>
 type ImportSummary = Awaited<ReturnType<typeof runIncrementalImport>>
+
+/**
+ * Proof of concept: exercises the undocumented Garmin Dive API (gear,
+ * certifications, dive metadata) with the connected account and shows what
+ * each endpoint returned. Read-only.
+ */
+function GarminDiveProbeSection() {
+  const [running, setRunning] = useState(false)
+  const [result, setResult] = useState<GarminDiveProbe | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function run() {
+    setRunning(true)
+    setError(null)
+    try {
+      setResult(await probeGarminDive())
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Probe failed')
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  return (
+    <div className="mt-5 border-t border-border pt-4">
+      <h3 className="text-sm font-semibold">Garmin Dive API (experimental)</h3>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+        Checks whether the Dive app’s gear, certification, and dive-log endpoints answer
+        for this account. Nothing is imported; token exchange and reads only.
+      </p>
+      <div className="mt-3">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={running}
+          onClick={() => void run()}
+        >
+          <FlaskConical
+            className={running ? 'animate-pulse' : ''}
+            size={16}
+            aria-hidden="true"
+          />
+          {running ? 'Probing…' : 'Probe Dive API'}
+        </Button>
+      </div>
+      {error ? (
+        <p className="mt-3 text-xs text-destructive" aria-live="polite">
+          {error}
+        </p>
+      ) : null}
+      {result ? (
+        <ol className="mt-3 divide-y divide-border text-xs" aria-live="polite">
+          {result.steps.map((step) => (
+            <li key={step.name} className="py-2">
+              <div className="flex items-start gap-2">
+                {step.ok ? (
+                  <CheckCircle2
+                    className="mt-0.5 shrink-0 text-emerald-600"
+                    size={14}
+                    aria-label="OK"
+                  />
+                ) : (
+                  <CircleAlert
+                    className="mt-0.5 shrink-0 text-red-600"
+                    size={14}
+                    aria-label="Failed"
+                  />
+                )}
+                <div className="min-w-0">
+                  <span className="font-semibold">{step.name}</span>
+                  <span className="text-muted-foreground"> — {step.detail}</span>
+                  {step.sample ? (
+                    <details className="mt-1">
+                      <summary className="cursor-pointer text-muted-foreground">
+                        Sample payload
+                      </summary>
+                      <pre className="mt-1 max-h-64 overflow-auto rounded-lg bg-muted p-2 font-mono text-[11px] leading-4">
+                        {step.sample}
+                      </pre>
+                    </details>
+                  ) : null}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </div>
+  )
+}
 
 function importSummaryMessage(result: ImportSummary) {
   return `${result.records.created} new, ${result.records.updated} changed, and ${result.records.skipped} unchanged source records.`
@@ -285,6 +379,7 @@ function GarminAccountSection({ account }: { account: GarminAccount }) {
         </form>
       )}
       {message ? <p className="mt-3 text-sm">{message}</p> : null}
+      {account.connected ? <GarminDiveProbeSection /> : null}
     </div>
   )
 }

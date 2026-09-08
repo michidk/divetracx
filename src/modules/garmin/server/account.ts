@@ -6,6 +6,7 @@ import {
   disconnectGarminAccount,
   loadGarminAccountStatus,
 } from './account.server'
+import { probeGarminDiveApi } from './dive-probe.server'
 
 export const getGarminAccountStatus = createServerFn({ method: 'GET' }).handler(
   loadGarminAccountStatus,
@@ -31,4 +32,8 @@ export const completeGarminMfa = createServerFn({ method: 'POST' })
 
 export const disconnectGarmin = createServerFn({ method: 'POST' }).handler(() =>
   disconnectGarminAccount(),
+)
+
+export const probeGarminDive = createServerFn({ method: 'POST' }).handler(() =>
+  probeGarminDiveApi(),
 )
