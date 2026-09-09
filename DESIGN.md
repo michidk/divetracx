@@ -283,11 +283,25 @@ click-to-pin interaction and a muted helper callout.
 
 ### Navigation
 
-The header nav is icon-first: Dives, Sites, Buddies, Gear, Stats, Profile, and a
-Settings gear. Labels are hidden below `lg`, so every item carries an
-`aria-label`. The active item uses `bg-accent text-foreground`; inactive items
-are `text-muted-foreground` and turn `text-foreground` on hover. Demo builds
-show an amber read-only banner directly under the header.
+Destinations are declared once in `src/lib/navigation.ts` and rendered two
+ways.
+
+From `md` up, the header nav is icon-first: Dives, Sites, Buddies, Gear, Stats,
+Profile, and a Settings gear. Labels are hidden below `lg`, so every item
+carries an `aria-label`. The active item uses `bg-accent text-foreground`;
+inactive items are `text-muted-foreground` and turn `text-foreground` on hover.
+
+Below `md`, the header keeps only the brand and the current section name, and a
+fixed bottom tab bar (`h-16`, same blur and border treatment as the header, plus
+`env(safe-area-inset-bottom)`) shows Dives, Sites, Buddies, Gear, and a "More"
+tab. Tabs are icon-over-label at 11px, `text-primary` with a heavier stroke
+when active. "More" opens a Base UI `Drawer` bottom sheet (`rounded-t-3xl
+bg-card`, swipe-to-dismiss) listing Overview, Map, Stats, Profile, and
+Settings as `min-h-16` rows with an icon tile and one-line description; the
+current destination uses `bg-accent` with a filled primary tile. The page frame
+adds `pb-[calc(6rem+env(safe-area-inset-bottom))]` and toasts are offset above
+the bar so neither is covered. Demo builds show an amber read-only banner
+directly under the header.
 
 ### Error state
 

@@ -1,24 +1,15 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import {
-  Backpack,
-  ChartColumn,
-  CircleUserRound,
-  MapPinned,
-  Settings,
-  UsersRound,
-  Waves,
-} from 'lucide-react'
 import type { FormEvent, ReactNode } from 'react'
+import { MobileNav } from '@/components/mobile-nav'
 import { DEMO_MODE } from '@/lib/build-mode'
-
-const navigation = [
-  { to: '/dives', label: 'Dives', icon: Waves, exact: false },
-  { to: '/sites', label: 'Sites', icon: MapPinned, exact: false },
-  { to: '/buddies', label: 'Buddies', icon: UsersRound, exact: false },
-  { to: '/gear', label: 'Gear', icon: Backpack, exact: false },
-  { to: '/stats', label: 'Stats', icon: ChartColumn, exact: false },
-  { to: '/profile', label: 'Profile', icon: CircleUserRound, exact: false },
-] as const
+import {
+  isNavigationItemActive,
+  mobileMoreNavigation,
+  mobileTabNavigation,
+  type NavigationItem,
+  primaryNavigation,
+  settingsNavigation,
+} from '@/lib/navigation'
 
 function LogoMark({ size }: { size: number }) {
   return (
@@ -34,6 +25,22 @@ function LogoMark({ size }: { size: number }) {
   )
 }
 
+function HeaderLink({ item }: { item: NavigationItem }) {
+  return (
+    <Link
+      to={item.to}
+      aria-label={item.label}
+      activeOptions={{ exact: false }}
+      activeProps={{ className: 'bg-accent text-foreground' }}
+      inactiveProps={{ className: 'text-muted-foreground hover:text-foreground' }}
+      className="flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-medium transition-colors"
+    >
+      <item.icon size={16} aria-hidden="true" />
+      <span className="hidden lg:inline">{item.label}</span>
+    </Link>
+  )
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   if (DEMO_MODE && pathname === '/') return children
@@ -41,6 +48,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const preventDemoSubmit = (event: FormEvent<HTMLElement>) => {
     event.preventDefault()
   }
+  const currentSection = [...mobileTabNavigation, ...mobileMoreNavigation].find((item) =>
+    isNavigationItemActive(item, pathname),
+  )
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -53,40 +63,18 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
               <LogoMark size={20} />
             </span>
-            <span className="hidden md:inline">Divetracx</span>
+            <span>Divetracx</span>
           </Link>
-          <nav className="flex items-center gap-1" aria-label="Main navigation">
-            {navigation.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                aria-label={item.label}
-                activeOptions={{ exact: item.exact }}
-                activeProps={{ className: 'bg-accent text-foreground' }}
-                inactiveProps={{
-                  className: 'text-muted-foreground hover:text-foreground',
-                }}
-                className="flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-medium transition-colors sm:px-3"
-              >
-                <item.icon size={16} aria-hidden="true" />
-                <span className="hidden lg:inline">{item.label}</span>
-              </Link>
+          {currentSection ? (
+            <span className="truncate text-sm font-medium text-muted-foreground md:hidden">
+              {currentSection.label}
+            </span>
+          ) : null}
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
+            {primaryNavigation.map((item) => (
+              <HeaderLink key={item.to} item={item} />
             ))}
-            {DEMO_MODE ? null : (
-              <Link
-                to="/settings"
-                aria-label="Settings"
-                activeOptions={{ exact: false }}
-                activeProps={{ className: 'bg-accent text-foreground' }}
-                inactiveProps={{
-                  className: 'text-muted-foreground hover:text-foreground',
-                }}
-                className="flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-medium transition-colors sm:px-3"
-              >
-                <Settings size={16} aria-hidden="true" />
-                <span className="sr-only">Settings</span>
-              </Link>
-            )}
+            {DEMO_MODE ? null : <HeaderLink item={settingsNavigation} />}
           </nav>
         </div>
       </header>
@@ -101,10 +89,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       ) : null}
       <main
         onSubmitCapture={DEMO_MODE ? preventDemoSubmit : undefined}
-        className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8 md:py-12"
+        className="mx-auto w-full max-w-6xl px-4 py-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:px-8 md:py-12"
       >
         {children}
       </main>
+      <MobileNav pathname={pathname} />
     </div>
   )
 }

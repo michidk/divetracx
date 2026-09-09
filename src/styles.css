@@ -192,3 +192,41 @@
     height: 44px;
   }
 }
+
+/* Bottom sheet driven by Base UI's Drawer swipe variables. */
+.divetracx-sheet {
+  transform: translateY(var(--drawer-swipe-movement-y, 0px));
+  transition: transform 350ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.divetracx-sheet[data-starting-style],
+.divetracx-sheet[data-ending-style] {
+  transform: translateY(100%);
+}
+
+.divetracx-sheet-backdrop {
+  opacity: calc(0.35 * (1 - var(--drawer-swipe-progress, 0)));
+  transition: opacity 350ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.divetracx-sheet-backdrop[data-starting-style],
+.divetracx-sheet-backdrop[data-ending-style] {
+  opacity: 0;
+}
+
+.divetracx-sheet[data-ending-style],
+.divetracx-sheet-backdrop[data-ending-style] {
+  transition-duration: calc(var(--drawer-swipe-strength, 1) * 350ms);
+}
+
+.divetracx-sheet[data-swiping],
+.divetracx-sheet-backdrop[data-swiping] {
+  transition-duration: 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .divetracx-sheet,
+  .divetracx-sheet-backdrop {
+    transition-duration: 0ms;
+  }
+}
