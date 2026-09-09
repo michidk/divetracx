@@ -34,6 +34,7 @@ import { Route as DivesNewIndexRouteImport } from './routes/dives/new/index'
 import { Route as GearGearIdIndexRouteImport } from './routes/gear/$gearId/index'
 import { Route as GearNewIndexRouteImport } from './routes/gear/new/index'
 import { Route as SettingsAgenciesIndexRouteImport } from './routes/settings/agencies/index'
+import { Route as SettingsDataVerificationIndexRouteImport } from './routes/settings/data-verification/index'
 import { Route as SettingsDiveTypesIndexRouteImport } from './routes/settings/dive-types/index'
 import { Route as SettingsExportIndexRouteImport } from './routes/settings/export/index'
 import { Route as SettingsMcpIndexRouteImport } from './routes/settings/mcp/index'
@@ -176,6 +177,12 @@ const SettingsAgenciesIndexRoute = SettingsAgenciesIndexRouteImport.update({
   path: '/settings/agencies/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsDataVerificationIndexRoute =
+  SettingsDataVerificationIndexRouteImport.update({
+    id: '/settings/data-verification/',
+    path: '/settings/data-verification/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const SettingsDiveTypesIndexRoute = SettingsDiveTypesIndexRouteImport.update({
   id: '/settings/dive-types/',
   path: '/settings/dive-types/',
@@ -288,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/gear/$gearId/': typeof GearGearIdIndexRoute
   '/gear/new/': typeof GearNewIndexRoute
   '/settings/agencies/': typeof SettingsAgenciesIndexRoute
+  '/settings/data-verification/': typeof SettingsDataVerificationIndexRoute
   '/settings/dive-types/': typeof SettingsDiveTypesIndexRoute
   '/settings/export/': typeof SettingsExportIndexRoute
   '/settings/mcp/': typeof SettingsMcpIndexRoute
@@ -331,6 +339,7 @@ export interface FileRoutesByTo {
   '/gear/$gearId': typeof GearGearIdIndexRoute
   '/gear/new': typeof GearNewIndexRoute
   '/settings/agencies': typeof SettingsAgenciesIndexRoute
+  '/settings/data-verification': typeof SettingsDataVerificationIndexRoute
   '/settings/dive-types': typeof SettingsDiveTypesIndexRoute
   '/settings/export': typeof SettingsExportIndexRoute
   '/settings/mcp': typeof SettingsMcpIndexRoute
@@ -375,6 +384,7 @@ export interface FileRoutesById {
   '/gear/$gearId/': typeof GearGearIdIndexRoute
   '/gear/new/': typeof GearNewIndexRoute
   '/settings/agencies/': typeof SettingsAgenciesIndexRoute
+  '/settings/data-verification/': typeof SettingsDataVerificationIndexRoute
   '/settings/dive-types/': typeof SettingsDiveTypesIndexRoute
   '/settings/export/': typeof SettingsExportIndexRoute
   '/settings/mcp/': typeof SettingsMcpIndexRoute
@@ -420,6 +430,7 @@ export interface FileRouteTypes {
     | '/gear/$gearId/'
     | '/gear/new/'
     | '/settings/agencies/'
+    | '/settings/data-verification/'
     | '/settings/dive-types/'
     | '/settings/export/'
     | '/settings/mcp/'
@@ -463,6 +474,7 @@ export interface FileRouteTypes {
     | '/gear/$gearId'
     | '/gear/new'
     | '/settings/agencies'
+    | '/settings/data-verification'
     | '/settings/dive-types'
     | '/settings/export'
     | '/settings/mcp'
@@ -506,6 +518,7 @@ export interface FileRouteTypes {
     | '/gear/$gearId/'
     | '/gear/new/'
     | '/settings/agencies/'
+    | '/settings/data-verification/'
     | '/settings/dive-types/'
     | '/settings/export/'
     | '/settings/mcp/'
@@ -550,6 +563,7 @@ export interface RootRouteChildren {
   GearGearIdIndexRoute: typeof GearGearIdIndexRoute
   GearNewIndexRoute: typeof GearNewIndexRoute
   SettingsAgenciesIndexRoute: typeof SettingsAgenciesIndexRoute
+  SettingsDataVerificationIndexRoute: typeof SettingsDataVerificationIndexRoute
   SettingsDiveTypesIndexRoute: typeof SettingsDiveTypesIndexRoute
   SettingsExportIndexRoute: typeof SettingsExportIndexRoute
   SettingsMcpIndexRoute: typeof SettingsMcpIndexRoute
@@ -745,6 +759,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAgenciesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/data-verification/': {
+      id: '/settings/data-verification/'
+      path: '/settings/data-verification'
+      fullPath: '/settings/data-verification/'
+      preLoaderRoute: typeof SettingsDataVerificationIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/dive-types/': {
       id: '/settings/dive-types/'
       path: '/settings/dive-types'
@@ -886,6 +907,7 @@ const rootRouteChildren: RootRouteChildren = {
   GearGearIdIndexRoute: GearGearIdIndexRoute,
   GearNewIndexRoute: GearNewIndexRoute,
   SettingsAgenciesIndexRoute: SettingsAgenciesIndexRoute,
+  SettingsDataVerificationIndexRoute: SettingsDataVerificationIndexRoute,
   SettingsDiveTypesIndexRoute: SettingsDiveTypesIndexRoute,
   SettingsExportIndexRoute: SettingsExportIndexRoute,
   SettingsMcpIndexRoute: SettingsMcpIndexRoute,

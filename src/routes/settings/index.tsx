@@ -1,35 +1,29 @@
-import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import {
   Bot,
   Building2,
   ChevronRight,
   Download,
   Fish,
-  ListOrdered,
   RefreshCw,
   ScrollText,
+  ShieldCheck,
   Ship,
 } from 'lucide-react'
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardLink,
-  CardTitle,
-} from '@/components/ui/card'
-import { formatDiveDate } from '@/modules/dives/format'
-import { getNumberingStatus, renumberDives } from '@/modules/dives/server/maintenance'
+import { CardDescription, CardHeader, CardLink, CardTitle } from '@/components/ui/card'
 
 export const Route = createFileRoute('/settings/')({
-  loader: () => getNumberingStatus(),
   head: () => ({ meta: [{ title: 'Settings · Divetracx' }] }),
   component: SettingsRoute,
 })
 
 const sections = [
+  {
+    to: '/settings/data-verification',
+    label: 'Data verification',
+    description: 'Check dive numbering and review entries that may be duplicates.',
+    icon: ShieldCheck,
+  },
   {
     to: '/settings/mcp',
     label: 'AI access',
@@ -74,116 +68,7 @@ const sections = [
   },
 ] as const
 
-function RenumberCard({
-  status,
-}: {
-  status: Awaited<ReturnType<typeof getNumberingStatus>>
-}) {
-  const router = useRouter()
-  const [running, setRunning] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const clean = status.wouldChange === 0
-  const divesWithDuplicateNumbers = status.duplicateGroups.reduce(
-    (total, group) => total + group.dives.length,
-    0,
-  )
-
-  const issues = [
-    status.duplicateNumbers > 0
-      ? `${status.duplicateNumbers} dive ${status.duplicateNumbers === 1 ? 'number is' : 'numbers are'} each assigned to multiple entries (${divesWithDuplicateNumbers} affected entries)`
-      : null,
-    status.unnumberedDives > 0
-      ? `${status.unnumberedDives} ${status.unnumberedDives === 1 ? 'dive has' : 'dives have'} no number`
-      : null,
-  ].filter(Boolean)
-
-  async function run() {
-    if (
-      !window.confirm(
-        `Renumber all ${status.totalDives} dives chronologically to 1–${status.totalDives}? ` +
-          `${status.wouldChange} dives will get a new number. The new numbers are included in future exports.`,
-      )
-    ) {
-      return
-    }
-    setRunning(true)
-    setMessage(null)
-    try {
-      const result = await renumberDives()
-      await router.invalidate()
-      setMessage(`Renumbered ${result.changed} dives.`)
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Renumbering failed')
-    } finally {
-      setRunning(false)
-    }
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2.5">
-          <ListOrdered className="shrink-0 text-primary" size={22} aria-hidden="true" />
-          <CardTitle>Dive numbering</CardTitle>
-        </div>
-        <CardDescription className="leading-6">
-          {clean
-            ? `All ${status.totalDives.toLocaleString()} dives are numbered 1–${status.totalDives.toLocaleString()} in chronological order.`
-            : issues.length > 0
-              ? `${issues.join(' and ')}. Renumbering assigns 1–${status.totalDives.toLocaleString()} strictly by date and entry time.`
-              : `${status.wouldChange} dives are numbered out of chronological order. Renumbering assigns 1–${status.totalDives.toLocaleString()} strictly by date and entry time.`}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {status.duplicateGroups.length > 0 ? (
-          <div className="mb-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {status.duplicateGroups.map((group) => (
-              <div
-                key={group.number}
-                className="rounded-xl border border-border bg-muted/25 p-3"
-              >
-                <p className="mb-1.5 font-mono text-xs font-semibold text-muted-foreground">
-                  Dive #{group.number} is used by
-                </p>
-                <ul className="space-y-1">
-                  {group.dives.map((dive) => (
-                    <li key={dive.id}>
-                      <Link
-                        to="/dives/$diveId"
-                        params={{ diveId: dive.id }}
-                        className="block truncate text-sm font-medium text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                      >
-                        {dive.siteName ?? 'Unknown site'} ·{' '}
-                        {formatDiveDate(dive.diveDate, 'medium')}
-                        {dive.entryTime ? ` · ${dive.entryTime.slice(0, 5)}` : ''}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        ) : null}
-        <div className="flex flex-wrap items-center gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={clean || running}
-            onClick={() => void run()}
-          >
-            {running ? 'Renumbering…' : 'Renumber dives by date'}
-          </Button>
-          <p aria-live="polite" className="text-sm text-muted-foreground">
-            {message}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
 function SettingsRoute() {
-  const numberingStatus = Route.useLoaderData()
   return (
     <div className="space-y-7">
       <header>
@@ -221,12 +106,6 @@ function SettingsRoute() {
             </CardDescription>
           </CardLink>
         ))}
-      </div>
-      <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Logbook maintenance
-        </h2>
-        <RenumberCard status={numberingStatus} />
       </div>
     </div>
   )

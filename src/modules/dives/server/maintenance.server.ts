@@ -2,6 +2,8 @@ import '@tanstack/react-start/server-only'
 
 import { sql } from 'drizzle-orm'
 import { getDb } from '@/db'
+import { diveSites, dives } from '@/db/schema'
+import { findDuplicateDiveCandidates } from '../verification'
 
 const chronologicalNumbers = sql`
   select id, number, row_number() over (
@@ -24,6 +26,11 @@ export interface NumberingStatus {
   }>
   unnumberedDives: number
   wouldChange: number
+}
+
+export interface DataVerificationStatus {
+  numbering: NumberingStatus
+  duplicateCandidates: ReturnType<typeof findDuplicateDiveCandidates>
 }
 
 export async function loadNumberingStatus(): Promise<NumberingStatus> {
@@ -100,6 +107,28 @@ export async function loadNumberingStatus(): Promise<NumberingStatus> {
     },
     { isolationLevel: 'repeatable read', accessMode: 'read only' },
   )
+}
+
+export async function loadDataVerificationStatus(): Promise<DataVerificationStatus> {
+  const [numbering, records] = await Promise.all([
+    loadNumberingStatus(),
+    getDb()
+      .select({
+        id: dives.id,
+        number: dives.number,
+        diveDate: dives.diveDate,
+        entryTime: dives.entryTime,
+        durationSeconds: dives.durationSeconds,
+        maximumDepthMeters: dives.maximumDepthMeters,
+        siteId: dives.siteId,
+        siteName: diveSites.name,
+        captureSource: dives.captureSource,
+      })
+      .from(dives)
+      .leftJoin(diveSites, sql`${dives.siteId} = ${diveSites.id}`),
+  ])
+
+  return { numbering, duplicateCandidates: findDuplicateDiveCandidates(records) }
 }
 
 export async function renumberDivesByDate() {

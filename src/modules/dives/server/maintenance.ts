@@ -1,8 +1,8 @@
 import { createServerFn } from '@tanstack/react-start'
-import { loadNumberingStatus, renumberDivesByDate } from './maintenance.server'
+import { loadDataVerificationStatus, renumberDivesByDate } from './maintenance.server'
 
-export const getNumberingStatus = createServerFn({ method: 'GET' }).handler(
-  loadNumberingStatus,
+export const getDataVerificationStatus = createServerFn({ method: 'GET' }).handler(
+  loadDataVerificationStatus,
 )
 
 export const renumberDives = createServerFn({ method: 'POST' }).handler(

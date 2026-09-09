@@ -272,6 +272,15 @@ created the dive or attached to one that already existed, and a line for what
 it added (profile samples, tanks, computer events, people, gear). A dive with no
 sources says whether it was logged by hand or from computer data.
 
+### Data verification
+
+`/settings/data-verification` groups read-only logbook health checks into cards.
+Each check has a passed or review-count badge and explains the fields it compares.
+Dive numbering reports missing, repeated, and non-chronological numbers and keeps
+the confirmed renumber action beside its findings. Duplicate-entry candidates show
+both dive summaries, the signals that caused the match, and a link to the existing
+full-page merge review; detection never changes or deletes records by itself.
+
 ### Site map
 
 MapLibre GL in a `rounded-xl border` frame. The canvas is desaturated
