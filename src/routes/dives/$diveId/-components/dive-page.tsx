@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import {
   ArrowLeft,
+  Bell,
   Clock3,
   Combine,
   Database,
@@ -11,14 +12,17 @@ import {
   Pencil,
   Snowflake,
   Star,
+  TriangleAlert,
   UserRound,
   Waves,
 } from 'lucide-react'
 import { PhotoManager } from '@/components/photo-manager'
 import { PictureGallery } from '@/components/picture-gallery'
 import { StatCard } from '@/components/stat-card'
+import { Badge } from '@/components/ui/badge'
 import { diveBuddyRoleLabel } from '@/modules/dives/buddy-role'
 import { entryTypeLabel, waterTypeLabel } from '@/modules/dives/codes'
+import { isCriticalDiveEvent } from '@/modules/dives/dive-events'
 import {
   formatDiveDate,
   formatDuration,
@@ -42,6 +46,38 @@ function Value({ label, value }: { label: string; value: React.ReactNode }) {
       <dd className="mt-1 text-sm font-medium">{value || '—'}</dd>
     </div>
   )
+}
+
+function gasRoleLabel(role: string) {
+  switch (role) {
+    case 'bottom':
+      return 'Bottom gas'
+    case 'deco':
+      return 'Deco gas'
+    case 'travel':
+      return 'Travel gas'
+    default:
+      return role
+  }
+}
+
+function describeContributions(
+  contributions: DiveData['sources'][number]['contributions'],
+) {
+  const parts = [
+    contributions.profileSamples > 0
+      ? `${contributions.profileSamples.toLocaleString()} profile samples`
+      : null,
+    contributions.tanks > 0
+      ? `${contributions.tanks} tank${contributions.tanks === 1 ? '' : 's'}`
+      : null,
+    contributions.events > 0
+      ? `${contributions.events} computer event${contributions.events === 1 ? '' : 's'}`
+      : null,
+    contributions.buddies > 0 ? `${contributions.buddies} people` : null,
+    contributions.equipment > 0 ? `${contributions.equipment} gear items` : null,
+  ].filter(Boolean)
+  return parts.length === 0 ? '' : `Added ${parts.join(', ')}`
 }
 
 function displayTankGas(tank: DiveData['tanks'][number]) {
@@ -184,7 +220,11 @@ export function DivePage({ dive }: { dive: DiveData }) {
       </section>
 
       {dive.profileSamples.length > 0 ? (
-        <DiveProfileChart samples={dive.profileSamples} tanks={dive.tanks} />
+        <DiveProfileChart
+          samples={dive.profileSamples}
+          tanks={dive.tanks}
+          events={dive.events}
+        />
       ) : (
         <ManualDiveDiagram dive={dive} />
       )}
@@ -219,8 +259,45 @@ export function DivePage({ dive }: { dive: DiveData }) {
                 value={dive.maximumPpo2 ? Number(dive.maximumPpo2).toFixed(2) : '—'}
               />
               <Value
+                label="Heart rate"
+                value={
+                  dive.averageHeartRateBpm === null && dive.maximumHeartRateBpm === null
+                    ? null
+                    : `${dive.averageHeartRateBpm ?? '—'} avg · ${dive.maximumHeartRateBpm ?? '—'} max bpm`
+                }
+              />
+              <Value
                 label="Decompression dive"
                 value={dive.decompressionDive ? 'Yes' : 'No'}
+              />
+              <Value
+                label="Deco model"
+                value={
+                  dive.decoModel
+                    ? `${dive.decoModel}${
+                        dive.gradientFactorLow !== null &&
+                        dive.gradientFactorHigh !== null
+                          ? ` · GF ${dive.gradientFactorLow}/${dive.gradientFactorHigh}`
+                          : ''
+                      }`
+                    : null
+                }
+              />
+              <Value
+                label="CNS"
+                value={
+                  dive.endCnsPercent === null
+                    ? null
+                    : `${dive.startCnsPercent ?? 0}% → ${dive.endCnsPercent}%`
+                }
+              />
+              <Value
+                label="Oxygen toxicity"
+                value={
+                  dive.oxygenToxicityUnits === null
+                    ? null
+                    : `${dive.oxygenToxicityUnits} OTU`
+                }
               />
               <Value
                 label="Safety stop"
@@ -282,8 +359,15 @@ export function DivePage({ dive }: { dive: DiveData }) {
                   <article key={tank.id} className="rounded-xl bg-muted/60 p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="font-semibold">
+                        <p className="flex flex-wrap items-center gap-2 font-semibold">
                           {tank.name || `Tank ${index + 1}`}
+                          {tank.gasRole ? (
+                            <Badge
+                              variant={tank.gasRole === 'deco' ? 'warning' : 'secondary'}
+                            >
+                              {gasRoleLabel(tank.gasRole)}
+                            </Badge>
+                          ) : null}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {displayTankGas(tank)}
@@ -346,6 +430,58 @@ export function DivePage({ dive }: { dive: DiveData }) {
                   </article>
                 ))}
               </div>
+            </section>
+          ) : null}
+
+          {dive.events.length > 0 ? (
+            <section className="rounded-2xl border border-border bg-card p-6 md:p-8">
+              <div className="flex items-center gap-3">
+                <Bell className="text-primary" size={21} aria-hidden="true" />
+                <h2 className="text-xl font-semibold">Computer events</h2>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Gas switches and alerts the dive computer raised, in dive time.
+              </p>
+              <ol className="mt-4 divide-y divide-border">
+                {dive.events.map((event) => {
+                  const critical = isCriticalDiveEvent(event)
+                  return (
+                    <li
+                      key={event.id}
+                      className="grid grid-cols-[4.5rem_1.25rem_minmax(0,1fr)] items-center gap-3 py-2 text-sm"
+                    >
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {formatDuration(event.elapsedSeconds)}
+                      </span>
+                      {critical ? (
+                        <TriangleAlert
+                          className="text-warning"
+                          size={16}
+                          aria-label="Critical alert"
+                        />
+                      ) : event.kind === 'gas_switch' ? (
+                        <span
+                          className="size-3 justify-self-center rounded-full bg-primary"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Bell
+                          className="text-muted-foreground"
+                          size={16}
+                          aria-hidden="true"
+                        />
+                      )}
+                      <span
+                        className={
+                          critical ? 'font-semibold text-warning-foreground' : ''
+                        }
+                      >
+                        {event.label}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ol>
             </section>
           ) : null}
 
@@ -496,19 +632,60 @@ export function DivePage({ dive }: { dive: DiveData }) {
 
           <section className="rounded-2xl border border-border bg-card p-6">
             <Database className="text-primary" size={21} aria-hidden="true" />
-            <h2 className="mt-4 text-lg font-semibold">Record</h2>
-            <dl className="mt-5 space-y-5">
-              {dive.sources.length === 0 ? (
-                <Value label="Provenance" value="Created in Divetracx" />
-              ) : (
-                dive.sources.map((source) => (
-                  <Value
+            <h2 className="mt-4 text-lg font-semibold">Recorded by</h2>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Every computer and app this dive was read from, and what each one added.
+            </p>
+            {dive.sources.length === 0 ? (
+              <p className="mt-4 text-sm">
+                {dive.captureSource === 'computer'
+                  ? 'Logged in Divetracx from computer data'
+                  : 'Logged by hand in Divetracx'}
+              </p>
+            ) : (
+              <ul className="mt-4 divide-y divide-border">
+                {dive.sources.map((source) => (
+                  <li
                     key={`${source.integrationKey}:${source.identityKey}`}
-                    label={source.integrationName}
-                    value={`${source.externalId ?? source.identityKey} · seen ${formatRecordTime(source.lastSeenAt)}`}
-                  />
-                ))
-              )}
+                    className="py-3 first:pt-0 last:pb-0"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold">
+                        {source.device.name ?? source.integrationName}
+                      </span>
+                      <Badge
+                        variant={source.role === 'matched' ? 'outline' : 'secondary'}
+                      >
+                        {source.role === 'matched'
+                          ? 'Attached to this dive'
+                          : 'Created this dive'}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      {[
+                        source.device.name ? `via ${source.integrationName}` : null,
+                        source.device.serialNumber
+                          ? `serial ${source.device.serialNumber}`
+                          : null,
+                        source.device.softwareVersion
+                          ? `firmware ${source.device.softwareVersion}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      {describeContributions(source.contributions) || 'Dive details only'}
+                    </p>
+                    <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+                      {source.externalId ?? source.identityKey} · seen{' '}
+                      {formatRecordTime(source.lastSeenAt)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <dl className="mt-5 space-y-5 border-t border-border pt-5">
               {dive.merges.length > 0 ? (
                 <Value
                   label="Merged from"

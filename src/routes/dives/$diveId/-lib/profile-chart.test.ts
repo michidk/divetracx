@@ -31,6 +31,10 @@ function sample(
     decoCeilingMeters: null,
     tankNumber: null,
     heartRateBpm: null,
+    ndlSeconds: null,
+    timeToSurfaceSeconds: null,
+    cnsPercent: null,
+    nitrogenLoadPercent: null,
     ...values,
   }
 }

@@ -14,6 +14,10 @@ export interface DiveProfilePoint {
   decoCeilingMeters: number | null
   tankNumber: number | null
   heartRateBpm: number | null
+  ndlSeconds: number | null
+  timeToSurfaceSeconds: number | null
+  cnsPercent: number | null
+  nitrogenLoadPercent: number | null
 }
 
 export interface PositionedDiveProfilePoint extends DiveProfilePoint {
@@ -448,8 +452,16 @@ export function createProfileGeometry(samples: DiveProfilePoint[]) {
     return point.tankNumber !== previousTankNumber
   })
 
+  const hasDecoData = positionedPoints.some(
+    (point) =>
+      point.ndlSeconds !== null ||
+      point.timeToSurfaceSeconds !== null ||
+      point.cnsPercent !== null,
+  )
+
   return {
     points: positionedPoints,
+    hasDecoData,
     depthPath: closedDepthPath,
     depthAreaPath,
     temperaturePath,

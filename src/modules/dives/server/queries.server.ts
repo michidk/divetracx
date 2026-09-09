@@ -1,12 +1,13 @@
 import '@tanstack/react-start/server-only'
 
-import { and, asc, count, desc, eq, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm'
 import { getDb } from '@/db'
 import {
   boats,
   buddies,
   diveBuddies,
   diveEquipment,
+  diveEvents,
   diveProfileSamples,
   divers,
   diveSites,
@@ -21,6 +22,41 @@ import {
   tanks,
 } from '@/db/schema'
 import { loadDiveMerges } from './merge.server'
+
+/**
+ * The computer or file behind a source record, in the words a diver would use.
+ * Garmin keeps the FIT creator device on the file metadata; DiveMate and
+ * Subsurface record the computer name on the dive itself.
+ */
+function describeSourceDevice(
+  integrationKey: string,
+  rawPayload: Record<string, unknown>,
+  fileMetadata: Record<string, unknown> | null,
+): { name: string | null; serialNumber: string | null; softwareVersion: string | null } {
+  const text = (value: unknown) =>
+    typeof value === 'string' && value.trim() ? value.trim() : null
+  if (integrationKey === 'garmin') {
+    const device =
+      fileMetadata && typeof fileMetadata.device === 'object' && fileMetadata.device
+        ? (fileMetadata.device as Record<string, unknown>)
+        : null
+    return {
+      name: text(device?.product) ?? text(rawPayload.deviceName) ?? null,
+      serialNumber:
+        device?.serialNumber === undefined ? null : String(device.serialNumber),
+      softwareVersion: text(device?.softwareVersion),
+    }
+  }
+  return {
+    name:
+      text(rawPayload.computer) ??
+      text(rawPayload.Computer) ??
+      text(rawPayload.divecomputer) ??
+      null,
+    serialNumber: null,
+    softwareVersion: null,
+  }
+}
 
 export async function loadDashboard() {
   const db = getDb()
@@ -228,6 +264,14 @@ export async function loadDive(diveId: string) {
           weightKg: dives.weightKg,
           equipmentWeightKg: dives.equipmentWeightKg,
           maximumPpo2: dives.maximumPpo2,
+          averageHeartRateBpm: dives.averageHeartRateBpm,
+          maximumHeartRateBpm: dives.maximumHeartRateBpm,
+          startCnsPercent: dives.startCnsPercent,
+          endCnsPercent: dives.endCnsPercent,
+          oxygenToxicityUnits: dives.oxygenToxicityUnits,
+          decoModel: dives.decoModel,
+          gradientFactorLow: dives.gradientFactorLow,
+          gradientFactorHigh: dives.gradientFactorHigh,
           decompressionDive: dives.decompressionDive,
           safetyStop: dives.safetyStop,
           safetyStopSeconds: dives.safetyStopSeconds,
@@ -321,6 +365,7 @@ export async function loadDive(diveId: string) {
           workingPressureBar: tanks.workingPressureBar,
           oxygenPercent: tanks.oxygenPercent,
           heliumPercent: tanks.heliumPercent,
+          gasRole: tanks.gasRole,
           breathingTimeSeconds: tanks.breathingTimeSeconds,
           weightKg: tanks.weightKg,
         })
@@ -357,6 +402,10 @@ export async function loadDive(diveId: string) {
           decoCeilingMeters: diveProfileSamples.decoCeilingMeters,
           tankNumber: diveProfileSamples.tankNumber,
           heartRateBpm: diveProfileSamples.heartRateBpm,
+          ndlSeconds: diveProfileSamples.ndlSeconds,
+          timeToSurfaceSeconds: diveProfileSamples.timeToSurfaceSeconds,
+          cnsPercent: diveProfileSamples.cnsPercent,
+          nitrogenLoadPercent: diveProfileSamples.nitrogenLoadPercent,
         })
         .from(diveProfileSamples)
         .where(eq(diveProfileSamples.diveId, diveId))
@@ -365,13 +414,31 @@ export async function loadDive(diveId: string) {
           asc(diveProfileSamples.sampleIndex),
         )
 
-      const sources = await transaction
+      const events = await transaction
         .select({
+          id: diveEvents.id,
+          elapsedSeconds: diveEvents.elapsedSeconds,
+          kind: diveEvents.kind,
+          code: diveEvents.code,
+          label: diveEvents.label,
+          tankNumber: diveEvents.tankNumber,
+        })
+        .from(diveEvents)
+        .where(eq(diveEvents.diveId, diveId))
+        .orderBy(asc(diveEvents.elapsedSeconds), asc(diveEvents.createdAt))
+
+      const sourceRows = await transaction
+        .select({
+          externalRecordId: externalRecords.id,
           integrationKey: externalRecords.integrationKey,
           integrationName: integrations.displayName,
           externalId: externalRecords.externalId,
           identityKey: externalRecords.identityKey,
+          role: externalRecordLinks.role,
+          rawPayload: externalRecords.rawPayload,
+          fileMetadata: externalRecords.fileMetadata,
           externalUpdatedAt: externalRecords.externalUpdatedAt,
+          firstSeenAt: externalRecords.firstSeenAt,
           lastSeenAt: externalRecords.lastSeenAt,
         })
         .from(externalRecordLinks)
@@ -386,6 +453,57 @@ export async function loadDive(diveId: string) {
             eq(externalRecordLinks.canonicalEntityId, diveId),
           ),
         )
+      // What each source contributed to this dive, so the page can say
+      // "created the dive" or "added 3,267 samples and 2 tanks" per computer.
+      const contributionRows =
+        sourceRows.length === 0
+          ? []
+          : await transaction
+              .select({
+                externalRecordId: externalRecordLinks.externalRecordId,
+                canonicalEntityType: externalRecordLinks.canonicalEntityType,
+                total: count(),
+              })
+              .from(externalRecordLinks)
+              .where(
+                inArray(
+                  externalRecordLinks.externalRecordId,
+                  sourceRows.map((row) => row.externalRecordId),
+                ),
+              )
+              .groupBy(
+                externalRecordLinks.externalRecordId,
+                externalRecordLinks.canonicalEntityType,
+              )
+      const sources = sourceRows.map((row) => {
+        const contributions = Object.fromEntries(
+          contributionRows
+            .filter((item) => item.externalRecordId === row.externalRecordId)
+            .map((item) => [item.canonicalEntityType, Number(item.total)]),
+        ) as Record<string, number>
+        return {
+          integrationKey: row.integrationKey,
+          integrationName: row.integrationName,
+          externalId: row.externalId,
+          identityKey: row.identityKey,
+          role: row.role,
+          device: describeSourceDevice(
+            row.integrationKey,
+            row.rawPayload,
+            row.fileMetadata,
+          ),
+          contributions: {
+            profileSamples: contributions.profile_sample ?? 0,
+            tanks: contributions.tank ?? 0,
+            events: contributions.dive_event ?? 0,
+            buddies: contributions.dive_buddy ?? 0,
+            equipment: contributions.dive_equipment ?? 0,
+          },
+          externalUpdatedAt: row.externalUpdatedAt,
+          firstSeenAt: row.firstSeenAt,
+          lastSeenAt: row.lastSeenAt,
+        }
+      })
 
       const merges = await loadDiveMerges(transaction, diveId)
 
@@ -398,6 +516,7 @@ export async function loadDive(diveId: string) {
         photos: divePictures.filter((picture) => picture.kind === 'photo'),
         signatures: divePictures.filter((picture) => picture.kind === 'signature'),
         profileSamples,
+        events,
         sources,
       }
     },

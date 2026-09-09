@@ -322,6 +322,15 @@ export const dives = pgTable(
     maximumPpo2: numeric('maximum_ppo2', { precision: 8, scale: 6 }),
     averageHeartRateBpm: integer('average_heart_rate_bpm'),
     maximumHeartRateBpm: integer('maximum_heart_rate_bpm'),
+    // Decompression bookkeeping as the computer reported it at the end of the
+    // dive: CNS oxygen toxicity in percent, OTU dose, and the algorithm with
+    // its gradient factors, e.g. "ZHL-16C" 40/70.
+    startCnsPercent: integer('start_cns_percent'),
+    endCnsPercent: integer('end_cns_percent'),
+    oxygenToxicityUnits: integer('oxygen_toxicity_units'),
+    decoModel: text('deco_model'),
+    gradientFactorLow: integer('gradient_factor_low'),
+    gradientFactorHigh: integer('gradient_factor_high'),
     decompressionDive: boolean('decompression_dive').notNull().default(false),
     safetyStop: boolean('safety_stop').notNull().default(false),
     safetyStopSeconds: integer('safety_stop_seconds'),
@@ -371,6 +380,12 @@ export const diveProfileSamples = pgTable(
     decoCeilingMeters: numeric('deco_ceiling_meters', { precision: 7, scale: 2 }),
     tankNumber: integer('tank_number'),
     heartRateBpm: integer('heart_rate_bpm'),
+    /** No-decompression limit remaining; null once in deco. */
+    ndlSeconds: integer('ndl_seconds'),
+    timeToSurfaceSeconds: integer('time_to_surface_seconds'),
+    cnsPercent: integer('cns_percent'),
+    /** Leading-compartment nitrogen loading in percent of the M-value. */
+    nitrogenLoadPercent: integer('nitrogen_load_percent'),
     ...auditColumns,
   },
   (table) => [
@@ -387,6 +402,33 @@ export const diveProfileSamples = pgTable(
  * several log entries leaves them to be recombined by hand; merging deletes the
  * source dives, so this records what went into the surviving one.
  */
+export const DIVE_EVENT_KINDS = ['gas_switch', 'alert', 'marker'] as const
+
+/**
+ * Things the computer flagged during the dive — gas switches, ascent-rate and
+ * NDL alerts, deco violations — kept as a timeline alongside the profile.
+ * `code` is the source's own identifier (e.g. FIT `ascentCritical`) so that
+ * nothing is lost when a computer emits an alert this application does not
+ * know how to label.
+ */
+export const diveEvents = pgTable(
+  'dive_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    diveId: uuid('dive_id')
+      .notNull()
+      .references(() => dives.id, { onDelete: 'cascade' }),
+    elapsedSeconds: integer('elapsed_seconds').notNull(),
+    kind: text('kind').$type<(typeof DIVE_EVENT_KINDS)[number]>().notNull(),
+    code: text('code').notNull(),
+    label: text('label').notNull(),
+    /** For a gas switch, the one-based tank taken into use. */
+    tankNumber: integer('tank_number'),
+    ...auditColumns,
+  },
+  (table) => [index('dive_events_dive_id_index').on(table.diveId)],
+)
+
 export const diveMerges = pgTable(
   'dive_merges',
   {
@@ -462,6 +504,8 @@ export const tanks = pgTable(
     }),
     oxygenPercent: numeric('oxygen_percent', { precision: 5, scale: 2 }),
     heliumPercent: numeric('helium_percent', { precision: 5, scale: 2 }),
+    /** The computer's plan for this gas: bottom, decompression, travel. */
+    gasRole: text('gas_role'),
     breathingTimeSeconds: integer('breathing_time_seconds'),
     weightKg: numeric('weight_kg', { precision: 7, scale: 3 }),
     ...auditColumns,

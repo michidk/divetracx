@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from 'react'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
+import { isCriticalDiveEvent } from '@/modules/dives/dive-events'
 import type { PositionedDiveProfilePoint } from '../-lib/profile-chart'
 import {
   createProfileGeometry,
@@ -19,7 +20,87 @@ interface ProfileSample {
   decoCeilingMeters: string | null
   tankNumber: number | null
   heartRateBpm: number | null
+  ndlSeconds: number | null
+  timeToSurfaceSeconds: number | null
+  cnsPercent: number | null
+  nitrogenLoadPercent: number | null
   segmentIndex: number
+}
+
+interface ProfileEvent {
+  id: string
+  elapsedSeconds: number
+  kind: 'gas_switch' | 'alert' | 'marker'
+  code: string
+  label: string
+}
+
+function nearestPointByTime(
+  points: PositionedDiveProfilePoint[],
+  elapsedSeconds: number,
+) {
+  let nearest: PositionedDiveProfilePoint | null = null
+  for (const point of points) {
+    if (
+      nearest === null ||
+      Math.abs(point.elapsedSeconds - elapsedSeconds) <
+        Math.abs(nearest.elapsedSeconds - elapsedSeconds)
+    ) {
+      nearest = point
+    }
+  }
+  return nearest
+}
+
+/**
+ * An alert the computer raised, pinned to the depth curve at its time. Critical
+ * alerts use the warning treatment; the rest stay quiet so a chatty computer
+ * does not bury the profile.
+ */
+function AlertMarker({
+  event,
+  point,
+}: {
+  event: ProfileEvent
+  point: PositionedDiveProfilePoint
+}) {
+  const critical = isCriticalDiveEvent(event)
+  const markerY = Math.max(PROFILE_CHART_VIEWBOX.top + 10, point.depthY - 22)
+  return (
+    <g aria-label={`${event.label} at ${formatElapsedTime(event.elapsedSeconds)}`}>
+      <line
+        x1={point.x}
+        x2={point.x}
+        y1={markerY + 6}
+        y2={point.depthY}
+        stroke={critical ? 'var(--warning)' : 'var(--muted-foreground)'}
+        strokeWidth="1.25"
+        strokeDasharray="2 3"
+        opacity="0.8"
+        vectorEffect="non-scaling-stroke"
+      />
+      {critical ? (
+        <path
+          d={`M ${point.x} ${markerY - 7} L ${point.x + 7} ${markerY + 5} L ${point.x - 7} ${markerY + 5} Z`}
+          fill="var(--warning)"
+          stroke="var(--card)"
+          strokeWidth="1.5"
+          vectorEffect="non-scaling-stroke"
+        />
+      ) : (
+        <circle
+          cx={point.x}
+          cy={markerY}
+          r={4}
+          fill="var(--card)"
+          stroke="var(--muted-foreground)"
+          strokeWidth="1.5"
+          vectorEffect="non-scaling-stroke"
+        />
+      )}
+      <title>{`${formatElapsedTime(event.elapsedSeconds)} · ${event.label}`}</title>
+    </g>
+  )
 }
 
 interface ProfileTank {
@@ -508,9 +589,11 @@ function ProfileMagnifier({
 export function DiveProfileChart({
   samples,
   tanks,
+  events = [],
 }: {
   samples: ProfileSample[]
   tanks: ProfileTank[]
+  events?: ProfileEvent[]
 }) {
   const gradientId = useId()
   const ceilingGradientId = useId()
@@ -530,12 +613,26 @@ export function DiveProfileChart({
           tank2PressureBar:
             sample.tank2PressureBar === null ? null : Number(sample.tank2PressureBar),
           heartRateBpm: sample.heartRateBpm,
+          ndlSeconds: sample.ndlSeconds,
+          timeToSurfaceSeconds: sample.timeToSurfaceSeconds,
+          cnsPercent: sample.cnsPercent,
+          nitrogenLoadPercent: sample.nitrogenLoadPercent,
           decoCeilingMeters:
             sample.decoCeilingMeters === null ? null : Number(sample.decoCeilingMeters),
           tankNumber: sample.tankNumber,
         })),
       ),
     [samples],
+  )
+  const alertMarkers = useMemo(
+    () =>
+      events
+        .filter((event) => event.kind === 'alert')
+        .flatMap((event) => {
+          const point = nearestPointByTime(geometry.points, event.elapsedSeconds)
+          return point ? [{ event, point }] : []
+        }),
+    [events, geometry.points],
   )
   const selectedPoint =
     selectedIndex === null ? null : (geometry.points[selectedIndex] ?? null)
@@ -921,6 +1018,9 @@ export function DiveProfileChart({
                   tanks={tanks}
                 />
               ))}
+              {alertMarkers.map(({ event, point }) => (
+                <AlertMarker key={event.id} event={event} point={point} />
+              ))}
 
               {selectedPoint ? (
                 <g>
@@ -1045,6 +1145,34 @@ export function DiveProfileChart({
                   : `${selectedPoint.temperatureCelsius.toFixed(1)} °C`}
               </span>
             </p>
+            {geometry.hasDecoData ? (
+              <p className="rounded-lg bg-muted/60 px-3 py-2">
+                <span className="block text-xs text-muted-foreground">
+                  {selectedPoint?.ndlSeconds !== null &&
+                  selectedPoint?.ndlSeconds !== undefined
+                    ? 'No-deco limit'
+                    : 'Time to surface'}
+                </span>
+                <span className="font-mono font-semibold">
+                  {!selectedPoint
+                    ? '—'
+                    : selectedPoint.ndlSeconds !== null
+                      ? formatElapsedTime(selectedPoint.ndlSeconds)
+                      : selectedPoint.timeToSurfaceSeconds !== null
+                        ? formatElapsedTime(selectedPoint.timeToSurfaceSeconds)
+                        : '—'}
+                </span>
+                {selectedPoint?.cnsPercent !== null &&
+                selectedPoint?.cnsPercent !== undefined ? (
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    CNS {selectedPoint.cnsPercent}%
+                    {selectedPoint.nitrogenLoadPercent !== null
+                      ? ` · N₂ ${selectedPoint.nitrogenLoadPercent}%`
+                      : ''}
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
             {geometry.heartRatePath ? (
               <p className="rounded-lg bg-muted/60 px-3 py-2">
                 <span className="block text-xs text-muted-foreground">Heart rate</span>

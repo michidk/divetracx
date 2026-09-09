@@ -62,7 +62,7 @@ describe('canonical DiveMate export', () => {
     const now = new Date('2026-09-01T12:00:00Z')
     const snapshot = {
       format: 'divetracx-backup',
-      version: 18,
+      version: 19,
       exportedAt: now.toISOString(),
       data: {
         agencies: [
@@ -227,6 +227,12 @@ describe('canonical DiveMate export', () => {
             maximumPpo2: null,
             averageHeartRateBpm: null,
             maximumHeartRateBpm: null,
+            startCnsPercent: null,
+            endCnsPercent: null,
+            oxygenToxicityUnits: null,
+            decoModel: null,
+            gradientFactorLow: null,
+            gradientFactorHigh: null,
             decompressionDive: false,
             safetyStop: false,
             safetyStopSeconds: null,
@@ -263,6 +269,7 @@ describe('canonical DiveMate export', () => {
             equipmentId: '55555555-5555-5555-5555-555555555555',
           },
         ],
+        diveEvents: [],
         diveProfileSamples: [
           {
             id: '33333333-3333-3333-3333-333333333333',
@@ -278,6 +285,10 @@ describe('canonical DiveMate export', () => {
             decoCeilingMeters: null,
             tankNumber: null,
             heartRateBpm: null,
+            ndlSeconds: null,
+            timeToSurfaceSeconds: null,
+            cnsPercent: null,
+            nitrogenLoadPercent: null,
             createdAt: now,
             updatedAt: now,
           },
@@ -295,6 +306,10 @@ describe('canonical DiveMate export', () => {
             decoCeilingMeters: null,
             tankNumber: null,
             heartRateBpm: null,
+            ndlSeconds: null,
+            timeToSurfaceSeconds: null,
+            cnsPercent: null,
+            nitrogenLoadPercent: null,
             createdAt: now,
             updatedAt: now,
           },

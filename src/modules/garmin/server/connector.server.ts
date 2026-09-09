@@ -5,6 +5,7 @@ import { and, eq, inArray } from 'drizzle-orm'
 import type { DatabaseTransaction } from '@/db'
 import {
   certifications,
+  diveEvents,
   diveProfileSamples,
   dives,
   equipment,
@@ -39,7 +40,7 @@ import { createGarminSourceClient } from './client.server'
 
 const SOURCE_KEY = 'garmin'
 /** Bumped when the FIT mapping learns a field so stored activities re-process. */
-const ACTIVITY_MAPPER_VERSION = 2
+const ACTIVITY_MAPPER_VERSION = 3
 
 interface PreparedGarminActivity {
   source: GarminSourceActivity
@@ -76,10 +77,33 @@ function garminDiveValues(mapped: GarminMappedDive) {
     maximumPpo2: numeric(mapped.maximumPpo2),
     averageHeartRateBpm: mapped.averageHeartRateBpm,
     maximumHeartRateBpm: mapped.maximumHeartRateBpm,
-    computer: mapped.computer,
+    startCnsPercent: mapped.startCnsPercent,
+    endCnsPercent: mapped.endCnsPercent,
+    oxygenToxicityUnits: mapped.oxygenToxicityUnits,
+    decoModel: mapped.deco?.model ?? null,
+    gradientFactorLow: mapped.deco?.gradientFactorLow ?? null,
+    gradientFactorHigh: mapped.deco?.gradientFactorHigh ?? null,
+    decompressionDive: mapped.decompressionDive,
+    waterType: waterTypeCode(mapped.deco?.waterType ?? null),
+    computer: mapped.computer ?? mapped.device?.product ?? null,
     notes: mapped.notes,
     updatedAt: new Date(),
   }
+}
+
+/** "Air", "EAN50", "Tx18/45" — the way divers name a mix. */
+function gasName(gas: GarminMappedDive['gases'][number]) {
+  const o2 = gas.oxygenPercent === null ? null : Math.round(gas.oxygenPercent)
+  const he = gas.heliumPercent === null ? null : Math.round(gas.heliumPercent)
+  if (he !== null && he > 0) return `Tx${o2 ?? '?'}/${he}`
+  if (o2 === null || o2 === 21) return 'Air'
+  if (o2 === 100) return 'Oxygen'
+  return `EAN${o2}`
+}
+
+/** DiveMate's numeric water codes, which the rest of the app labels. */
+function waterTypeCode(waterType: 'fresh' | 'salt' | null) {
+  return waterType === 'salt' ? 1 : waterType === 'fresh' ? 2 : null
 }
 
 /**
@@ -102,6 +126,10 @@ async function enrichMatchedDive(
       maximumPpo2: dives.maximumPpo2,
       averageHeartRateBpm: dives.averageHeartRateBpm,
       maximumHeartRateBpm: dives.maximumHeartRateBpm,
+      endCnsPercent: dives.endCnsPercent,
+      decoModel: dives.decoModel,
+      decompressionDive: dives.decompressionDive,
+      waterType: dives.waterType,
       utcOffsetMinutes: dives.utcOffsetMinutes,
       computer: dives.computer,
     })
@@ -138,10 +166,33 @@ async function enrichMatchedDive(
       ...(current.maximumHeartRateBpm === null
         ? { maximumHeartRateBpm: mapped.maximumHeartRateBpm }
         : {}),
+      ...(current.endCnsPercent === null
+        ? {
+            startCnsPercent: mapped.startCnsPercent,
+            endCnsPercent: mapped.endCnsPercent,
+            oxygenToxicityUnits: mapped.oxygenToxicityUnits,
+          }
+        : {}),
+      ...(current.decoModel === null && mapped.deco
+        ? {
+            decoModel: mapped.deco.model,
+            gradientFactorLow: mapped.deco.gradientFactorLow,
+            gradientFactorHigh: mapped.deco.gradientFactorHigh,
+          }
+        : {}),
+      // A deco obligation reported by any computer stands.
+      ...(mapped.decompressionDive && !current.decompressionDive
+        ? { decompressionDive: true }
+        : {}),
+      ...(current.waterType === null || current.waterType === 0
+        ? { waterType: waterTypeCode(mapped.deco?.waterType ?? null) }
+        : {}),
       ...(current.utcOffsetMinutes === null
         ? { utcOffsetMinutes: mapped.utcOffsetMinutes }
         : {}),
-      ...(current.computer === null ? { computer: mapped.computer } : {}),
+      ...(current.computer === null
+        ? { computer: mapped.computer ?? mapped.device?.product ?? null }
+        : {}),
     })
     .where(eq(dives.id, diveId))
 }
@@ -264,6 +315,16 @@ function prepareBatch(batch: GarminSourceBatch) {
             byteSize: source.fitBytes?.byteLength ?? 0,
             fileName: source.fitFileName ?? null,
             contentType: source.fitContentType ?? 'application/vnd.ant.fit',
+            // The computer that recorded the file, for the dive's provenance panel.
+            ...(mapped?.device
+              ? {
+                  device: {
+                    product: mapped.device.product,
+                    serialNumber: mapped.device.serialNumber,
+                    softwareVersion: mapped.device.softwareVersion,
+                  },
+                }
+              : {}),
           }
         : null,
       externalUpdatedAt: validDate(details.insertedDate),
@@ -538,6 +599,7 @@ export function createGarminConnector(
       let profileSamplesCreated = 0
       let heartRateSamplesFilled = 0
       let tanksCreated = 0
+      let eventsCreated = 0
 
       // Dives that already carry a Garmin activity must not be matched again
       // by a second activity in this or a later run.
@@ -615,10 +677,18 @@ export function createGarminConnector(
           const importedTankIds = record.canonicalLinks
             .filter((link) => link.canonicalEntityType === 'tank')
             .map((link) => link.canonicalEntityId)
+          const importedEventIds = record.canonicalLinks
+            .filter((link) => link.canonicalEntityType === 'dive_event')
+            .map((link) => link.canonicalEntityId)
           if (syncSamples && importedSampleIds.length > 0) {
             await context.transaction
               .delete(diveProfileSamples)
               .where(inArray(diveProfileSamples.id, importedSampleIds))
+          }
+          if (syncSamples && importedEventIds.length > 0) {
+            await context.transaction
+              .delete(diveEvents)
+              .where(inArray(diveEvents.id, importedEventIds))
           }
           if (syncTanks && importedTankIds.length > 0) {
             await context.transaction
@@ -626,7 +696,7 @@ export function createGarminConnector(
               .where(inArray(tanks.id, importedTankIds))
           }
           await context.unlinkCanonicalRecords(record.id, [
-            ...(syncSamples ? ['profile_sample'] : []),
+            ...(syncSamples ? ['profile_sample', 'dive_event'] : []),
             ...(syncTanks ? ['tank'] : []),
           ])
         }
@@ -687,6 +757,10 @@ export function createGarminConnector(
                 temperatureCelsius: numeric(sample.temperatureCelsius),
                 decoCeilingMeters: numeric(sample.decoCeilingMeters),
                 heartRateBpm: sample.heartRateBpm,
+                ndlSeconds: sample.ndlSeconds,
+                timeToSurfaceSeconds: sample.timeToSurfaceSeconds,
+                cnsPercent: sample.cnsPercent,
+                nitrogenLoadPercent: sample.nitrogenLoadPercent,
               })
               .returning({ id: diveProfileSamples.id })
             if (inserted) {
@@ -707,15 +781,52 @@ export function createGarminConnector(
               .insert(tanks)
               .values({
                 diveId,
-                name: `Garmin gas ${gas.index + 1}`,
+                name: gasName(gas),
                 sortOrder: gas.index,
+                computerTankNumber: gas.index + 1,
                 oxygenPercent: numeric(gas.oxygenPercent),
                 heliumPercent: numeric(gas.heliumPercent),
+                gasRole: gas.role,
               })
               .returning({ id: tanks.id })
             if (inserted) {
               tanksCreated += 1
               await context.linkCanonicalRecord(record.id, 'tank', inserted.id, 'derived')
+            }
+          }
+        }
+        // Alerts and gas switches travel with the profile: a dive that keeps
+        // another computer's samples still gains the events Garmin flagged,
+        // unless it already has events of its own.
+        if (syncSamples && mapped.events.length > 0) {
+          const [existingEvent] = await context.transaction
+            .select({ id: diveEvents.id })
+            .from(diveEvents)
+            .where(eq(diveEvents.diveId, diveId))
+            .limit(1)
+          if (ownsDive || !existingEvent) {
+            for (const event of mapped.events) {
+              context.signal.throwIfAborted()
+              const [inserted] = await context.transaction
+                .insert(diveEvents)
+                .values({
+                  diveId,
+                  elapsedSeconds: event.elapsedSeconds,
+                  kind: event.kind,
+                  code: event.code,
+                  label: event.label,
+                  tankNumber: event.tankNumber,
+                })
+                .returning({ id: diveEvents.id })
+              if (inserted) {
+                eventsCreated += 1
+                await context.linkCanonicalRecord(
+                  record.id,
+                  'dive_event',
+                  inserted.id,
+                  'derived',
+                )
+              }
             }
           }
         }
@@ -732,6 +843,7 @@ export function createGarminConnector(
           profileSamplesCreated,
           ...(heartRateSamplesFilled > 0 ? { heartRateSamplesFilled } : {}),
           tanksCreated,
+          ...(eventsCreated > 0 ? { eventsCreated } : {}),
           ...gearByEntity,
         },
       }

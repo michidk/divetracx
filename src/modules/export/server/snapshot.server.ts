@@ -11,6 +11,7 @@ import {
   certifications,
   diveBuddies,
   diveEquipment,
+  diveEvents,
   diveProfileSamples,
   divers,
   diveSites,
@@ -30,7 +31,7 @@ export async function loadExportSnapshot(): Promise<ExportSnapshot> {
   return getDb().transaction(
     async (transaction) => ({
       format: 'divetracx-backup',
-      version: 18,
+      version: 19,
       exportedAt: new Date().toISOString(),
       data: {
         agencies: await transaction.select().from(agencies),
@@ -51,6 +52,7 @@ export async function loadExportSnapshot(): Promise<ExportSnapshot> {
         diveBuddies: await transaction.select().from(diveBuddies),
         diveEquipment: await transaction.select().from(diveEquipment),
         diveProfileSamples: await transaction.select().from(diveProfileSamples),
+        diveEvents: await transaction.select().from(diveEvents),
         tanks: await transaction.select().from(tanks),
         pictures: await transaction.select().from(pictures),
         importRuns: await transaction.select().from(importRuns),

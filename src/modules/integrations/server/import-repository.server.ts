@@ -8,6 +8,7 @@ import {
   certifications,
   diveBuddies,
   diveEquipment,
+  diveEvents,
   diveProfileSamples,
   divers,
   diveSites,
@@ -37,6 +38,7 @@ import { hashExternalRecord } from './record-hash.server'
 const CANONICAL_DELETE_ORDER = [
   'picture',
   'certification',
+  'dive_event',
   'profile_sample',
   'tank',
   'dive_buddy',
@@ -70,6 +72,9 @@ async function deleteCanonicalRows(
       return
     case 'certification':
       await transaction.delete(certifications).where(inArray(certifications.id, ids))
+      return
+    case 'dive_event':
+      await transaction.delete(diveEvents).where(inArray(diveEvents.id, ids))
       return
     case 'profile_sample':
       await transaction

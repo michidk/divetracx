@@ -8,6 +8,7 @@ import type {
   certifications,
   diveBuddies,
   diveEquipment,
+  diveEvents,
   diveProfileSamples,
   divers,
   diveSites,
@@ -24,7 +25,7 @@ import type {
 
 export interface ExportSnapshot {
   format: 'divetracx-backup'
-  version: 18
+  version: 19
   exportedAt: string
   data: {
     agencies: Array<typeof agencies.$inferSelect>
@@ -45,6 +46,7 @@ export interface ExportSnapshot {
     diveBuddies: Array<typeof diveBuddies.$inferSelect>
     diveEquipment: Array<typeof diveEquipment.$inferSelect>
     diveProfileSamples: Array<typeof diveProfileSamples.$inferSelect>
+    diveEvents: Array<typeof diveEvents.$inferSelect>
     tanks: Array<typeof tanks.$inferSelect>
     pictures: Array<typeof pictures.$inferSelect>
     importRuns: Array<typeof importRuns.$inferSelect>

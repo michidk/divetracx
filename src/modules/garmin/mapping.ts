@@ -42,9 +42,63 @@ function heartRateSummary(fit: DecodedGarminFit | null, kind: 'avg' | 'max') {
     : Math.round(readings.reduce((sum, value) => sum + value, 0) / readings.length)
 }
 
+function roundOrNull(value: number | null) {
+  return value === null ? null : Math.round(value)
+}
+
 function minimum(values: Array<number | null>) {
   const present = values.filter((value): value is number => value !== null)
   return present.length > 0 ? Math.min(...present) : null
+}
+
+/**
+ * The Dive service lists each gas with its planned use; matched onto the FIT
+ * gases by oxygen and helium content, in order.
+ */
+function gasRoles(
+  raw: Record<string, unknown>,
+): Array<{ o2: number | null; he: number | null; role: string }> {
+  const gases = Array.isArray(raw.gases) ? raw.gases : []
+  return gases.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const gas = item as Record<string, unknown>
+    const status = typeof gas.gasStatus === 'string' ? gas.gasStatus : null
+    if (!status) return []
+    return [
+      {
+        o2: finite(gas.percentOxygen),
+        he: finite(gas.percentHelium),
+        role:
+          status === 'BOTTOM_GAS'
+            ? 'bottom'
+            : status.startsWith('DECO')
+              ? 'deco'
+              : status.startsWith('TRAVEL')
+                ? 'travel'
+                : status.toLowerCase(),
+      },
+    ]
+  })
+}
+
+function withGasRoles(gases: GarminMappedDive['gases'], raw: Record<string, unknown>) {
+  const roles = gasRoles(raw)
+  if (roles.length === 0) return gases
+  const remaining = [...roles]
+  return gases.map((gas) => {
+    const index = remaining.findIndex(
+      (candidate) =>
+        (candidate.o2 === null ||
+          gas.oxygenPercent === null ||
+          Math.round(candidate.o2) === Math.round(gas.oxygenPercent)) &&
+        (candidate.he === null ||
+          gas.heliumPercent === null ||
+          Math.round(candidate.he) === Math.round(gas.heliumPercent)),
+    )
+    if (index === -1) return gas
+    const [match] = remaining.splice(index, 1)
+    return { ...gas, role: match?.role ?? null }
+  })
 }
 
 export function mapGarminActivity(source: GarminSourceActivity): GarminMappedDive | null {
@@ -103,6 +157,20 @@ export function mapGarminActivity(source: GarminSourceActivity): GarminMappedDiv
     maximumPpo2: fit?.maximumPpo2 ?? null,
     averageHeartRateBpm: heartRateSummary(fit, 'avg'),
     maximumHeartRateBpm: heartRateSummary(fit, 'max'),
+    startCnsPercent: roundOrNull(finite(fit?.summary?.startCns)),
+    endCnsPercent: roundOrNull(finite(fit?.summary?.endCns)),
+    oxygenToxicityUnits: roundOrNull(finite(fit?.summary?.o2Toxicity)),
+    deco: fit?.deco ?? null,
+    // The Dive service knows whether the dive incurred a deco obligation; the
+    // FIT only shows it indirectly through a non-zero ceiling.
+    decompressionDive:
+      details.raw.isDeco === true ||
+      details.raw.deco === true ||
+      (fit?.profileSamples ?? []).some(
+        (sample) => sample.decoCeilingMeters !== null && sample.decoCeilingMeters > 0,
+      ),
+    device: fit?.device ?? null,
+    events: fit?.events ?? [],
     number:
       finite(fit?.summary?.diveNumber) === null
         ? null
@@ -113,7 +181,7 @@ export function mapGarminActivity(source: GarminSourceActivity): GarminMappedDiv
     latitude,
     longitude,
     profileSamples: fit?.profileSamples ?? [],
-    gases: fit?.gases ?? [],
+    gases: withGasRoles(fit?.gases ?? [], details.raw),
     fitProfileVersion: fit?.profileVersion ?? null,
   }
 }

@@ -218,6 +218,16 @@ Heart rate, when a computer recorded it, shares the temperature band as a dashed
 rose (`rose-500`) line with its own scale and a peak marker in `bpm`; it appears
 in the legend and the selected-sample panel only when the dive has readings.
 
+Alerts the computer raised sit on the depth curve at their time: a `--warning`
+triangle for critical ones (ascent rate, broken ceiling or safety stop, ppO₂,
+CNS/OTU, battery) and a small hollow circle for the rest, each with a dotted
+connector and a `<title>`. Gas switches keep their labelled circles. When a
+dive carries decompression data, the selected-sample panel shows the remaining
+no-deco limit (or time to surface once in deco) with CNS and N₂ loading.
+
+The dive page lists the same alerts and gas switches under “Computer events”
+as a mono-time / icon / label list; critical rows use `--warning-foreground`.
+
 A merged dive holds more than one recorded profile on one timeline. Samples keep
 their true elapsed times, so the surface interval between segments is drawn to
 scale: a `--muted` band spanning the depth track, edged with dashed `--border`
@@ -255,8 +265,12 @@ red text with an alert icon and disable the action; consequences that are merely
 worth knowing use the `--warning` surface. Confirmation is `window.confirm`,
 matching dive deletion, and it names every dive that will be deleted.
 
-A dive that absorbed others lists them under “Merged from” in its Record panel,
-alongside the integration sources it still syncs from.
+A dive that absorbed others lists them under “Merged from” in its “Recorded by”
+panel. That panel names every computer and app the dive was read from — device
+name, integration, serial, firmware — with a badge saying whether the source
+created the dive or attached to one that already existed, and a line for what
+it added (profile samples, tanks, computer events, people, gear). A dive with no
+sources says whether it was logged by hand or from computer data.
 
 ### Site map
 

@@ -106,6 +106,58 @@ describe('Garmin canonical mapping', () => {
     ])
   })
 
+  test('takes the deco flag and gas roles from the Dive service summary', () => {
+    const startedAt = new Date('2026-09-01T10:00:00Z')
+    const encoder = new Encoder()
+    encoder.onMesg(messageNumber('FILE_ID'), {
+      type: 'activity',
+      manufacturer: 'development',
+      product: 1,
+      timeCreated: startedAt,
+    } as FileIdMesg)
+    encoder.onMesg(messageNumber('SESSION'), {
+      sport: 'diving',
+      subSport: 'multiGasDiving',
+      startTime: startedAt,
+      timestamp: new Date(startedAt.getTime() + 60_000),
+      totalTimerTime: 60,
+      event: 'session',
+      eventType: 'stop',
+    } as SessionMesg)
+    encoder.onMesg(messageNumber('DIVE_GAS'), {
+      messageIndex: 0,
+      oxygenContent: 21,
+      heliumContent: 0,
+      status: 'enabled',
+    } as never)
+    encoder.onMesg(messageNumber('DIVE_GAS'), {
+      messageIndex: 1,
+      oxygenContent: 50,
+      heliumContent: 0,
+      status: 'enabled',
+    } as never)
+    encoder.onMesg(messageNumber('RECORD'), {
+      timestamp: startedAt,
+      depth: 5,
+    } as RecordMesg)
+
+    const mapped = mapGarminActivity({
+      activityDetails: {
+        activityId: '9',
+        activityType: 'multi_gas_diving',
+        startTimeInSeconds: startedAt.getTime() / 1_000,
+        isDeco: true,
+        gases: [
+          { gasStatus: 'BOTTOM_GAS', percentOxygen: 21, percentHelium: 0 },
+          { gasStatus: 'DECO_ENABLED', percentOxygen: 50, percentHelium: 0 },
+        ],
+      },
+      fitBytes: encoder.close(),
+    })
+    expect(mapped?.decompressionDive).toBe(true)
+    expect(mapped?.gases.map((gas) => gas.role)).toEqual(['bottom', 'deco'])
+  })
+
   test('ignores non-diving Garmin activities', () => {
     expect(
       mapGarminActivity({

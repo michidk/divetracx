@@ -66,6 +66,10 @@ export interface GarminProfileSample {
   temperatureCelsius: number | null
   decoCeilingMeters: number | null
   heartRateBpm: number | null
+  ndlSeconds: number | null
+  timeToSurfaceSeconds: number | null
+  cnsPercent: number | null
+  nitrogenLoadPercent: number | null
 }
 
 export interface GarminGas {
@@ -74,6 +78,30 @@ export interface GarminGas {
   heliumPercent: number | null
   mode: string | null
   status: string | null
+  /** From the Dive service's gas list: bottom, deco, or travel. */
+  role: string | null
+}
+
+export interface GarminDiveEvent {
+  elapsedSeconds: number
+  kind: 'gas_switch' | 'alert' | 'marker'
+  code: string
+  label: string
+  tankNumber: number | null
+}
+
+/** The computer that wrote the FIT file, from its `device_info` creator entry. */
+export interface GarminDevice {
+  product: string | null
+  serialNumber: string | null
+  softwareVersion: string | null
+}
+
+export interface GarminDecoSettings {
+  model: string | null
+  gradientFactorLow: number | null
+  gradientFactorHigh: number | null
+  waterType: 'fresh' | 'salt' | null
 }
 
 export interface GarminMappedDive {
@@ -90,6 +118,13 @@ export interface GarminMappedDive {
   maximumPpo2: number | null
   averageHeartRateBpm: number | null
   maximumHeartRateBpm: number | null
+  startCnsPercent: number | null
+  endCnsPercent: number | null
+  oxygenToxicityUnits: number | null
+  deco: GarminDecoSettings | null
+  decompressionDive: boolean
+  device: GarminDevice | null
+  events: GarminDiveEvent[]
   number: number | null
   computer: string | null
   notes: string | null

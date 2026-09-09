@@ -58,6 +58,10 @@ describe('Garmin FIT mapping', () => {
       temperatureCelsius: 22,
       decoCeilingMeters: 3,
       heartRateBpm: null,
+      ndlSeconds: null,
+      timeToSurfaceSeconds: null,
+      cnsPercent: null,
+      nitrogenLoadPercent: null,
     })
     expect(mapped.gases[0]?.oxygenPercent).toBe(32)
     expect(mapped.maximumPpo2).toBe(1.35)
@@ -84,6 +88,113 @@ describe('Garmin FIT mapping', () => {
       88,
       null,
     ])
+  })
+
+  test('reads alerts, gas switches, the recording device, and deco settings', () => {
+    const startedAt = new Date('2026-09-01T10:00:00Z')
+    const at = (seconds: number) => new Date(startedAt.getTime() + seconds * 1_000)
+    const mapped = mapDecodedGarminFit({
+      sessionMesgs: [{ sport: 'diving', startTime: startedAt, totalTimerTime: 600 }],
+      recordMesgs: [
+        {
+          timestamp: at(0),
+          depth: 0,
+          ndlTime: 59_654,
+          cnsLoad: 0,
+          n2Load: 1,
+          timeToSurface: 0,
+        },
+        {
+          timestamp: at(300),
+          depth: 30,
+          ndlTime: 120,
+          cnsLoad: 4,
+          n2Load: 90,
+          timeToSurface: 60,
+        },
+        { timestamp: at(600), depth: 6, cnsLoad: 11, n2Load: 60, timeToSurface: 30 },
+      ],
+      eventMesgs: [
+        { timestamp: at(0), event: 'diveGasSwitched', eventType: 'marker', data: 0 },
+        { timestamp: at(0), event: 'timer', eventType: 'start' },
+        {
+          timestamp: at(150),
+          event: 'diveAlert',
+          eventType: 'marker',
+          diveAlert: 'ascentCritical',
+        },
+        {
+          timestamp: at(153),
+          event: 'diveAlert',
+          eventType: 'marker',
+          diveAlert: 'alertDismissedByTimeout',
+        },
+        { timestamp: at(400), event: 'diveGasSwitched', eventType: 'marker', data: 1 },
+        {
+          timestamp: at(500),
+          event: 'diveAlert',
+          eventType: 'marker',
+          diveAlert: 'ndlReached',
+        },
+      ],
+      deviceInfoMesgs: [
+        {
+          deviceIndex: 'creator',
+          garminProduct: 'descentMk3',
+          serialNumber: 3504275763,
+          softwareVersion: 27.16,
+        },
+        { deviceIndex: 1, garminProduct: 'descentMk3', localDeviceType: 'barometer' },
+      ],
+      diveSettingsMesgs: [{ model: 'zhl16c', gfLow: 40, gfHigh: 70, waterType: 'fresh' }],
+      diveSummaryMesgs: [{ startCns: 0, endCns: 11, o2Toxicity: 31 }],
+    } as unknown as FitMessages)
+
+    expect(mapped.events).toEqual([
+      {
+        elapsedSeconds: 150,
+        kind: 'alert',
+        code: 'ascentCritical',
+        label: 'Ascent rate critical',
+        tankNumber: null,
+      },
+      {
+        elapsedSeconds: 400,
+        kind: 'gas_switch',
+        code: 'diveGasSwitched',
+        label: 'Switched to gas 2',
+        tankNumber: 2,
+      },
+      {
+        elapsedSeconds: 500,
+        kind: 'alert',
+        code: 'ndlReached',
+        label: 'No-deco limit reached',
+        tankNumber: null,
+      },
+    ])
+    expect(mapped.device).toEqual({
+      product: 'Descent Mk3',
+      serialNumber: '3504275763',
+      softwareVersion: '27.16',
+    })
+    expect(mapped.deco).toEqual({
+      model: 'ZHL-16C',
+      gradientFactorLow: 40,
+      gradientFactorHigh: 70,
+      waterType: 'fresh',
+    })
+    // A huge NDL means "no limit in range"; a missing one means in deco.
+    expect(mapped.profileSamples.map((sample) => sample.ndlSeconds)).toEqual([
+      null,
+      120,
+      null,
+    ])
+    expect(mapped.profileSamples[1]).toMatchObject({
+      cnsPercent: 4,
+      nitrogenLoadPercent: 90,
+      timeToSurfaceSeconds: 60,
+    })
   })
 
   test('decodes a real FIT binary using the official Garmin SDK', () => {

@@ -6,7 +6,7 @@ function fixture(): ExportSnapshot {
   const timestamp = new Date('2026-08-29T10:15:00.000Z')
   return {
     format: 'divetracx-backup',
-    version: 18,
+    version: 19,
     exportedAt: timestamp.toISOString(),
     data: {
       agencies: [],
@@ -99,6 +99,12 @@ function fixture(): ExportSnapshot {
           maximumPpo2: '1.176000',
           averageHeartRateBpm: null,
           maximumHeartRateBpm: null,
+          startCnsPercent: null,
+          endCnsPercent: null,
+          oxygenToxicityUnits: null,
+          decoModel: null,
+          gradientFactorLow: null,
+          gradientFactorHigh: null,
           decompressionDive: true,
           safetyStop: true,
           safetyStopSeconds: 180,
@@ -122,6 +128,7 @@ function fixture(): ExportSnapshot {
       ],
       diveBuddies: [],
       diveEquipment: [],
+      diveEvents: [],
       diveProfileSamples: [
         {
           id: 'sample-1',
@@ -137,6 +144,10 @@ function fixture(): ExportSnapshot {
           decoCeilingMeters: null,
           tankNumber: 1,
           heartRateBpm: null,
+          ndlSeconds: null,
+          timeToSurfaceSeconds: null,
+          cnsPercent: null,
+          nitrogenLoadPercent: null,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
@@ -154,6 +165,10 @@ function fixture(): ExportSnapshot {
           decoCeilingMeters: '3.00',
           tankNumber: 2,
           heartRateBpm: null,
+          ndlSeconds: null,
+          timeToSurfaceSeconds: null,
+          cnsPercent: null,
+          nitrogenLoadPercent: null,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
@@ -175,7 +190,7 @@ describe('export formats', () => {
     }
 
     expect(parsed.format).toBe('divetracx-backup')
-    expect(parsed.version).toBe(18)
+    expect(parsed.version).toBe(19)
     expect(parsed.data.dives).toHaveLength(1)
     expect(parsed.data.divers[0]?.createdAt).toBe('2026-08-29T10:15:00.000Z')
   })
