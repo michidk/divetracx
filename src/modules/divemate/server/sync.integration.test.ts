@@ -381,9 +381,10 @@ describe.skipIf(!enabled)('DiveMate entity selection', () => {
     })
 
     // Repair data created before identity preservation shipped. The shuffled
-    // source row points at a generated canonical copy, while its UUID names
-    // the original exactly. The next ordinary incremental sync removes only
-    // that copy and reattaches its provenance and relationships.
+    // source row points at a generated canonical copy and a later write-back
+    // has already replaced its UUID too. The next ordinary incremental sync
+    // uses the integration-owned natural key to remove only that copy and
+    // reattach its provenance and relationships.
     const original = await currentDive()
     const [originalSite] = await getDb().select().from(diveSites)
     if (!originalSite) throw new Error('The fixture site is missing')
@@ -410,7 +411,7 @@ describe.skipIf(!enabled)('DiveMate entity selection', () => {
           entityType: 'dive_site',
           identityKey: '70',
           externalId: '70',
-          rawPayload: { ID: 70, UUID: originalSite.id, Place: originalSite.name },
+          rawPayload: { ID: 70, UUID: duplicateSite.id, Place: originalSite.name },
           contentHash: 'stale-site',
         },
         {
@@ -418,7 +419,7 @@ describe.skipIf(!enabled)('DiveMate entity selection', () => {
           entityType: 'dive',
           identityKey: '99',
           externalId: '99',
-          rawPayload: { ID: 99, UUID: original.id, Comments: original.notes },
+          rawPayload: { ID: 99, UUID: duplicateDive.id, Comments: original.notes },
           contentHash: 'stale-dive',
         },
       ])
@@ -436,17 +437,17 @@ describe.skipIf(!enabled)('DiveMate entity selection', () => {
 
     const shuffledDive = {
       ...dive(original.notes ?? '', null),
-      ...source('99', { UUID: original.id, Comments: original.notes }),
+      ...source('99', { UUID: duplicateDive.id, Comments: original.notes }),
       siteExternalId: '70',
     }
     const shuffledSite = {
       ...site(originalSite.name),
-      ...source('70', { UUID: originalSite.id, Place: originalSite.name }),
+      ...source('70', { UUID: duplicateSite.id, Place: originalSite.name }),
     }
     const repaired = await importSnapshot(
       snapshot({
-        sites: [shuffledSite],
-        dives: [shuffledDive],
+        sites: [site(originalSite.name), shuffledSite],
+        dives: [dive(original.notes ?? '', null), shuffledDive],
         tanks: [],
         profileSamples: [],
       }),

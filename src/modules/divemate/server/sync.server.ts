@@ -297,11 +297,133 @@ interface RoundTripDuplicate {
   originalId: string
 }
 
+async function inferLegacyRoundTripDuplicates(
+  transaction: DatabaseTransaction,
+  records: ObservedExternalRecord[],
+) {
+  const linkedRecords = new Map<DirectCanonicalSourceType, Map<string, string[]>>()
+  for (const record of records) {
+    if (!isDirectCanonicalSourceType(record.input.entityType)) continue
+    const direct = record.canonicalLinks.find(
+      (link) => link.canonicalEntityType === record.input.entityType,
+    )
+    if (!direct) continue
+    const byCanonicalId = linkedRecords.get(record.input.entityType) ?? new Map()
+    byCanonicalId.set(direct.canonicalEntityId, [
+      ...(byCanonicalId.get(direct.canonicalEntityId) ?? []),
+      record.id,
+    ])
+    linkedRecords.set(record.input.entityType, byCanonicalId)
+  }
+
+  const normalize = (value: string) => value.trim().toLocaleLowerCase('en-US')
+  const rowsByType = new Map<
+    DirectCanonicalSourceType,
+    Array<{ id: string; createdAt: Date; key: string | null }>
+  >()
+  rowsByType.set(
+    'dive_site',
+    (
+      await transaction
+        .select({ id: diveSites.id, createdAt: diveSites.createdAt, key: diveSites.name })
+        .from(diveSites)
+    ).map((row) => ({ ...row, key: normalize(row.key) })),
+  )
+  rowsByType.set(
+    'equipment',
+    (
+      await transaction
+        .select({ id: equipment.id, createdAt: equipment.createdAt, key: equipment.name })
+        .from(equipment)
+    ).map((row) => ({ ...row, key: normalize(row.key) })),
+  )
+  rowsByType.set(
+    'equipment_set',
+    (
+      await transaction
+        .select({
+          id: equipmentSets.id,
+          createdAt: equipmentSets.createdAt,
+          key: equipmentSets.name,
+        })
+        .from(equipmentSets)
+    ).map((row) => ({ ...row, key: normalize(row.key) })),
+  )
+  rowsByType.set(
+    'certification',
+    (
+      await transaction
+        .select({
+          id: certifications.id,
+          createdAt: certifications.createdAt,
+          key: certifications.name,
+        })
+        .from(certifications)
+    ).map((row) => ({ ...row, key: normalize(row.key) })),
+  )
+  rowsByType.set(
+    'shop',
+    (
+      await transaction
+        .select({ id: shops.id, createdAt: shops.createdAt, key: shops.name })
+        .from(shops)
+    ).map((row) => ({ ...row, key: normalize(row.key) })),
+  )
+  rowsByType.set(
+    'dive',
+    (
+      await transaction
+        .select({ id: dives.id, createdAt: dives.createdAt, number: dives.number })
+        .from(dives)
+    ).map((row) => ({
+      id: row.id,
+      createdAt: row.createdAt,
+      key: row.number === null ? null : String(row.number),
+    })),
+  )
+
+  const repairs: RoundTripDuplicate[] = []
+  for (const [entityType, rows] of rowsByType) {
+    const sourceLinks = linkedRecords.get(entityType)
+    if (!sourceLinks) continue
+    const groups = new Map<string, typeof rows>()
+    for (const row of rows) {
+      if (row.key === null || !sourceLinks.has(row.id)) continue
+      const group = groups.get(row.key) ?? []
+      group.push(row)
+      groups.set(row.key, group)
+    }
+    for (const group of groups.values()) {
+      if (group.length < 2) continue
+      group.sort(
+        (left, right) =>
+          left.createdAt.getTime() - right.createdAt.getTime() ||
+          left.id.localeCompare(right.id),
+      )
+      const original = group[0]
+      if (!original) continue
+      for (const duplicate of group.slice(1)) {
+        for (const externalRecordId of sourceLinks.get(duplicate.id) ?? []) {
+          repairs.push({
+            entityType,
+            externalRecordId,
+            duplicateId: duplicate.id,
+            originalId: original.id,
+          })
+        }
+      }
+    }
+  }
+  return repairs
+}
+
 /**
  * Repair canonical copies created by the old write-back implementation. It
  * changed numeric DiveMate IDs even though those IDs are import identities,
- * but it also wrote the original canonical UUID into every exported row. That
- * UUID makes the repair exact: no name, date, or other fuzzy match is used.
+ * but it also wrote the canonical UUID into every exported row. Prefer that
+ * exact key while it survives. If a later broken write-back replaced it, use
+ * the same stable natural keys the import contract already uses (entity name,
+ * or the unique dive number), limited to rows owned by this integration.
  */
 async function repairRoundTripDuplicates(
   transaction: DatabaseTransaction,
@@ -357,11 +479,18 @@ async function repairRoundTripDuplicates(
   }
   // Refuse an internally inconsistent mapping instead of guessing which UUID
   // owns a generated row. The old exporter produced one unambiguous target.
-  const repairs = existingCandidates.filter(
+  const exactRepairs = existingCandidates.filter(
     (candidate) =>
       targetsByDuplicate.get(`${candidate.entityType}:${candidate.duplicateId}`)?.size ===
       1,
   )
+  const exactLosers = new Set(
+    exactRepairs.map((repair) => `${repair.entityType}:${repair.duplicateId}`),
+  )
+  const legacyRepairs = (
+    await inferLegacyRoundTripDuplicates(transaction, records)
+  ).filter((repair) => !exactLosers.has(`${repair.entityType}:${repair.duplicateId}`))
+  const repairs = [...exactRepairs, ...legacyRepairs]
   if (repairs.length === 0) return 0
 
   // The shuffled source record becomes a matched reference to the original.
@@ -582,6 +711,51 @@ async function repairRoundTripDuplicates(
     }
   }
   for (const repair of byType.get('dive') ?? []) {
+    const discardImportedChildren = async (
+      entityType: 'tank' | 'picture',
+      canonicalIds: string[],
+    ) => {
+      const ids = new Set(canonicalIds)
+      const sourceRecords = records.filter(
+        (record) =>
+          record.input.entityType === entityType &&
+          record.canonicalLinks.some(
+            (link) =>
+              link.canonicalEntityType === entityType && ids.has(link.canonicalEntityId),
+          ),
+      )
+      if (sourceRecords.length === 0) return
+      await transaction.delete(externalRecordLinks).where(
+        inArray(
+          externalRecordLinks.externalRecordId,
+          sourceRecords.map((row) => row.id),
+        ),
+      )
+      for (const record of sourceRecords) record.canonicalLinks = []
+      if (entityType === 'tank') {
+        await transaction.delete(tanks).where(inArray(tanks.id, canonicalIds))
+      } else {
+        await transaction.delete(pictures).where(inArray(pictures.id, canonicalIds))
+      }
+    }
+    await discardImportedChildren(
+      'tank',
+      (
+        await transaction
+          .select({ id: tanks.id })
+          .from(tanks)
+          .where(eq(tanks.diveId, repair.duplicateId))
+      ).map((row) => row.id),
+    )
+    await discardImportedChildren(
+      'picture',
+      (
+        await transaction
+          .select({ id: pictures.id })
+          .from(pictures)
+          .where(eq(pictures.diveId, repair.duplicateId))
+      ).map((row) => row.id),
+    )
     const buddiesOnDive = await transaction
       .select({ buddyId: diveBuddies.buddyId, role: diveBuddies.role })
       .from(diveBuddies)
