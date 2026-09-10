@@ -6,6 +6,7 @@ import {
   certifications,
   diveBuddies,
   diveProfileSamples,
+  diveSites,
   dives,
   externalRecordLinks,
   externalRecords,
@@ -378,5 +379,85 @@ describe.skipIf(!enabled)('DiveMate entity selection', () => {
       canonicalEntityId: manualDive.id,
       role: 'matched',
     })
+
+    // Repair data created before identity preservation shipped. The shuffled
+    // source row points at a generated canonical copy, while its UUID names
+    // the original exactly. The next ordinary incremental sync removes only
+    // that copy and reattaches its provenance and relationships.
+    const original = await currentDive()
+    const [originalSite] = await getDb().select().from(diveSites)
+    if (!originalSite) throw new Error('The fixture site is missing')
+    const [duplicateSite] = await getDb()
+      .insert(diveSites)
+      .values({ name: originalSite.name })
+      .returning({ id: diveSites.id })
+    const [duplicateDive] = await getDb()
+      .insert(dives)
+      .values({
+        captureSource: original.captureSource,
+        diveDate: original.diveDate,
+        siteId: duplicateSite?.id,
+        number: original.number,
+        durationSeconds: original.durationSeconds,
+      })
+      .returning({ id: dives.id })
+    if (!duplicateSite || !duplicateDive) throw new Error('Could not create copies')
+    const staleRecords = await getDb()
+      .insert(externalRecords)
+      .values([
+        {
+          integrationKey: 'divemate',
+          entityType: 'dive_site',
+          identityKey: '70',
+          externalId: '70',
+          rawPayload: { ID: 70, UUID: originalSite.id, Place: originalSite.name },
+          contentHash: 'stale-site',
+        },
+        {
+          integrationKey: 'divemate',
+          entityType: 'dive',
+          identityKey: '99',
+          externalId: '99',
+          rawPayload: { ID: 99, UUID: original.id, Comments: original.notes },
+          contentHash: 'stale-dive',
+        },
+      ])
+      .returning({ id: externalRecords.id, entityType: externalRecords.entityType })
+    await getDb()
+      .insert(externalRecordLinks)
+      .values(
+        staleRecords.map((record) => ({
+          externalRecordId: record.id,
+          canonicalEntityType: record.entityType,
+          canonicalEntityId:
+            record.entityType === 'dive' ? duplicateDive.id : duplicateSite.id,
+        })),
+      )
+
+    const shuffledDive = {
+      ...dive(original.notes ?? '', null),
+      ...source('99', { UUID: original.id, Comments: original.notes }),
+      siteExternalId: '70',
+    }
+    const shuffledSite = {
+      ...site(originalSite.name),
+      ...source('70', { UUID: originalSite.id, Place: originalSite.name }),
+    }
+    const repaired = await importSnapshot(
+      snapshot({
+        sites: [shuffledSite],
+        dives: [shuffledDive],
+        tanks: [],
+        profileSamples: [],
+      }),
+    )
+    expect(repaired.diagnostics).toMatchObject({
+      canonical: { byEntity: { roundTripDuplicatesRemoved: 2 } },
+    })
+    expect(await getDb().select().from(dives)).toHaveLength(2)
+    expect(await getDb().select().from(diveSites)).toHaveLength(1)
+    const repairedDive = await currentDive()
+    expect(repairedDive.id).toBe(original.id)
+    expect(repairedDive.siteId).toBe(originalSite.id)
   })
 })

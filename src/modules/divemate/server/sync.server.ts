@@ -4,15 +4,18 @@ import { createHash } from 'node:crypto'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { asc, eq, inArray } from 'drizzle-orm'
+import { and, asc, eq, inArray } from 'drizzle-orm'
 import type { DatabaseTransaction } from '@/db'
 import {
+  agencyMemberships,
   boats,
   buddies,
   buddyAgencyMemberships,
+  buddyCertifications,
   certifications,
   diveBuddies,
   diveEquipment,
+  diveEvents,
   diveProfileSamples,
   divers,
   diveSites,
@@ -223,6 +226,21 @@ function isDirectCanonicalSourceType(value: string): value is DirectCanonicalSou
   return Object.hasOwn(canonicalTableBySourceType, value)
 }
 
+async function existingCanonicalIds(
+  transaction: DatabaseTransaction,
+  entityType: DirectCanonicalSourceType,
+  candidateIds: string[],
+) {
+  if (candidateIds.length === 0) return []
+  const table = canonicalTableBySourceType[entityType]
+  return (
+    await transaction
+      .select({ id: table.id })
+      .from(table)
+      .where(inArray(table.id, candidateIds))
+  ).map((row) => row.id)
+}
+
 /**
  * The DiveMate exporter writes the canonical UUID into the source row. A row
  * created locally has no external-record link on its first round trip, so use
@@ -263,104 +281,343 @@ async function linkExportedCanonicalRecords(
 
   for (const [entityType, byUuid] of candidatesByType) {
     const candidateIds = [...byUuid.keys()]
-    if (candidateIds.length === 0) continue
-    let existingIds: string[]
-    switch (entityType) {
-      case 'diver':
-        existingIds = (
-          await transaction
-            .select({ id: divers.id })
-            .from(divers)
-            .where(inArray(divers.id, candidateIds))
-        ).map((row) => row.id)
-        break
-      case 'dive_site':
-        existingIds = (
-          await transaction
-            .select({ id: diveSites.id })
-            .from(diveSites)
-            .where(inArray(diveSites.id, candidateIds))
-        ).map((row) => row.id)
-        break
-      case 'buddy':
-        existingIds = (
-          await transaction
-            .select({ id: buddies.id })
-            .from(buddies)
-            .where(inArray(buddies.id, candidateIds))
-        ).map((row) => row.id)
-        break
-      case 'equipment':
-        existingIds = (
-          await transaction
-            .select({ id: equipment.id })
-            .from(equipment)
-            .where(inArray(equipment.id, candidateIds))
-        ).map((row) => row.id)
-        break
-      case 'equipment_set':
-        existingIds = (
-          await transaction
-            .select({ id: equipmentSets.id })
-            .from(equipmentSets)
-            .where(inArray(equipmentSets.id, candidateIds))
-        ).map((row) => row.id)
-        break
-      case 'certification':
-        existingIds = (
-          await transaction
-            .select({ id: certifications.id })
-            .from(certifications)
-            .where(inArray(certifications.id, candidateIds))
-        ).map((row) => row.id)
-        break
-      case 'shop':
-        existingIds = (
-          await transaction
-            .select({ id: shops.id })
-            .from(shops)
-            .where(inArray(shops.id, candidateIds))
-        ).map((row) => row.id)
-        break
-      case 'dive_type':
-        existingIds = (
-          await transaction
-            .select({ id: diveTypes.id })
-            .from(diveTypes)
-            .where(inArray(diveTypes.id, candidateIds))
-        ).map((row) => row.id)
-        break
-      case 'dive':
-        existingIds = (
-          await transaction
-            .select({ id: dives.id })
-            .from(dives)
-            .where(inArray(dives.id, candidateIds))
-        ).map((row) => row.id)
-        break
-      case 'tank':
-        existingIds = (
-          await transaction
-            .select({ id: tanks.id })
-            .from(tanks)
-            .where(inArray(tanks.id, candidateIds))
-        ).map((row) => row.id)
-        break
-      case 'picture':
-        existingIds = (
-          await transaction
-            .select({ id: pictures.id })
-            .from(pictures)
-            .where(inArray(pictures.id, candidateIds))
-        ).map((row) => row.id)
-        break
-    }
+    const existingIds = await existingCanonicalIds(transaction, entityType, candidateIds)
     for (const canonicalId of existingIds) {
       for (const externalRecordId of byUuid.get(canonicalId) ?? []) {
         await link(externalRecordId, entityType, canonicalId, MATCHED_LINK_ROLE)
       }
     }
   }
+}
+
+interface RoundTripDuplicate {
+  entityType: DirectCanonicalSourceType
+  externalRecordId: string
+  duplicateId: string
+  originalId: string
+}
+
+/**
+ * Repair canonical copies created by the old write-back implementation. It
+ * changed numeric DiveMate IDs even though those IDs are import identities,
+ * but it also wrote the original canonical UUID into every exported row. That
+ * UUID makes the repair exact: no name, date, or other fuzzy match is used.
+ */
+async function repairRoundTripDuplicates(
+  transaction: DatabaseTransaction,
+  records: ObservedExternalRecord[],
+  signal: AbortSignal,
+) {
+  const candidates: RoundTripDuplicate[] = []
+  for (const record of records) {
+    if (!isDirectCanonicalSourceType(record.input.entityType)) continue
+    const originalId = record.input.rawPayload.UUID
+    if (
+      typeof originalId !== 'string' ||
+      !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(originalId)
+    ) {
+      continue
+    }
+    const directLink = record.canonicalLinks.find(
+      (link) => link.canonicalEntityType === record.input.entityType,
+    )
+    if (!directLink || directLink.canonicalEntityId === originalId) continue
+    candidates.push({
+      entityType: record.input.entityType,
+      externalRecordId: record.id,
+      duplicateId: directLink.canonicalEntityId,
+      originalId,
+    })
+  }
+
+  const existing = new Set<string>()
+  for (const entityType of Object.keys(
+    canonicalTableBySourceType,
+  ) as DirectCanonicalSourceType[]) {
+    const ids = candidates
+      .filter((candidate) => candidate.entityType === entityType)
+      .flatMap((candidate) => [candidate.originalId, candidate.duplicateId])
+    for (const id of await existingCanonicalIds(transaction, entityType, [
+      ...new Set(ids),
+    ])) {
+      existing.add(`${entityType}:${id}`)
+    }
+  }
+  const existingCandidates = candidates.filter(
+    ({ entityType, duplicateId, originalId }) =>
+      existing.has(`${entityType}:${duplicateId}`) &&
+      existing.has(`${entityType}:${originalId}`),
+  )
+  const targetsByDuplicate = new Map<string, Set<string>>()
+  for (const candidate of existingCandidates) {
+    const key = `${candidate.entityType}:${candidate.duplicateId}`
+    const targets = targetsByDuplicate.get(key) ?? new Set<string>()
+    targets.add(candidate.originalId)
+    targetsByDuplicate.set(key, targets)
+  }
+  // Refuse an internally inconsistent mapping instead of guessing which UUID
+  // owns a generated row. The old exporter produced one unambiguous target.
+  const repairs = existingCandidates.filter(
+    (candidate) =>
+      targetsByDuplicate.get(`${candidate.entityType}:${candidate.duplicateId}`)?.size ===
+      1,
+  )
+  if (repairs.length === 0) return 0
+
+  // The shuffled source record becomes a matched reference to the original.
+  // Remove its derived links too, so children of the generated copy cannot be
+  // recreated on a later import.
+  for (const repair of repairs) {
+    signal.throwIfAborted()
+    await transaction
+      .delete(externalRecordLinks)
+      .where(eq(externalRecordLinks.externalRecordId, repair.externalRecordId))
+    await transaction.insert(externalRecordLinks).values({
+      externalRecordId: repair.externalRecordId,
+      canonicalEntityType: repair.entityType,
+      canonicalEntityId: repair.originalId,
+      role: MATCHED_LINK_ROLE,
+    })
+    const record = records.find((candidate) => candidate.id === repair.externalRecordId)
+    if (record) {
+      record.canonicalLinks = [
+        {
+          canonicalEntityType: repair.entityType,
+          canonicalEntityId: repair.originalId,
+          role: MATCHED_LINK_ROLE,
+        },
+      ]
+    }
+  }
+
+  const byType = new Map<DirectCanonicalSourceType, RoundTripDuplicate[]>()
+  for (const repair of repairs) {
+    const key = `${repair.entityType}:${repair.duplicateId}`
+    const entries = byType.get(repair.entityType) ?? []
+    if (!entries.some((entry) => `${entry.entityType}:${entry.duplicateId}` === key)) {
+      entries.push(repair)
+      byType.set(repair.entityType, entries)
+    }
+  }
+
+  const repointRemainingProvenance = async (repair: RoundTripDuplicate) => {
+    const links = await transaction
+      .select({ externalRecordId: externalRecordLinks.externalRecordId })
+      .from(externalRecordLinks)
+      .where(
+        and(
+          eq(externalRecordLinks.canonicalEntityType, repair.entityType),
+          eq(externalRecordLinks.canonicalEntityId, repair.duplicateId),
+        ),
+      )
+    if (links.length === 0) return
+    await transaction
+      .delete(externalRecordLinks)
+      .where(
+        and(
+          eq(externalRecordLinks.canonicalEntityType, repair.entityType),
+          eq(externalRecordLinks.canonicalEntityId, repair.duplicateId),
+        ),
+      )
+    await transaction
+      .insert(externalRecordLinks)
+      .values(
+        links.map(({ externalRecordId }) => ({
+          externalRecordId,
+          canonicalEntityType: repair.entityType,
+          canonicalEntityId: repair.originalId,
+          role: MATCHED_LINK_ROLE,
+        })),
+      )
+      .onConflictDoNothing()
+  }
+
+  for (const repair of byType.get('equipment_set') ?? []) {
+    const rows = await transaction
+      .select({
+        equipmentId: equipmentSetItems.equipmentId,
+        sortOrder: equipmentSetItems.sortOrder,
+      })
+      .from(equipmentSetItems)
+      .where(eq(equipmentSetItems.equipmentSetId, repair.duplicateId))
+    if (rows.length > 0) {
+      await transaction
+        .insert(equipmentSetItems)
+        .values(rows.map((row) => ({ ...row, equipmentSetId: repair.originalId })))
+        .onConflictDoNothing()
+    }
+    await repointRemainingProvenance(repair)
+    await transaction
+      .delete(equipmentSets)
+      .where(eq(equipmentSets.id, repair.duplicateId))
+  }
+  for (const repair of byType.get('equipment') ?? []) {
+    const diveRows = await transaction
+      .select({ diveId: diveEquipment.diveId })
+      .from(diveEquipment)
+      .where(eq(diveEquipment.equipmentId, repair.duplicateId))
+    if (diveRows.length > 0) {
+      await transaction
+        .insert(diveEquipment)
+        .values(diveRows.map((row) => ({ ...row, equipmentId: repair.originalId })))
+        .onConflictDoNothing()
+    }
+    const setRows = await transaction
+      .select({
+        equipmentSetId: equipmentSetItems.equipmentSetId,
+        sortOrder: equipmentSetItems.sortOrder,
+      })
+      .from(equipmentSetItems)
+      .where(eq(equipmentSetItems.equipmentId, repair.duplicateId))
+    if (setRows.length > 0) {
+      await transaction
+        .insert(equipmentSetItems)
+        .values(setRows.map((row) => ({ ...row, equipmentId: repair.originalId })))
+        .onConflictDoNothing()
+    }
+    await transaction
+      .update(pictures)
+      .set({ equipmentId: repair.originalId })
+      .where(eq(pictures.equipmentId, repair.duplicateId))
+    await repointRemainingProvenance(repair)
+    await transaction.delete(equipment).where(eq(equipment.id, repair.duplicateId))
+  }
+  for (const repair of byType.get('buddy') ?? []) {
+    const diveRows = await transaction
+      .select({ diveId: diveBuddies.diveId, role: diveBuddies.role })
+      .from(diveBuddies)
+      .where(eq(diveBuddies.buddyId, repair.duplicateId))
+    if (diveRows.length > 0) {
+      await transaction
+        .insert(diveBuddies)
+        .values(diveRows.map((row) => ({ ...row, buddyId: repair.originalId })))
+        .onConflictDoNothing()
+    }
+    const memberships = await transaction
+      .select({
+        agencyId: buddyAgencyMemberships.agencyId,
+        memberNumber: buddyAgencyMemberships.memberNumber,
+      })
+      .from(buddyAgencyMemberships)
+      .where(eq(buddyAgencyMemberships.buddyId, repair.duplicateId))
+    if (memberships.length > 0) {
+      await transaction
+        .insert(buddyAgencyMemberships)
+        .values(memberships.map((row) => ({ ...row, buddyId: repair.originalId })))
+        .onConflictDoNothing()
+    }
+    await transaction
+      .update(buddyCertifications)
+      .set({ buddyId: repair.originalId })
+      .where(eq(buddyCertifications.buddyId, repair.duplicateId))
+    await transaction
+      .update(certifications)
+      .set({ instructorBuddyId: repair.originalId })
+      .where(eq(certifications.instructorBuddyId, repair.duplicateId))
+    await transaction
+      .update(pictures)
+      .set({ buddyId: repair.originalId })
+      .where(eq(pictures.buddyId, repair.duplicateId))
+    await repointRemainingProvenance(repair)
+    await transaction.delete(buddies).where(eq(buddies.id, repair.duplicateId))
+  }
+  for (const repair of byType.get('dive_site') ?? []) {
+    await transaction
+      .update(dives)
+      .set({ siteId: repair.originalId })
+      .where(eq(dives.siteId, repair.duplicateId))
+    await transaction
+      .update(pictures)
+      .set({ siteId: repair.originalId })
+      .where(eq(pictures.siteId, repair.duplicateId))
+    await repointRemainingProvenance(repair)
+    await transaction.delete(diveSites).where(eq(diveSites.id, repair.duplicateId))
+  }
+  for (const repair of byType.get('shop') ?? []) {
+    await transaction
+      .update(dives)
+      .set({ shopId: repair.originalId })
+      .where(eq(dives.shopId, repair.duplicateId))
+    await repointRemainingProvenance(repair)
+    await transaction.delete(shops).where(eq(shops.id, repair.duplicateId))
+  }
+  for (const repair of byType.get('dive_type') ?? []) {
+    await transaction
+      .update(dives)
+      .set({ diveTypeId: repair.originalId })
+      .where(eq(dives.diveTypeId, repair.duplicateId))
+    await repointRemainingProvenance(repair)
+    await transaction.delete(diveTypes).where(eq(diveTypes.id, repair.duplicateId))
+  }
+  for (const repair of byType.get('diver') ?? []) {
+    await transaction
+      .update(dives)
+      .set({ diverId: repair.originalId })
+      .where(eq(dives.diverId, repair.duplicateId))
+    await transaction
+      .update(equipment)
+      .set({ diverId: repair.originalId })
+      .where(eq(equipment.diverId, repair.duplicateId))
+    await transaction
+      .update(certifications)
+      .set({ diverId: repair.originalId })
+      .where(eq(certifications.diverId, repair.duplicateId))
+    await transaction
+      .update(agencyMemberships)
+      .set({ diverId: repair.originalId })
+      .where(eq(agencyMemberships.diverId, repair.duplicateId))
+    await transaction
+      .update(pictures)
+      .set({ diverId: repair.originalId })
+      .where(eq(pictures.diverId, repair.duplicateId))
+    await repointRemainingProvenance(repair)
+    await transaction.delete(divers).where(eq(divers.id, repair.duplicateId))
+  }
+  for (const entityType of ['picture', 'tank', 'certification'] as const) {
+    for (const repair of byType.get(entityType) ?? []) {
+      await repointRemainingProvenance(repair)
+      await transaction
+        .delete(canonicalTableBySourceType[entityType])
+        .where(eq(canonicalTableBySourceType[entityType].id, repair.duplicateId))
+    }
+  }
+  for (const repair of byType.get('dive') ?? []) {
+    const buddiesOnDive = await transaction
+      .select({ buddyId: diveBuddies.buddyId, role: diveBuddies.role })
+      .from(diveBuddies)
+      .where(eq(diveBuddies.diveId, repair.duplicateId))
+    if (buddiesOnDive.length > 0) {
+      await transaction
+        .insert(diveBuddies)
+        .values(buddiesOnDive.map((row) => ({ ...row, diveId: repair.originalId })))
+        .onConflictDoNothing()
+    }
+    const gearOnDive = await transaction
+      .select({ equipmentId: diveEquipment.equipmentId })
+      .from(diveEquipment)
+      .where(eq(diveEquipment.diveId, repair.duplicateId))
+    if (gearOnDive.length > 0) {
+      await transaction
+        .insert(diveEquipment)
+        .values(gearOnDive.map((row) => ({ ...row, diveId: repair.originalId })))
+        .onConflictDoNothing()
+    }
+    await transaction
+      .update(pictures)
+      .set({ diveId: repair.originalId })
+      .where(eq(pictures.diveId, repair.duplicateId))
+    await transaction
+      .update(diveEvents)
+      .set({ diveId: repair.originalId })
+      .where(eq(diveEvents.diveId, repair.duplicateId))
+    await transaction
+      .update(tanks)
+      .set({ diveId: repair.originalId })
+      .where(eq(tanks.diveId, repair.duplicateId))
+    await repointRemainingProvenance(repair)
+    await transaction.delete(dives).where(eq(dives.id, repair.duplicateId))
+  }
+  return [...byType.values()].reduce((total, entries) => total + entries.length, 0)
 }
 
 async function ensureDiveMateDiveTypes(transaction: DatabaseTransaction) {
@@ -1368,6 +1625,11 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
     }
   },
   async applyImport(context) {
+    const roundTripDuplicatesRemoved = await repairRoundTripDuplicates(
+      context.transaction,
+      context.records,
+      context.signal,
+    )
     const discardedDivesRemoved = context.isEntityEnabled('dives')
       ? await pruneDiscardedDives(
           context.transaction,
@@ -1457,6 +1719,9 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
       : 0
     if (discardedDivesRemoved > 0) {
       byEntity.discardedDivesRemoved = discardedDivesRemoved
+    }
+    if (roundTripDuplicatesRemoved > 0) {
+      byEntity.roundTripDuplicatesRemoved = roundTripDuplicatesRemoved
     }
     byEntity.pictureFiles = counts.pictureFiles
     byEntity.certificationScans = counts.certificationScans
