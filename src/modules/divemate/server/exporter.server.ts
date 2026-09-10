@@ -32,7 +32,9 @@ function replaceTable(
   }
   const columns = new Set(
     (
-      database.prepare(`PRAGMA table_info("${table}")`).all() as Array<{ name: string }>
+      database.prepare(`PRAGMA table_info("${table}")`).all() as Array<{
+        name: string
+      }>
     ).map((column) => column.name),
   )
   database.prepare(`DELETE FROM "${table}"`).run()
@@ -51,11 +53,35 @@ interface SourceIdentity {
   id: string
 }
 
-function assignDiveMateIds<T extends SourceIdentity>(rows: T[]) {
+export type DiveMateSourceIds = ReadonlyMap<string, number>
+
+export function diveMateSourceIdKey(entityType: string, canonicalId: string) {
+  return `${entityType}\u0000${canonicalId}`
+}
+
+function assignDiveMateIds<T extends SourceIdentity>(
+  rows: T[],
+  entityType: (row: T) => string,
+  sourceIds: DiveMateSourceIds,
+) {
   const result = new Map<string, number>()
   const used = new Set<number>()
+  const sorted = [...rows].sort((left, right) => left.id.localeCompare(right.id))
+  for (const row of sorted) {
+    const preferred = sourceIds.get(diveMateSourceIdKey(entityType(row), row.id))
+    if (
+      !preferred ||
+      !Number.isSafeInteger(preferred) ||
+      preferred < 1 ||
+      used.has(preferred)
+    ) {
+      continue
+    }
+    result.set(row.id, preferred)
+    used.add(preferred)
+  }
   let next = 1
-  for (const row of [...rows].sort((left, right) => left.id.localeCompare(right.id))) {
+  for (const row of sorted) {
     if (result.has(row.id)) continue
     while (used.has(next)) next += 1
     result.set(row.id, next)
@@ -93,6 +119,7 @@ function coordinate(value: string | null, latitude: boolean) {
 export function rewriteDiveMateDatabase(
   database: SqliteDatabase,
   snapshot: ExportSnapshot,
+  sourceIds: DiveMateSourceIds = new Map(),
 ) {
   const data = snapshot.data
   const buddiesById = new Map(data.buddies.map((buddy) => [buddy.id, buddy]))
@@ -102,17 +129,32 @@ export function rewriteDiveMateDatabase(
       membership.memberNumber,
     ]),
   )
-  const diverIds = assignDiveMateIds(data.divers)
-  const siteIds = assignDiveMateIds(data.diveSites)
-  const buddyIds = assignDiveMateIds(data.buddies)
-  const equipmentIds = assignDiveMateIds([...data.equipment, ...data.equipmentSets])
-  const certificationIds = assignDiveMateIds(data.certifications)
-  const shopIds = assignDiveMateIds(data.shops)
+  const diverIds = assignDiveMateIds(data.divers, () => 'diver', sourceIds)
+  const siteIds = assignDiveMateIds(data.diveSites, () => 'dive_site', sourceIds)
+  const buddyIds = assignDiveMateIds(data.buddies, () => 'buddy', sourceIds)
+  const equipmentRows = [
+    ...data.equipment.map((row) => ({ ...row, sourceType: 'equipment' })),
+    ...data.equipmentSets.map((row) => ({
+      ...row,
+      sourceType: 'equipment_set',
+    })),
+  ]
+  const equipmentIds = assignDiveMateIds(
+    equipmentRows,
+    (row) => row.sourceType,
+    sourceIds,
+  )
+  const certificationIds = assignDiveMateIds(
+    data.certifications,
+    () => 'certification',
+    sourceIds,
+  )
+  const shopIds = assignDiveMateIds(data.shops, () => 'shop', sourceIds)
   const boatsById = new Map(data.boats.map((boat) => [boat.id, boat.name]))
-  const diveTypeIds = assignDiveMateIds(data.diveTypes)
-  const diveIds = assignDiveMateIds(data.dives)
-  const tankIds = assignDiveMateIds(data.tanks)
-  const pictureIds = assignDiveMateIds(data.pictures)
+  const diveTypeIds = assignDiveMateIds(data.diveTypes, () => 'dive_type', sourceIds)
+  const diveIds = assignDiveMateIds(data.dives, () => 'dive', sourceIds)
+  const tankIds = assignDiveMateIds(data.tanks, () => 'tank', sourceIds)
+  const pictureIds = assignDiveMateIds(data.pictures, () => 'picture', sourceIds)
   const buddyIdsByDive = new Map<string, number[]>()
   const buddyNamesByDive = new Map<string, string[]>()
   const diveTeamByDive = new Map<string, DiveTeamMember[]>()

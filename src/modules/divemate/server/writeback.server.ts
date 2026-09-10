@@ -4,9 +4,16 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { eq } from 'drizzle-orm'
+import { getDb } from '@/db'
+import { externalRecordLinks, externalRecords } from '@/db/schema'
 import { getServerEnv } from '@/env'
 import { loadExportSnapshot } from '@/modules/export/server/snapshot.server'
-import { rewriteDiveMateDatabase } from './exporter.server'
+import {
+  type DiveMateSourceIds,
+  diveMateSourceIdKey,
+  rewriteDiveMateDatabase,
+} from './exporter.server'
 import { openGoogleDriveBackup } from './google-drive.server'
 import { openSqlite } from './sqlite.server'
 
@@ -85,7 +92,11 @@ async function createDiveMateExportFile() {
     environment.DIVEMATE_MAX_BACKUP_BYTES,
   )
   setStage('reading-divetracx')
-  const [drive, snapshot] = await Promise.all([drivePromise, loadExportSnapshot()])
+  const [drive, snapshot, sourceIds] = await Promise.all([
+    drivePromise,
+    loadExportSnapshot(),
+    loadDiveMateSourceIds(),
+  ])
   const directory = await mkdtemp(join(tmpdir(), 'divetracx-divemate-export-'))
   const path = join(directory, 'DiveMate.ddb')
   try {
@@ -93,7 +104,7 @@ async function createDiveMateExportFile() {
     setStage('updating-database')
     const database = await openSqlite(path)
     try {
-      rewriteDiveMateDatabase(database, snapshot)
+      rewriteDiveMateDatabase(database, snapshot, sourceIds)
       database.exec('PRAGMA wal_checkpoint(TRUNCATE)')
     } finally {
       database.close()
@@ -126,6 +137,36 @@ async function createDiveMateExportFile() {
   } finally {
     await rm(directory, { recursive: true, force: true })
   }
+}
+
+async function loadDiveMateSourceIds(): Promise<DiveMateSourceIds> {
+  const rows = await getDb()
+    .select({
+      entityType: externalRecords.entityType,
+      externalId: externalRecords.externalId,
+      canonicalEntityType: externalRecordLinks.canonicalEntityType,
+      canonicalEntityId: externalRecordLinks.canonicalEntityId,
+      role: externalRecordLinks.role,
+    })
+    .from(externalRecords)
+    .innerJoin(
+      externalRecordLinks,
+      eq(externalRecordLinks.externalRecordId, externalRecords.id),
+    )
+    .where(eq(externalRecords.integrationKey, 'divemate'))
+  const result = new Map<string, number>()
+  // A merged row may have both produced and matched provenance. Its produced
+  // identity is the one that remains in the exported DiveMate table.
+  for (const row of rows.sort((left, right) =>
+    left.role === right.role ? 0 : left.role === 'produced' ? -1 : 1,
+  )) {
+    if (row.entityType !== row.canonicalEntityType) continue
+    const id = Number(row.externalId)
+    if (!Number.isSafeInteger(id) || id < 1) continue
+    const key = diveMateSourceIdKey(row.entityType, row.canonicalEntityId)
+    if (!result.has(key)) result.set(key, id)
+  }
+  return result
 }
 
 export async function exportDiveMateBackup(): Promise<DiveMateExportFile> {

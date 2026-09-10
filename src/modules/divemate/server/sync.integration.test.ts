@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { closeDb, getDb } from '@/db'
 import {
   buddies,
@@ -7,6 +7,7 @@ import {
   diveBuddies,
   diveProfileSamples,
   dives,
+  externalRecordLinks,
   externalRecords,
   importRuns,
   integrationState,
@@ -207,7 +208,10 @@ function connectorFor(data: DiveMateSnapshot): IntegrationConnector<PreparedData
   return {
     ...diveMateConnector,
     async prepareImport() {
-      const storedMedia = { pictures: new Map(), certificationScans: new Map() }
+      const storedMedia = {
+        pictures: new Map(),
+        certificationScans: new Map(),
+      }
       return {
         records: [
           ...data.sites.map((item) => record('dive_site', item)),
@@ -329,5 +333,50 @@ describe.skipIf(!enabled)('DiveMate entity selection', () => {
     expect((await getDb().select().from(buddies)).map((p) => p.firstName).sort()).toEqual(
       ['Newcomer', 'Sam'],
     )
+
+    // A canonical row exported to DiveMate comes back with its UUID. Its new
+    // numeric source ID must attach to that row rather than create a copy.
+    const [manualDive] = await getDb()
+      .insert(dives)
+      .values({
+        captureSource: 'manual',
+        diveDate: '2026-09-02',
+        notes: 'created in Divetracx',
+      })
+      .returning({ id: dives.id })
+    if (!manualDive) throw new Error('Could not create the round-trip fixture')
+    const roundTrippedDive = {
+      ...dive('created in Divetracx', null),
+      ...source('12', {
+        UUID: manualDive.id,
+        Comments: 'created in Divetracx',
+      }),
+      captureSource: 'manual' as const,
+      diveDate: '2026-09-02',
+    }
+    await importSnapshot(snapshot({ dives: [dive('fifth', null), roundTrippedDive] }))
+    expect(await getDb().select().from(dives)).toHaveLength(2)
+    const [roundTripLink] = await getDb()
+      .select({
+        canonicalEntityId: externalRecordLinks.canonicalEntityId,
+        role: externalRecordLinks.role,
+      })
+      .from(externalRecords)
+      .innerJoin(
+        externalRecordLinks,
+        eq(externalRecordLinks.externalRecordId, externalRecords.id),
+      )
+      .where(
+        and(
+          eq(externalRecords.integrationKey, 'divemate'),
+          eq(externalRecords.entityType, 'dive'),
+          eq(externalRecords.identityKey, '12'),
+          eq(externalRecordLinks.canonicalEntityType, 'dive'),
+        ),
+      )
+    expect(roundTripLink).toEqual({
+      canonicalEntityId: manualDive.id,
+      role: 'matched',
+    })
   })
 })

@@ -37,6 +37,7 @@ import { performIncrementalImport } from '@/modules/integrations/server/import-s
 import type {
   ExternalRecordInput,
   IntegrationConnector,
+  ObservedExternalRecord,
 } from '@/modules/integrations/types'
 import { MATCHED_LINK_ROLE } from '@/modules/integrations/types'
 import { resolveAgencyId } from '@/modules/profile/server/agencies.server'
@@ -202,6 +203,166 @@ interface SnapshotApplyContext {
   ): Promise<void>
 }
 
+const canonicalTableBySourceType = {
+  diver: divers,
+  dive_site: diveSites,
+  buddy: buddies,
+  equipment,
+  equipment_set: equipmentSets,
+  certification: certifications,
+  shop: shops,
+  dive_type: diveTypes,
+  dive: dives,
+  tank: tanks,
+  picture: pictures,
+} as const
+
+type DirectCanonicalSourceType = keyof typeof canonicalTableBySourceType
+
+function isDirectCanonicalSourceType(value: string): value is DirectCanonicalSourceType {
+  return Object.hasOwn(canonicalTableBySourceType, value)
+}
+
+/**
+ * The DiveMate exporter writes the canonical UUID into the source row. A row
+ * created locally has no external-record link on its first round trip, so use
+ * that UUID to attach the new source identity to the row instead of importing
+ * a duplicate.
+ */
+async function linkExportedCanonicalRecords(
+  transaction: DatabaseTransaction,
+  records: ObservedExternalRecord[],
+  link: (
+    externalRecordId: string,
+    canonicalEntityType: string,
+    canonicalEntityId: string,
+    role?: string,
+  ) => Promise<void>,
+) {
+  const candidatesByType = new Map<DirectCanonicalSourceType, Map<string, string[]>>()
+  for (const record of records) {
+    if (
+      record.change !== 'created' ||
+      !isDirectCanonicalSourceType(record.input.entityType)
+    ) {
+      continue
+    }
+    if (
+      record.canonicalLinks.some(
+        (candidate) => candidate.canonicalEntityType === record.input.entityType,
+      )
+    ) {
+      continue
+    }
+    const uuid = record.input.rawPayload.UUID
+    if (typeof uuid !== 'string' || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(uuid)) continue
+    const byUuid = candidatesByType.get(record.input.entityType) ?? new Map()
+    byUuid.set(uuid, [...(byUuid.get(uuid) ?? []), record.id])
+    candidatesByType.set(record.input.entityType, byUuid)
+  }
+
+  for (const [entityType, byUuid] of candidatesByType) {
+    const candidateIds = [...byUuid.keys()]
+    if (candidateIds.length === 0) continue
+    let existingIds: string[]
+    switch (entityType) {
+      case 'diver':
+        existingIds = (
+          await transaction
+            .select({ id: divers.id })
+            .from(divers)
+            .where(inArray(divers.id, candidateIds))
+        ).map((row) => row.id)
+        break
+      case 'dive_site':
+        existingIds = (
+          await transaction
+            .select({ id: diveSites.id })
+            .from(diveSites)
+            .where(inArray(diveSites.id, candidateIds))
+        ).map((row) => row.id)
+        break
+      case 'buddy':
+        existingIds = (
+          await transaction
+            .select({ id: buddies.id })
+            .from(buddies)
+            .where(inArray(buddies.id, candidateIds))
+        ).map((row) => row.id)
+        break
+      case 'equipment':
+        existingIds = (
+          await transaction
+            .select({ id: equipment.id })
+            .from(equipment)
+            .where(inArray(equipment.id, candidateIds))
+        ).map((row) => row.id)
+        break
+      case 'equipment_set':
+        existingIds = (
+          await transaction
+            .select({ id: equipmentSets.id })
+            .from(equipmentSets)
+            .where(inArray(equipmentSets.id, candidateIds))
+        ).map((row) => row.id)
+        break
+      case 'certification':
+        existingIds = (
+          await transaction
+            .select({ id: certifications.id })
+            .from(certifications)
+            .where(inArray(certifications.id, candidateIds))
+        ).map((row) => row.id)
+        break
+      case 'shop':
+        existingIds = (
+          await transaction
+            .select({ id: shops.id })
+            .from(shops)
+            .where(inArray(shops.id, candidateIds))
+        ).map((row) => row.id)
+        break
+      case 'dive_type':
+        existingIds = (
+          await transaction
+            .select({ id: diveTypes.id })
+            .from(diveTypes)
+            .where(inArray(diveTypes.id, candidateIds))
+        ).map((row) => row.id)
+        break
+      case 'dive':
+        existingIds = (
+          await transaction
+            .select({ id: dives.id })
+            .from(dives)
+            .where(inArray(dives.id, candidateIds))
+        ).map((row) => row.id)
+        break
+      case 'tank':
+        existingIds = (
+          await transaction
+            .select({ id: tanks.id })
+            .from(tanks)
+            .where(inArray(tanks.id, candidateIds))
+        ).map((row) => row.id)
+        break
+      case 'picture':
+        existingIds = (
+          await transaction
+            .select({ id: pictures.id })
+            .from(pictures)
+            .where(inArray(pictures.id, candidateIds))
+        ).map((row) => row.id)
+        break
+    }
+    for (const canonicalId of existingIds) {
+      for (const externalRecordId of byUuid.get(canonicalId) ?? []) {
+        await link(externalRecordId, entityType, canonicalId, MATCHED_LINK_ROLE)
+      }
+    }
+  }
+}
+
 async function ensureDiveMateDiveTypes(transaction: DatabaseTransaction) {
   const existingNames = new Set(
     (await transaction.select({ name: diveTypes.name }).from(diveTypes)).map((diveType) =>
@@ -357,7 +518,10 @@ async function storeSnapshotMedia(
     if (scans.scan1 || scans.scan2)
       storedCertificationScans.set(certification.externalId, scans)
   }
-  return { pictures: storedPictures, certificationScans: storedCertificationScans }
+  return {
+    pictures: storedPictures,
+    certificationScans: storedCertificationScans,
+  }
 }
 
 async function applySnapshot(
@@ -716,7 +880,9 @@ async function applySnapshot(
   // pictures must not land on it; that holds for dives linked in earlier runs.
   const diveIds = enabled('dives')
     ? new Map<string, string>()
-    : await context.previouslyLinkedIds('dive', 'dive', { excludeMatched: true })
+    : await context.previouslyLinkedIds('dive', 'dive', {
+        excludeMatched: true,
+      })
   const profileSamplesByDive = new Map<string, DiveMateSnapshot['profileSamples']>()
   for (const sample of enabled('profile_samples') ? snapshot.profileSamples : []) {
     context.signal.throwIfAborted()
@@ -1209,6 +1375,11 @@ export const diveMateConnector: IntegrationConnector<PreparedDiveMateData> = {
           context.signal,
         )
       : 0
+    await linkExportedCanonicalRecords(
+      context.transaction,
+      context.records,
+      context.linkCanonicalRecord,
+    )
     const changedRecords = context.records.filter(
       (record) => record.change !== 'unchanged',
     )

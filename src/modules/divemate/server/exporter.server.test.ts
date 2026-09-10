@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { ExportSnapshot } from '@/modules/export/types'
 import { parseDiveMateDatabase } from '../parser'
-import { rewriteDiveMateDatabase } from './exporter.server'
+import { diveMateSourceIdKey, rewriteDiveMateDatabase } from './exporter.server'
 import { openSqlite } from './sqlite.server'
 
 const temporaryDirectories: string[] = []
@@ -320,12 +320,25 @@ describe('canonical DiveMate export', () => {
       },
     } satisfies ExportSnapshot
 
-    rewriteDiveMateDatabase(database, snapshot)
+    rewriteDiveMateDatabase(
+      database,
+      snapshot,
+      new Map([
+        [diveMateSourceIdKey('dive_site', '11111111-1111-1111-1111-111111111111'), 37],
+        [diveMateSourceIdKey('equipment', '55555555-5555-5555-5555-555555555555'), 12],
+        [
+          diveMateSourceIdKey('equipment_set', '66666666-6666-6666-6666-666666666666'),
+          99,
+        ],
+        [diveMateSourceIdKey('dive', '22222222-2222-2222-2222-222222222222'), 52],
+      ]),
+    )
     database.close()
     const exported = await parseDiveMateDatabase(path)
 
     expect(exported.dives).toHaveLength(1)
     expect(exported.dives[0]).toMatchObject({
+      externalId: '52',
       number: 7,
       diveDate: '2026-08-31',
       durationSeconds: 1800,
@@ -335,7 +348,10 @@ describe('canonical DiveMate export', () => {
       buddyName: null,
     })
     expect(exported.dives[0]?.buddyExternalIds).toHaveLength(1)
-    expect(exported.sites[0]?.name).toBe('Garmin site')
+    expect(exported.sites[0]).toMatchObject({
+      externalId: '37',
+      name: 'Garmin site',
+    })
     expect(exported.certifications[0]).toMatchObject({
       name: 'Advanced Diver',
       instructorName: 'Ada Instructor',
@@ -345,7 +361,9 @@ describe('canonical DiveMate export', () => {
     const exportedSet = exported.equipment.find((item) => item.isSet)
     if (!exportedItem) throw new Error('Exported equipment item is missing')
     expect(exportedItem?.name).toBe('Primary mask')
+    expect(exportedItem?.externalId).toBe('12')
     expect(exportedSet).toMatchObject({
+      externalId: '99',
       name: 'Travel set',
       category: '---SET',
       equipmentTypeCode: 9,
