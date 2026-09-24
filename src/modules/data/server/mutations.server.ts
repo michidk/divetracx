@@ -339,9 +339,16 @@ async function saveBuddyAgencyMembership(id: string, values: EditorValues) {
     if (!row) throw new Error('Buddy agency membership was not found')
     return row.id
   } catch (error) {
+    // drizzle-orm wraps the driver's constraint-violation message as `cause`
+    // rather than including it in `message`, so both must be checked.
+    const messages = [
+      error instanceof Error ? error.message : null,
+      error instanceof Error && error.cause instanceof Error ? error.cause.message : null,
+    ]
     if (
-      error instanceof Error &&
-      error.message.includes('buddy_agency_memberships_buddy_agency_unique')
+      messages.some((message) =>
+        message?.includes('buddy_agency_memberships_buddy_agency_unique'),
+      )
     ) {
       throw new Error('This buddy already has a number for that agency')
     }
