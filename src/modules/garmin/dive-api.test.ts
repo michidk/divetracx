@@ -165,4 +165,94 @@ describe('Garmin Dive API client', () => {
     await expect(client.listDevices()).rejects.toBeInstanceOf(GarminDiveApiError)
     await expect(client.listDevices()).rejects.toMatchObject({ status: 403 })
   })
+
+  test('rejects a token exchange response with no access token', async () => {
+    const { fetchImpl } = fakeFetch(() => ({ token_type: 'bearer' }))
+    await expect(
+      exchangeForDiveToken('connect-access', fetchImpl),
+    ).rejects.toBeInstanceOf(GarminDiveApiError)
+  })
+
+  test('rejects an empty successful body instead of treating it as no data', async () => {
+    const { fetchImpl } = fakeFetch(() => new Response('', { status: 200 }))
+    const client = createGarminDiveClient(
+      { accessToken: 'dive', refreshToken: null, scope: null, expiresAt: null },
+      fetchImpl,
+    )
+    await expect(client.listDevices()).rejects.toBeInstanceOf(GarminDiveApiError)
+  })
+
+  test('drops gear entries missing a stable id or name instead of importing them under -1', async () => {
+    const { fetchImpl } = fakeFetch((url) => {
+      if (url.pathname === '/diving/v1/gear/summary') {
+        return [
+          { gearId: 1, name: 'Deep Diver', type: 'CERTIFICATION' },
+          { name: 'No id at all', type: 'MASK' },
+          { gearId: 2, name: '', type: 'FIN' },
+          { gearId: 'not-a-number', name: 'Bad id', type: 'BOOTS' },
+        ]
+      }
+      return new Response('not found', { status: 404 })
+    })
+    const client = createGarminDiveClient(
+      { accessToken: 'dive', refreshToken: null, scope: null, expiresAt: null },
+      fetchImpl,
+    )
+
+    const gear = await client.listGear()
+    expect(gear).toHaveLength(1)
+    expect(gear[0]).toMatchObject({ gearId: 1, name: 'Deep Diver' })
+    expect(gear.some((item) => item.gearId === -1)).toBe(false)
+  })
+
+  test('rejects a dive list envelope with no recognizable dive array', async () => {
+    const { fetchImpl } = fakeFetch((url) => {
+      if (url.pathname === '/diving/v1/dive/summary') {
+        return { totalCount: 2, warnings: ['throttled', 'partial'] }
+      }
+      return new Response('not found', { status: 404 })
+    })
+    const client = createGarminDiveClient(
+      { accessToken: 'dive', refreshToken: null, scope: null, expiresAt: null },
+      fetchImpl,
+    )
+    await expect(client.listDives()).rejects.toBeInstanceOf(GarminDiveApiError)
+  })
+
+  test('picks the array of valid dive summaries over an unrelated array in the same envelope', async () => {
+    const { fetchImpl } = fakeFetch((url) => {
+      if (url.pathname === '/diving/v1/dive/summary') {
+        return {
+          totalCount: 1,
+          warnings: ['throttled', 'partial'],
+          diveActivities: [{ id: 42, name: 'Cenote' }],
+        }
+      }
+      return new Response('not found', { status: 404 })
+    })
+    const client = createGarminDiveClient(
+      { accessToken: 'dive', refreshToken: null, scope: null, expiresAt: null },
+      fetchImpl,
+    )
+
+    const page = await client.listDives()
+    expect(page.dives).toHaveLength(1)
+    expect(page.dives[0]).toMatchObject({ id: 42, name: 'Cenote' })
+  })
+
+  test('rejects a dive summary entry missing a stable id instead of importing it under -1', async () => {
+    const { fetchImpl } = fakeFetch((url) => {
+      if (url.pathname === '/diving/v1/dive/summary') {
+        return { totalCount: 1, diveActivities: [{ name: 'No id at all' }] }
+      }
+      return new Response('not found', { status: 404 })
+    })
+    const client = createGarminDiveClient(
+      { accessToken: 'dive', refreshToken: null, scope: null, expiresAt: null },
+      fetchImpl,
+    )
+    // No array in the envelope validates as a dive summary list, so the
+    // whole page is rejected rather than silently reporting zero dives.
+    await expect(client.listDives()).rejects.toBeInstanceOf(GarminDiveApiError)
+  })
 })

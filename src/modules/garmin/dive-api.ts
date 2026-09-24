@@ -8,7 +8,14 @@
  * A Connect OAuth2 access token — the one the FIT sync already holds — is
  * exchanged for a bearer scoped to the Dive audience, which the
  * `gcs.garmin.com/diving/v1` endpoints accept.
+ *
+ * Every response is validated with a Zod schema before it becomes a typed
+ * record: since Garmin's shape can change without notice, an unrecognized or
+ * missing identity must surface as a `GarminDiveApiError` rather than a
+ * fabricated id that later collides with, or is mistaken for, a real one.
  */
+
+import { z } from 'zod'
 
 export const GARMIN_DIVE_HOSTS = {
   connectApi: 'https://connectapi.garmin.com',
@@ -138,20 +145,67 @@ function object(value: unknown): Record<string, unknown> {
     : {}
 }
 
+// Garmin sometimes sends numeric identifiers as strings; either form is
+// accepted, but the result must be a real, finite number rather than the
+// `-1` sentinel this module used to fabricate for a missing or malformed id.
+const numericIdField = z.union([z.number(), z.string()]).transform((value, ctx) => {
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(parsed)) {
+    ctx.addIssue({ code: 'custom', message: 'identifier is not a finite number' })
+    return z.NEVER
+  }
+  return parsed
+})
+
+const diveTokenResponseSchema = z.looseObject({
+  access_token: z.string().min(1),
+})
+
+const gearSummaryItemSchema = z.looseObject({
+  gearId: numericIdField,
+  name: z.string().min(1),
+})
+
+const gearSummaryEnvelopeSchema = z.union([
+  z.array(z.unknown()),
+  z.looseObject({ gear: z.array(z.unknown()) }),
+])
+
+const diveSummaryItemSchema = z.looseObject({
+  id: numericIdField,
+})
+
+const jsonObjectSchema = z.looseObject({})
+
+const jsonArraySchema = z.array(z.unknown())
+
 async function request<T>(
   url: string,
   init: RequestInit,
   fetchImpl: typeof fetch,
+  schema: z.ZodType<T>,
 ): Promise<T> {
   const response = await fetchImpl(url, init)
   const body = await response.text()
   if (!response.ok) throw new GarminDiveApiError(response.status, url, body)
-  if (!body) return null as T
+  // An object or array is always expected here, so an empty body — Garmin
+  // returning 200 with nothing — is a malformed response, not "no data".
+  if (!body) throw new GarminDiveApiError(response.status, url, 'empty response body')
+  let json: unknown
   try {
-    return JSON.parse(body) as T
+    json = JSON.parse(body)
   } catch {
     throw new GarminDiveApiError(response.status, url, `not JSON: ${body}`)
   }
+  const result = schema.safeParse(json)
+  if (!result.success) {
+    throw new GarminDiveApiError(
+      response.status,
+      url,
+      `unexpected response shape: ${result.error.issues.map((issue) => issue.message).join('; ')}`,
+    )
+  }
+  return result.data
 }
 
 /**
@@ -162,7 +216,7 @@ export async function exchangeForDiveToken(
   connectAccessToken: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<GarminDiveToken> {
-  const payload = await request<Record<string, unknown>>(
+  const payload = await request(
     `${GARMIN_DIVE_HOSTS.connectApi}/oauth-service/oauth/exchange/user/2.0`,
     {
       method: 'POST',
@@ -174,12 +228,11 @@ export async function exchangeForDiveToken(
       body: new URLSearchParams({ audience: DIVE_AUDIENCE }).toString(),
     },
     fetchImpl,
+    diveTokenResponseSchema,
   )
-  const accessToken = text(payload.access_token)
-  if (!accessToken) throw new Error('Garmin Dive token exchange returned no access token')
   const expiresIn = number(payload.expires_in)
   return {
-    accessToken,
+    accessToken: payload.access_token,
     refreshToken: text(payload.refresh_token),
     scope: text(payload.scope),
     expiresAt: expiresIn === null ? null : Math.floor(Date.now() / 1_000) + expiresIn,
@@ -190,11 +243,12 @@ export function createGarminDiveClient(
   token: GarminDiveToken,
   fetchImpl: typeof fetch = fetch,
 ) {
-  const get = <T>(path: string, params?: URLSearchParams) =>
-    request<T>(
+  const get = <T>(path: string, schema: z.ZodType<T>, params?: URLSearchParams) =>
+    request(
       `${GARMIN_DIVE_HOSTS.diveApi}${path}${params ? `?${params}` : ''}`,
       { headers: { ...APP_HEADERS, Authorization: `bearer ${token.accessToken}` } },
       fetchImpl,
+      schema,
     )
   const today = () => new Date().toISOString().slice(0, 10)
 
@@ -202,20 +256,32 @@ export function createGarminDiveClient(
     async listGear(): Promise<GarminDiveGearSummary[]> {
       const params = new URLSearchParams([['current-user-date', today()]])
       for (const type of GARMIN_DIVE_GEAR_TYPES) params.append('gear-types', type)
-      const payload = await get<unknown>('/diving/v1/gear/summary', params)
-      const items = Array.isArray(payload) ? payload : object(payload).gear
-      return (Array.isArray(items) ? items : []).map((item) =>
-        mapGearSummary(object(item)),
+      const payload = await get(
+        '/diving/v1/gear/summary',
+        gearSummaryEnvelopeSchema,
+        params,
       )
+      const items = Array.isArray(payload) ? payload : payload.gear
+      // An item missing a stable id or name is dropped rather than imported
+      // under a fabricated identity that could collide with, or shadow, a
+      // real one.
+      return items.flatMap((item) => {
+        const parsed = gearSummaryItemSchema.safeParse(item)
+        return parsed.success ? [mapGearSummary(parsed.data)] : []
+      })
     },
     async getGear(gearId: number): Promise<GarminDiveGearDetail> {
-      const payload = await get<unknown>(
+      const raw = await get(
         `/diving/v1/gear/${gearId}`,
+        gearSummaryItemSchema,
         new URLSearchParams([['current-user-date', today()]]),
       )
-      const raw = object(payload)
       return {
         ...mapGearSummary(raw),
+        // The endpoint is already scoped to this id; trusting the request
+        // parameter over a re-parsed response field avoids attributing the
+        // detail to whatever id the payload happens to carry.
+        gearId,
         brand: text(raw.brand),
         model: text(raw.model),
         serialNumber: raw.serialNumber === undefined ? null : String(raw.serialNumber),
@@ -233,25 +299,40 @@ export function createGarminDiveClient(
       }
     },
     async listDives(page = 0, resultsPerPage = 100) {
-      const payload = object(
-        await get<unknown>(
-          '/diving/v1/dive/summary',
-          new URLSearchParams({
-            requestedPage: String(page),
-            resultsPerPage: String(resultsPerPage),
-          }),
-        ),
+      const url = `${GARMIN_DIVE_HOSTS.diveApi}/diving/v1/dive/summary`
+      const payload = await get(
+        '/diving/v1/dive/summary',
+        jsonObjectSchema,
+        new URLSearchParams({
+          requestedPage: String(page),
+          resultsPerPage: String(resultsPerPage),
+        }),
       )
-      const list = Object.values(payload).find(Array.isArray) as unknown[] | undefined
+      // The list lives under a key that has changed before, so every
+      // array-valued property is a candidate — but it is only accepted once
+      // every item in it validates as a dive summary, so an unrelated array
+      // (diagnostics, warnings, …) is never mistaken for the dive list.
+      const diveArray = Object.values(payload).find(
+        (value): value is unknown[] =>
+          Array.isArray(value) &&
+          value.every((item) => diveSummaryItemSchema.safeParse(item).success),
+      )
+      if (!diveArray) {
+        throw new GarminDiveApiError(
+          200,
+          url,
+          'no array of recognizable dive summaries in the response',
+        )
+      }
       return {
         totalCount: number(payload.totalCount),
-        dives: (list ?? []).map((item) => mapDiveSummary(object(item))),
+        dives: diveArray.map((item) => mapDiveSummary(diveSummaryItemSchema.parse(item))),
         raw: payload,
       }
     },
     async listDevices(): Promise<GarminDiveDevice[]> {
-      const payload = await get<unknown>('/diving/v1/dive/devices')
-      return (Array.isArray(payload) ? payload : []).map((item) => {
+      const payload = await get('/diving/v1/dive/devices', jsonArraySchema)
+      return payload.map((item) => {
         const raw = object(item)
         return {
           productDisplayName: text(raw.productDisplayName),
@@ -290,7 +371,7 @@ export function createGarminDiveClient(
       return new Uint8Array(await response.arrayBuffer())
     },
     async listTags(): Promise<Record<string, number>> {
-      const payload = object(await get<unknown>('/diving/v1/dive/tags'))
+      const payload = await get('/diving/v1/dive/tags', jsonObjectSchema)
       return Object.fromEntries(
         Object.entries(payload).flatMap(([key, value]) => {
           const count = number(value)
@@ -301,11 +382,13 @@ export function createGarminDiveClient(
   }
 }
 
-function mapGearSummary(raw: Record<string, unknown>): GarminDiveGearSummary {
+function mapGearSummary(
+  raw: z.infer<typeof gearSummaryItemSchema>,
+): GarminDiveGearSummary {
   const stats = object(raw.stats)
   return {
-    gearId: number(raw.gearId) ?? -1,
-    name: text(raw.name) ?? '',
+    gearId: raw.gearId,
+    name: raw.name,
     type: text(raw.type) ?? 'OTHER',
     status: text(raw.status),
     dateOfFirstUse: text(raw.dateOfFirstUse),
@@ -320,12 +403,12 @@ function mapGearSummary(raw: Record<string, unknown>): GarminDiveGearSummary {
   }
 }
 
-function mapDiveSummary(raw: Record<string, unknown>): GarminDiveSummary {
+function mapDiveSummary(raw: z.infer<typeof diveSummaryItemSchema>): GarminDiveSummary {
   const entry = object(raw.entryLoc)
   const latitude = number(entry.latitude)
   const longitude = number(entry.longitude)
   return {
-    id: number(raw.id) ?? -1,
+    id: raw.id,
     connectActivityId: number(raw.connectActivityId),
     name: text(raw.name),
     diveType: text(raw.diveType),
