@@ -7,7 +7,7 @@
       "dependencies": {
         "@aws-sdk/client-s3": "^3.1068.0",
         "@base-ui/react": "^1.7.0",
-        "@garmin/fitsdk": "21.214.0",
+        "@garmin/fitsdk": "21.217.0",
         "@jmondi/oauth2-server": "^5.0.0",
         "@modelcontextprotocol/server": "^2",
         "@t3-oss/env-core": "^0.13.11",
@@ -227,7 +227,7 @@
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.12", "", {}, "sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww=="],
 
-    "@garmin/fitsdk": ["@garmin/fitsdk@21.214.0", "", {}, "sha512-c3ydrRYD0kPnX8USl+JEyJ9smhol3/JRxcU9QVZUvmb7ZBoGwhsqCAe7wXhwMJnMba97x4x+9J/yXr6WYUVaYQ=="],
+    "@garmin/fitsdk": ["@garmin/fitsdk@21.217.0", "", {}, "sha512-oIkDo28Yrv8ZhJiOTBZWn8Cb9kIkcAx7oVfNtgqRuNvzbCyFWdLg1StUVECjIo9rbtpvTDuW8Jqd3PTnVapiAw=="],
 
     "@img/colour": ["@img/colour@1.1.0", "", {}, "sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ=="],
 
