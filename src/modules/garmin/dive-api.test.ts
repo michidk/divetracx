@@ -240,6 +240,25 @@ describe('Garmin Dive API client', () => {
     expect(page.dives[0]).toMatchObject({ id: 42, name: 'Cenote' })
   })
 
+  test('propagates an aborted import signal into an in-flight request instead of waiting for it', async () => {
+    const controller = new AbortController()
+    const fetchImpl = ((_input: string | URL | Request, init: RequestInit = {}) => {
+      // A real fetch never settles here on its own; only the signal ends it.
+      return new Promise<Response>((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () => reject(init.signal?.reason))
+      })
+    }) as typeof fetch
+    const client = createGarminDiveClient(
+      { accessToken: 'dive', refreshToken: null, scope: null, expiresAt: null },
+      fetchImpl,
+      controller.signal,
+    )
+
+    const pending = client.listDevices()
+    controller.abort(new Error('import deadline exceeded'))
+    await expect(pending).rejects.toThrow('import deadline exceeded')
+  })
+
   test('rejects a dive summary entry missing a stable id instead of importing it under -1', async () => {
     const { fetchImpl } = fakeFetch((url) => {
       if (url.pathname === '/diving/v1/dive/summary') {

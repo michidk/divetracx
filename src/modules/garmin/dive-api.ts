@@ -208,6 +208,16 @@ async function request<T>(
   return result.data
 }
 
+// A single Dive API call has no per-request timeout of its own, so a Garmin
+// endpoint that accepts a connection and never responds would otherwise hang
+// the import forever even after the caller's own signal is aborted.
+const GARMIN_DIVE_REQUEST_TIMEOUT_MS = 20_000
+
+function withRequestTimeout(signal: AbortSignal | undefined, timeoutMs: number) {
+  const timeout = AbortSignal.timeout(timeoutMs)
+  return signal ? AbortSignal.any([signal, timeout]) : timeout
+}
+
 /**
  * Exchanges a Connect access token for a Dive-scoped one. The Connect token
  * is the `access_token` of the OAuth2 payload garmin-connect-2fa stores.
@@ -215,6 +225,7 @@ async function request<T>(
 export async function exchangeForDiveToken(
   connectAccessToken: string,
   fetchImpl: typeof fetch = fetch,
+  signal?: AbortSignal,
 ): Promise<GarminDiveToken> {
   const payload = await request(
     `${GARMIN_DIVE_HOSTS.connectApi}/oauth-service/oauth/exchange/user/2.0`,
@@ -226,6 +237,7 @@ export async function exchangeForDiveToken(
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({ audience: DIVE_AUDIENCE }).toString(),
+      signal: withRequestTimeout(signal, GARMIN_DIVE_REQUEST_TIMEOUT_MS),
     },
     fetchImpl,
     diveTokenResponseSchema,
@@ -242,11 +254,15 @@ export async function exchangeForDiveToken(
 export function createGarminDiveClient(
   token: GarminDiveToken,
   fetchImpl: typeof fetch = fetch,
+  signal?: AbortSignal,
 ) {
   const get = <T>(path: string, schema: z.ZodType<T>, params?: URLSearchParams) =>
     request(
       `${GARMIN_DIVE_HOSTS.diveApi}${path}${params ? `?${params}` : ''}`,
-      { headers: { ...APP_HEADERS, Authorization: `bearer ${token.accessToken}` } },
+      {
+        headers: { ...APP_HEADERS, Authorization: `bearer ${token.accessToken}` },
+        signal: withRequestTimeout(signal, GARMIN_DIVE_REQUEST_TIMEOUT_MS),
+      },
       fetchImpl,
       schema,
     )
@@ -350,7 +366,9 @@ export function createGarminDiveClient(
      */
     async downloadFitArchive(connectActivityId: number | string): Promise<Uint8Array> {
       // The download service answers 406 to the JSON Accept header the other
-      // endpoints want; it serves a zip.
+      // endpoints want; it serves a zip. FIT archives are larger than the
+      // other JSON responses, so this gets a longer bound than the shared
+      // per-request timeout rather than sharing it.
       const response = await fetchImpl(
         `${GARMIN_DIVE_HOSTS.connectApi}/download-service/files/activity/${connectActivityId}`,
         {
@@ -359,6 +377,7 @@ export function createGarminDiveClient(
             Accept: '*/*',
             Authorization: `bearer ${token.accessToken}`,
           },
+          signal: withRequestTimeout(signal, GARMIN_DIVE_REQUEST_TIMEOUT_MS * 3),
         },
       )
       if (!response.ok) {

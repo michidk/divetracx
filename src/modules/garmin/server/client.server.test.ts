@@ -36,4 +36,28 @@ describe('Garmin main-app transport', () => {
 
     expect(() => client.fetchFull({}, { signal: controller.signal })).toThrow('cancelled')
   })
+
+  test('passes the import signal through to the batch source instead of dropping it', async () => {
+    const controller = new AbortController()
+    let receivedSignal: AbortSignal | undefined
+    const client = createGarminSourceClient({
+      async fetchBatch(_mode, _state, options) {
+        receivedSignal = options?.signal
+        return {
+          activities: [],
+          nextState: {},
+          sourceDescription: 'test',
+          complete: true,
+          diagnostics: {},
+        }
+      },
+    })
+
+    await client.fetchIncremental({}, { signal: controller.signal })
+
+    // Before this fix, the signal was checked once here and never forwarded,
+    // so a source that only listens for cancellation on its own network calls
+    // never learned the import had been aborted.
+    expect(receivedSignal).toBe(controller.signal)
+  })
 })

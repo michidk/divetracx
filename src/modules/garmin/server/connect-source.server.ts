@@ -19,6 +19,7 @@ export type GarminConnectMode = 'full' | 'incremental'
 
 export interface GarminConnectFetchOptions {
   includeGear?: boolean
+  signal?: AbortSignal
 }
 
 export interface GarminConnectBatchSource {
@@ -28,6 +29,12 @@ export interface GarminConnectBatchSource {
     options?: GarminConnectFetchOptions,
   ): Promise<GarminConnectBatch>
 }
+
+// garmin-connect-2fa has no way to accept an AbortSignal per call, so a
+// bounded axios timeout is the only way to keep a non-responding Garmin
+// endpoint from hanging one of its calls (profile lookup, token refresh)
+// indefinitely.
+const GARMIN_CONNECT_REQUEST_TIMEOUT_MS = 20_000
 
 async function createClient() {
   const environment = getServerEnv()
@@ -42,7 +49,35 @@ async function createClient() {
     environment.GARMIN_DOMAIN,
   )
   client.loadToken(tokens.oauth1 as never, tokens.oauth2 as never)
+  client.client.client.defaults.timeout = GARMIN_CONNECT_REQUEST_TIMEOUT_MS
   return client
+}
+
+/**
+ * Rejects as soon as `signal` aborts, even if `promise` never settles — the
+ * underlying garmin-connect-2fa call has no cancellation hook of its own, so
+ * this is what lets the import's deadline actually end the wait.
+ */
+function rejectOnAbort<T>(
+  promise: Promise<T>,
+  signal: AbortSignal | undefined,
+): Promise<T> {
+  if (!signal) return promise
+  if (signal.aborted) return Promise.reject(signal.reason)
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(signal.reason)
+    signal.addEventListener('abort', onAbort, { once: true })
+    promise.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort)
+        resolve(value)
+      },
+      (error: unknown) => {
+        signal.removeEventListener('abort', onAbort)
+        reject(error)
+      },
+    )
+  })
 }
 
 function unzipFit(archive: Uint8Array, activityId: string, maximumFitBytes: number) {
@@ -90,17 +125,25 @@ export class GarminConnectSource implements GarminConnectBatchSource {
     state: Record<string, unknown>,
     options: GarminConnectFetchOptions = {},
   ): Promise<GarminConnectBatch> {
+    const { signal } = options
+    signal?.throwIfAborted()
     const environment = getServerEnv()
     const watermark = parseAdapterState(state)
     const client = await createClient()
     // Any request through the Connect client refreshes an expired token first;
-    // the Dive exchange below needs a live one.
-    await client.getUserProfile()
+    // the Dive exchange below needs a live one. garmin-connect-2fa has no
+    // cancellation hook, so the import's own deadline is enforced by racing
+    // its abort against this call rather than by passing the signal through.
+    await rejectOnAbort(client.getUserProfile(), signal)
     const connectAccessToken = client.exportToken().oauth2.access_token
     if (typeof connectAccessToken !== 'string') {
       throw new Error('Garmin Connect session has no OAuth2 access token')
     }
-    const dive = createGarminDiveClient(await exchangeForDiveToken(connectAccessToken))
+    const dive = createGarminDiveClient(
+      await exchangeForDiveToken(connectAccessToken, fetch, signal),
+      fetch,
+      signal,
+    )
 
     const collected: CollectedDive[] = []
     const seen = new Set<string>()

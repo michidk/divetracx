@@ -17,12 +17,16 @@ export function createGarminSourceClient(
   return {
     fetchFull(state, options) {
       options?.signal?.throwIfAborted()
-      return source.fetchBatch('full', state, { includeGear: options?.includeGear })
+      return source.fetchBatch('full', state, {
+        includeGear: options?.includeGear,
+        signal: options?.signal,
+      })
     },
     fetchIncremental(state, options) {
       options?.signal?.throwIfAborted()
       return source.fetchBatch('incremental', state, {
         includeGear: options?.includeGear,
+        signal: options?.signal,
       })
     },
   }
