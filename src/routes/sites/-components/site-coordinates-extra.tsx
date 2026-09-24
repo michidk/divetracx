@@ -1,5 +1,5 @@
 import { CoordinatePicker } from '@/components/coordinate-picker'
-import type { EditorValue, EditorValues } from '@/modules/data/entities'
+import type { EditorValue, EditorValues } from '@/modules/data/field-contract'
 
 export function renderSiteCoordinatesExtra(
   section: string,

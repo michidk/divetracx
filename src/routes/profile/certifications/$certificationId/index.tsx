@@ -4,13 +4,21 @@ import { z } from 'zod'
 import { CertificationCard } from '@/components/certification-card'
 import { DeleteRecordButton } from '@/components/delete-record-button'
 import { EntityForm } from '@/components/entity-form'
+import { presentationList } from '@/modules/data/field-contract'
 import { formatPersonName } from '@/modules/dives/format'
 import { AgencyMark } from '@/modules/profile/components/agency-mark'
+import { certificationContract } from '@/modules/profile/credential-contracts'
 import { getAgencies } from '@/modules/profile/server/agencies'
+import {
+  deleteCertificationRecord,
+  saveCertificationRecord,
+} from '@/modules/profile/server/certifications'
 import {
   getCertification,
   getCertificationInstructorOptions,
 } from '@/modules/profile/server/queries'
+
+const certificationPresentation = presentationList(certificationContract)
 
 function mediaUrl(path: string) {
   return `/media/${path.split('/').map(encodeURIComponent).join('/')}`
@@ -99,9 +107,12 @@ function CertificationRoute() {
 
       <EntityForm
         key={certificationId}
-        entity="certifications"
+        presentation={certificationPresentation}
         recordId={certificationId}
         record={detail?.certification ?? null}
+        onSubmit={(recordId, values) =>
+          saveCertificationRecord({ data: { recordId, values } })
+        }
         selectOptions={{
           agencyId: agencyOptions.map((agency) => ({
             value: agency.id,
@@ -118,8 +129,9 @@ function CertificationRoute() {
 
       {!isNew && detail ? (
         <DeleteRecordButton
-          entity="certifications"
-          recordId={certificationId}
+          onDelete={() =>
+            deleteCertificationRecord({ data: { recordId: certificationId } })
+          }
           label="Delete certification"
           confirmText={`Delete “${detail.certification.name}” and its card scans? A future full import may restore it.`}
           onDeleted={() => router.navigate({ to: '/profile' })}

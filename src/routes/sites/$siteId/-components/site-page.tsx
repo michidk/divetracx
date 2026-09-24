@@ -5,9 +5,14 @@ import { DiveLinkList } from '@/components/dive-link-list'
 import { EntityForm } from '@/components/entity-form'
 import { PhotoManager } from '@/components/photo-manager'
 import { Badge } from '@/components/ui/badge'
+import { presentationList } from '@/modules/data/field-contract'
 import { formatDiveDate, formatMeters } from '@/modules/dives/format'
+import { siteContract } from '@/modules/sites/entity-contract'
+import { deleteSiteRecord, saveSiteRecord } from '@/modules/sites/server/mutations'
 import type { getSite } from '@/modules/sites/server/queries'
 import { renderSiteCoordinatesExtra } from '../../-components/site-coordinates-extra'
+
+const sitePresentation = presentationList(siteContract)
 
 type SiteDetail = NonNullable<Awaited<ReturnType<typeof getSite>>>
 
@@ -90,15 +95,17 @@ export function SitePage({ detail }: { detail: SiteDetail }) {
             Site details
           </h2>
           <EntityForm
-            entity="sites"
+            presentation={sitePresentation}
             recordId={site.id}
             record={site}
+            onSubmit={(recordId, values) =>
+              saveSiteRecord({ data: { recordId, values } })
+            }
             renderSectionExtra={renderSiteCoordinatesExtra}
           />
           <div className="mt-4">
             <DeleteRecordButton
-              entity="sites"
-              recordId={site.id}
+              onDelete={() => deleteSiteRecord({ data: { recordId: site.id } })}
               label="Delete site"
               confirmText={`Delete “${site.name}”? Its ${dives.length} logged dives stay in the logbook without a site. A future full import may restore it.`}
               onDeleted={() => navigate({ to: '/sites' })}

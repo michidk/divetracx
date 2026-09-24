@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { asc, eq } from 'drizzle-orm'
 import { closeDb, getDb } from '@/db'
 import {
+  divers,
   equipment,
   equipmentSetItems,
   equipmentSets,
@@ -9,7 +10,12 @@ import {
   externalRecords,
   integrations,
 } from '@/db/schema'
-import { deleteGearSet, saveGearSet } from './mutations.server'
+import {
+  deleteEquipment,
+  deleteGearSet,
+  saveEquipment,
+  saveGearSet,
+} from './mutations.server'
 
 const enabled = process.env.RUN_IMPORT_INTEGRATION_TESTS === 'true'
 const INTEGRATION_KEY = 'test-gear-mutations'
@@ -135,5 +141,87 @@ describe.skipIf(!enabled)('manual gear-set mutations database contract', () => {
     ).toHaveLength(0)
 
     await expect(deleteGearSet(created.id)).rejects.toThrow('Gear set was not found')
+  })
+})
+
+describe.skipIf(!enabled)('manual equipment mutations database contract', () => {
+  beforeAll(async () => {
+    const db = getDb()
+    await db.delete(externalRecordLinks)
+    await db.delete(externalRecords)
+    await db.delete(integrations).where(eq(integrations.key, INTEGRATION_KEY))
+    await db.delete(equipmentSetItems)
+    await db.delete(equipment)
+  })
+
+  afterAll(async () => {
+    await closeDb()
+  })
+
+  test('creates equipment under the primary diver, updates one field, then deletes it', async () => {
+    const db = getDb()
+    await db.delete(divers)
+    const [primaryDiver] = await db
+      .insert(divers)
+      .values({ firstName: 'Primary' })
+      .returning({ id: divers.id })
+    if (!primaryDiver) throw new Error('Seed diver was not created')
+
+    const equipmentId = await saveEquipment('new', {
+      name: 'Regulator',
+      manufacturer: 'Atomic',
+      weightKg: 2.4,
+    })
+    const [item] = await db.select().from(equipment).where(eq(equipment.id, equipmentId))
+    expect(item).toMatchObject({
+      name: 'Regulator',
+      manufacturer: 'Atomic',
+      weightKg: '2.400',
+      diverId: primaryDiver.id,
+    })
+
+    await saveEquipment(equipmentId, { manufacturer: 'Scubapro' })
+    const [updated] = await db
+      .select()
+      .from(equipment)
+      .where(eq(equipment.id, equipmentId))
+    expect(updated?.manufacturer).toBe('Scubapro')
+    expect(updated?.name).toBe('Regulator')
+
+    await db.insert(integrations).values({
+      key: INTEGRATION_KEY,
+      displayName: 'Test equipment mutation integration',
+      capabilities: { fullImport: true, incrementalImport: true, export: false },
+      supportedEntities: ['equipment'],
+    })
+    const [externalRecord] = await db
+      .insert(externalRecords)
+      .values({
+        integrationKey: INTEGRATION_KEY,
+        entityType: 'equipment',
+        identityKey: 'gear-1',
+        rawPayload: {},
+        contentHash: 'hash-gear',
+      })
+      .returning({ id: externalRecords.id })
+    if (!externalRecord) throw new Error('Seed external record was not created')
+    await db.insert(externalRecordLinks).values({
+      externalRecordId: externalRecord.id,
+      canonicalEntityType: 'equipment',
+      canonicalEntityId: equipmentId,
+      role: 'produced',
+    })
+
+    await deleteEquipment(equipmentId)
+    expect(
+      await db.select().from(equipment).where(eq(equipment.id, equipmentId)),
+    ).toHaveLength(0)
+    expect(
+      await db
+        .select()
+        .from(externalRecordLinks)
+        .where(eq(externalRecordLinks.externalRecordId, externalRecord.id)),
+    ).toHaveLength(0)
+    await expect(deleteEquipment(equipmentId)).rejects.toThrow('The record was not found')
   })
 })

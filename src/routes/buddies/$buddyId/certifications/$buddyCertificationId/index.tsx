@@ -3,10 +3,18 @@ import { ArrowLeft } from 'lucide-react'
 import { z } from 'zod'
 import { DeleteRecordButton } from '@/components/delete-record-button'
 import { EntityForm } from '@/components/entity-form'
+import { buddyCertificationContract } from '@/modules/buddies/credential-contracts'
+import {
+  deleteBuddyCertificationRecord,
+  saveBuddyCertificationRecord,
+} from '@/modules/buddies/server/mutations'
 import { getBuddy, getBuddyCertification } from '@/modules/buddies/server/queries'
+import { presentationList } from '@/modules/data/field-contract'
 import { formatPersonName } from '@/modules/dives/format'
 import { AgencyMark } from '@/modules/profile/components/agency-mark'
 import { getAgencies } from '@/modules/profile/server/agencies'
+
+const buddyCertificationPresentation = presentationList(buddyCertificationContract)
 
 const paramsSchema = z.object({
   buddyId: z.string().uuid(),
@@ -77,10 +85,12 @@ function BuddyCertificationRoute() {
 
       <EntityForm
         key={buddyCertificationId}
-        entity="buddyCertifications"
+        presentation={buddyCertificationPresentation}
         recordId={buddyCertificationId}
         record={certification}
-        fixedValues={{ buddyId }}
+        onSubmit={(recordId, values) =>
+          saveBuddyCertificationRecord({ data: { buddyId, recordId, values } })
+        }
         selectOptions={{
           agencyId: agencyOptions.map((agency) => ({
             value: agency.id,
@@ -93,8 +103,9 @@ function BuddyCertificationRoute() {
 
       {!isNew && certification ? (
         <DeleteRecordButton
-          entity="buddyCertifications"
-          recordId={buddyCertificationId}
+          onDelete={() =>
+            deleteBuddyCertificationRecord({ data: { recordId: buddyCertificationId } })
+          }
           label="Delete certification"
           confirmText={`Delete “${certification.name}” from ${buddyName}?`}
           onDeleted={() =>

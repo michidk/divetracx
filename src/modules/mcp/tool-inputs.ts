@@ -1,5 +1,10 @@
 import { z } from 'zod'
+import { buddyContract } from '@/modules/buddies/entity-contract'
+import { mcpValuesSchema } from '@/modules/data/field-contract'
 import { DIVE_BUDDY_ROLE_VALUES } from '@/modules/dives/buddy-role'
+import { equipmentContract } from '@/modules/gear/entity-contract'
+import { diverContract } from '@/modules/profile/entity-contract'
+import { siteContract } from '@/modules/sites/entity-contract'
 
 const nullableText = z.string().max(10_000).nullable().optional()
 const nullableShortText = z.string().max(500).nullable().optional()
@@ -8,11 +13,6 @@ const nullableInteger = z.number().int().nullable().optional()
 const pressureGroupLetter = z
   .string()
   .regex(/^[A-Za-z]$/, 'Pressure groups are a single table letter')
-  .nullable()
-  .optional()
-const nullableDate = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
   .nullable()
   .optional()
 
@@ -96,74 +96,15 @@ export const updateDiveToolInputSchema = z.object({
 export type CreateDiveToolInput = z.infer<typeof createDiveToolInputSchema>
 export type UpdateDiveToolInput = z.infer<typeof updateDiveToolInputSchema>
 
-export const siteValuesSchema = z.object({
-  name: nullableShortText,
-  country: nullableShortText,
-  region: nullableShortText,
-  waterName: nullableShortText,
-  latitude: z.number().min(-90).max(90).nullable().optional(),
-  longitude: z.number().min(-180).max(180).nullable().optional(),
-  maximumDepthMeters: z.number().min(0).nullable().optional(),
-  altitudeMeters: nullableInteger,
-  difficulty: nullableShortText,
-  rating: z.number().int().min(1).max(5).nullable().optional(),
-  waterType: z.number().int().min(0).nullable().optional(),
-  notes: nullableText,
-})
-
-export const buddyValuesSchema = z.object({
-  firstName: nullableShortText,
-  lastName: nullableShortText,
-  email: nullableShortText,
-  phone: nullableShortText,
-  street: nullableShortText,
-  postalCode: nullableShortText,
-  city: nullableShortText,
-  state: nullableShortText,
-  country: nullableShortText,
-  instructor: z.boolean().optional(),
-  minimumDives: z.number().int().min(0).nullable().optional(),
-  notes: nullableText,
-})
-
-export const gearValuesSchema = z.object({
-  name: nullableShortText,
-  category: nullableShortText,
-  manufacturer: nullableShortText,
-  model: nullableShortText,
-  serialNumber: nullableShortText,
-  information: nullableText,
-  purchasedAt: nullableDate,
-  purchasePrice: z.number().min(0).nullable().optional(),
-  purchaseShop: nullableShortText,
-  retiredAt: nullableDate,
-  serviceDueAt: nullableDate,
-  inactive: z.boolean().optional(),
-  weightKg: z.number().min(0).nullable().optional(),
-  notes: nullableText,
-})
-
-export const profileValuesSchema = z.object({
-  firstName: nullableShortText,
-  lastName: nullableShortText,
-  email: nullableShortText,
-  phone: nullableShortText,
-  street: nullableShortText,
-  postalCode: nullableShortText,
-  city: nullableShortText,
-  state: nullableShortText,
-  country: nullableShortText,
-  birthDate: nullableDate,
-  bloodGroup: nullableShortText,
-  emergencyContact: nullableShortText,
-  emergencyPhone: nullableShortText,
-  emergencyEmail: nullableShortText,
-  insurance: nullableShortText,
-  insuranceTariff: nullableShortText,
-  insuranceNumber: nullableShortText,
-  insuranceHotline: nullableShortText,
-  notes: nullableText,
-})
+// Derived straight from each domain's field contract (src/modules/*/entity-contract.ts)
+// instead of being redeclared here: a field that contract exposes to MCP is
+// writable through these schemas by construction, and one that changes there
+// changes here too, so the two cannot drift apart the way three independent
+// declarations could.
+export const siteValuesSchema = mcpValuesSchema(siteContract)
+export const buddyValuesSchema = mcpValuesSchema(buddyContract)
+export const gearValuesSchema = mcpValuesSchema(equipmentContract)
+export const profileValuesSchema = mcpValuesSchema(diverContract)
 
 export const gearSetValuesSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),

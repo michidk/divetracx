@@ -2,18 +2,15 @@ import { useRouter } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import type { EntityKey } from '@/modules/data/entities'
-import { deleteRecord } from '@/modules/data/server/mutations'
 
 export function DeleteRecordButton({
-  entity,
-  recordId,
+  onDelete,
   label,
   confirmText,
   onDeleted,
 }: {
-  entity: Exclude<EntityKey, 'divers'>
-  recordId: string
+  /** The typed delete adapter: calls the domain's own delete command. */
+  onDelete: () => Promise<void>
   label: string
   confirmText: string
   onDeleted: () => void | Promise<void>
@@ -27,7 +24,7 @@ export function DeleteRecordButton({
     setDeleting(true)
     setMessage(null)
     try {
-      await deleteRecord({ data: { entity, recordId } })
+      await onDelete()
       await router.invalidate()
       await onDeleted()
     } catch (error) {

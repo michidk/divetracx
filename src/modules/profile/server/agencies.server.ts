@@ -87,6 +87,16 @@ export async function deleteCustomAgency(agencyId: string) {
   }
 }
 
+export async function assertAgencyExists(database: AgencyDatabase, agencyId: string) {
+  const [agency] = await database
+    .select({ id: agencies.id, name: agencies.name })
+    .from(agencies)
+    .where(eq(agencies.id, agencyId))
+    .limit(1)
+  if (!agency) throw new Error('Select an existing agency')
+  return agency
+}
+
 export async function resolveAgencyId(
   database: AgencyDatabase,
   organization: string | null | undefined,

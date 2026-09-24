@@ -1,6 +1,11 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
 import { EntityForm } from '@/components/entity-form'
+import { buddyContract } from '@/modules/buddies/entity-contract'
+import { saveBuddyRecord } from '@/modules/buddies/server/mutations'
+import { presentationList } from '@/modules/data/field-contract'
+
+const buddyPresentation = presentationList(buddyContract)
 
 export const Route = createFileRoute('/buddies/new/')({
   head: () => ({ meta: [{ title: 'New buddy · Divetracx' }] }),
@@ -21,9 +26,10 @@ function NewBuddyRoute() {
         <h1 className="mt-3 text-4xl font-semibold tracking-tight">New buddy</h1>
       </header>
       <EntityForm
-        entity="buddies"
+        presentation={buddyPresentation}
         recordId="new"
         record={null}
+        onSubmit={(recordId, values) => saveBuddyRecord({ data: { recordId, values } })}
         onSaved={(id) =>
           router.navigate({ to: '/buddies/$buddyId', params: { buddyId: id } })
         }

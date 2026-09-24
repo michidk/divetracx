@@ -3,11 +3,16 @@ import { Award, Clock3, Plus, Waves } from 'lucide-react'
 import { EntityForm } from '@/components/entity-form'
 import { ProfileImage } from '@/components/profile-image'
 import { StatCard } from '@/components/stat-card'
+import { presentationList } from '@/modules/data/field-contract'
 import { formatDiveDate, formatPersonName } from '@/modules/dives/format'
+import { diverContract } from '@/modules/profile/entity-contract'
+import { saveDiverRecord } from '@/modules/profile/server/mutations'
 import type { getProfile } from '@/modules/profile/server/queries'
 import { AgencyMembershipList } from './agency-membership-list'
 import { CertificationList } from './certification-list'
 import { SkillCard } from './skill-card'
+
+const diverPresentation = presentationList(diverContract)
 
 type ProfileData = Awaited<ReturnType<typeof getProfile>>
 
@@ -87,9 +92,12 @@ export function ProfilePage({ profile }: { profile: ProfileData }) {
             Personal details
           </h2>
           <EntityForm
-            entity="divers"
+            presentation={diverPresentation}
             recordId={diver?.id ?? 'new'}
             record={diver}
+            onSubmit={(recordId, values) =>
+              saveDiverRecord({ data: { recordId, values } })
+            }
             renderAfterSections={
               <section className="rounded-2xl border border-border bg-card p-5 md:p-6">
                 <div className="mb-4 flex items-center justify-between gap-4">

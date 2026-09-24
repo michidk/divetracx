@@ -5,8 +5,16 @@ import { DiveLinkList } from '@/components/dive-link-list'
 import { EntityForm } from '@/components/entity-form'
 import { PhotoManager } from '@/components/photo-manager'
 import { Badge } from '@/components/ui/badge'
+import { presentationList } from '@/modules/data/field-contract'
 import { formatDiveDate } from '@/modules/dives/format'
+import { equipmentContract } from '@/modules/gear/entity-contract'
+import {
+  deleteEquipmentRecord,
+  saveEquipmentRecord,
+} from '@/modules/gear/server/mutations'
 import type { getGearItem } from '@/modules/gear/server/queries'
+
+const equipmentPresentation = presentationList(equipmentContract)
 
 type GearDetail = NonNullable<Awaited<ReturnType<typeof getGearItem>>>
 
@@ -73,11 +81,17 @@ export function GearItemPage({ detail }: { detail: GearDetail }) {
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Item details
           </h2>
-          <EntityForm entity="equipment" recordId={item.id} record={item} />
+          <EntityForm
+            presentation={equipmentPresentation}
+            recordId={item.id}
+            record={item}
+            onSubmit={(recordId, values) =>
+              saveEquipmentRecord({ data: { recordId, values } })
+            }
+          />
           <div className="mt-4">
             <DeleteRecordButton
-              entity="equipment"
-              recordId={item.id}
+              onDelete={() => deleteEquipmentRecord({ data: { recordId: item.id } })}
               label="Delete gear item"
               confirmText={`Delete “${item.name}”? It will be removed from ${dives.length} dives. A future full import may restore it.`}
               onDeleted={() => navigate({ to: '/gear' })}

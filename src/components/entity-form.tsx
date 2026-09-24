@@ -19,35 +19,12 @@ import { Textarea } from '@/components/ui/textarea'
 import type {
   EditorValue,
   EditorValues,
-  EntityField,
-  EntityKey,
-} from '@/modules/data/entities'
-import { entityDefinitions } from '@/modules/data/entities'
-import { saveRecord } from '@/modules/data/server/mutations'
+  FieldOption,
+  PresentationEntry,
+} from '@/modules/data/field-contract'
+import { initialValuesFromPresentation } from '@/modules/data/field-contract'
 
-function initialValue(field: EntityField, record: Record<string, unknown> | null) {
-  if (field.kind === 'checkbox') {
-    return record ? record[field.key] === true : (field.defaultValue ?? false)
-  }
-  const value = record?.[field.key]
-  if (value === null || value === undefined) return ''
-  // Selects encode numeric source codes; 0 means "not set" in imported data.
-  if (field.kind === 'select' && value === 0) return ''
-  if (value instanceof Date) return value.toISOString().slice(0, 10)
-  return String(value)
-}
-
-export function initialEntityValues(
-  entity: EntityKey,
-  record: Record<string, unknown> | null,
-): EditorValues {
-  return Object.fromEntries(
-    entityDefinitions[entity].fields.map((field) => [
-      field.key,
-      initialValue(field, record),
-    ]),
-  )
-}
+export type { EditorValues }
 
 export function RatingInput({
   id,
@@ -97,9 +74,9 @@ function FieldControl({
   options,
   onChange,
 }: {
-  field: EntityField
+  field: PresentationEntry
   value: EditorValue | undefined
-  options?: EntityField['options']
+  options?: FieldOption[]
   onChange: (value: EditorValue) => void
 }) {
   const inputId = `field-${field.key}`
@@ -307,22 +284,29 @@ function FieldControl({
   )
 }
 
+/**
+ * A reusable form renderer driven entirely by presentation metadata and a
+ * typed submit adapter: it has no notion of which entity it edits, so a
+ * field lives in exactly one place — the domain's field contract — instead
+ * of also being redeclared here.
+ */
 export function EntityForm({
-  entity,
+  presentation,
   recordId,
   record,
+  onSubmit,
   onSaved,
   renderSectionExtra,
   renderAfterSections,
   selectOptions,
-  fixedValues,
 }: {
-  entity: EntityKey
+  presentation: PresentationEntry[]
   recordId: string
   record: Record<string, unknown> | null
+  /** The typed submit adapter: validates and persists through the domain's own save command. */
+  onSubmit: (recordId: string, values: EditorValues) => Promise<{ id: string }>
   onSaved?: (id: string) => void | Promise<void>
-  selectOptions?: Record<string, NonNullable<EntityField['options']>>
-  fixedValues?: EditorValues
+  selectOptions?: Record<string, FieldOption[]>
   renderSectionExtra?: (
     section: string,
     values: EditorValues,
@@ -330,13 +314,14 @@ export function EntityForm({
   ) => React.ReactNode
   renderAfterSections?: React.ReactNode
 }) {
-  const definition = entityDefinitions[entity]
   const router = useRouter()
-  const [values, setValues] = useState(() => initialEntityValues(entity, record))
+  const [values, setValues] = useState(() =>
+    initialValuesFromPresentation(presentation, record),
+  )
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const { saved, clearSaved, markSaved } = useTransientSavedState()
-  const sections = Array.from(new Set(definition.fields.map((field) => field.section)))
+  const sections = Array.from(new Set(presentation.map((field) => field.section)))
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -344,9 +329,7 @@ export function EntityForm({
     setMessage(null)
     clearSaved()
     try {
-      const result = await saveRecord({
-        data: { entity, recordId, values: { ...values, ...fixedValues } },
-      })
+      const result = await onSubmit(recordId, values)
       await router.invalidate()
       markSaved()
       if (recordId === 'new') await onSaved?.(result.id)
@@ -368,7 +351,7 @@ export function EntityForm({
             {section}
           </h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {definition.fields
+            {presentation
               .filter((field) => field.section === section)
               .map((field) => (
                 <div

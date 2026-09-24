@@ -3,9 +3,17 @@ import { ArrowLeft } from 'lucide-react'
 import { z } from 'zod'
 import { DeleteRecordButton } from '@/components/delete-record-button'
 import { EntityForm } from '@/components/entity-form'
+import { presentationList } from '@/modules/data/field-contract'
 import { AgencyMark } from '@/modules/profile/components/agency-mark'
+import { agencyMembershipContract } from '@/modules/profile/credential-contracts'
 import { getAgencies } from '@/modules/profile/server/agencies'
+import {
+  deleteAgencyMembershipRecord,
+  saveAgencyMembershipRecord,
+} from '@/modules/profile/server/agency-memberships'
 import { getAgencyMembership } from '@/modules/profile/server/queries'
+
+const agencyMembershipPresentation = presentationList(agencyMembershipContract)
 
 const agencyMembershipIdSchema = z.union([z.string().uuid(), z.literal('new')])
 
@@ -72,9 +80,12 @@ function AgencyMembershipRoute() {
 
       <EntityForm
         key={agencyMembershipId}
-        entity="agencyMemberships"
+        presentation={agencyMembershipPresentation}
         recordId={agencyMembershipId}
         record={membership}
+        onSubmit={(recordId, values) =>
+          saveAgencyMembershipRecord({ data: { recordId, values } })
+        }
         selectOptions={{
           agencyId: agencyOptions.map((agency) => ({
             value: agency.id,
@@ -102,8 +113,9 @@ function AgencyMembershipRoute() {
 
       {!isNew && membership ? (
         <DeleteRecordButton
-          entity="agencyMemberships"
-          recordId={agencyMembershipId}
+          onDelete={() =>
+            deleteAgencyMembershipRecord({ data: { recordId: agencyMembershipId } })
+          }
           label="Delete membership"
           confirmText={`Delete the ${membership.agency.name} membership?`}
           onDeleted={() => router.navigate({ to: '/profile' })}

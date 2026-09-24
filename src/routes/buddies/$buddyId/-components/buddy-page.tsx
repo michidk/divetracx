@@ -5,9 +5,14 @@ import { DiveLinkList } from '@/components/dive-link-list'
 import { EntityForm } from '@/components/entity-form'
 import { ProfileImage } from '@/components/profile-image'
 import { Badge } from '@/components/ui/badge'
+import { buddyContract } from '@/modules/buddies/entity-contract'
+import { deleteBuddyRecord, saveBuddyRecord } from '@/modules/buddies/server/mutations'
 import type { getBuddy } from '@/modules/buddies/server/queries'
+import { presentationList } from '@/modules/data/field-contract'
 import { formatDiveDate, formatPersonName } from '@/modules/dives/format'
 import { BuddyCredentials } from './buddy-credentials'
+
+const buddyPresentation = presentationList(buddyContract)
 
 type BuddyDetail = NonNullable<Awaited<ReturnType<typeof getBuddy>>>
 
@@ -27,8 +32,7 @@ export function BuddyPage({ detail }: { detail: BuddyDetail }) {
             <ArrowLeft size={16} aria-hidden="true" /> All buddies
           </Link>
           <DeleteRecordButton
-            entity="buddies"
-            recordId={buddy.id}
+            onDelete={() => deleteBuddyRecord({ data: { recordId: buddy.id } })}
             label="Delete buddy"
             confirmText={`Delete ${formatPersonName(buddy)}? They will be removed from ${dives.length} dives. A future full import may restore them.`}
             onDeleted={() => navigate({ to: '/buddies' })}
@@ -93,7 +97,14 @@ export function BuddyPage({ detail }: { detail: BuddyDetail }) {
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Buddy details
           </h2>
-          <EntityForm entity="buddies" recordId={buddy.id} record={buddy} />
+          <EntityForm
+            presentation={buddyPresentation}
+            recordId={buddy.id}
+            record={buddy}
+            onSubmit={(recordId, values) =>
+              saveBuddyRecord({ data: { recordId, values } })
+            }
+          />
         </div>
       </div>
     </div>

@@ -3,10 +3,18 @@ import { ArrowLeft } from 'lucide-react'
 import { z } from 'zod'
 import { DeleteRecordButton } from '@/components/delete-record-button'
 import { EntityForm } from '@/components/entity-form'
+import { buddyAgencyMembershipContract } from '@/modules/buddies/credential-contracts'
+import {
+  deleteBuddyAgencyMembershipRecord,
+  saveBuddyAgencyMembershipRecord,
+} from '@/modules/buddies/server/mutations'
 import { getBuddy, getBuddyAgencyMembership } from '@/modules/buddies/server/queries'
+import { presentationList } from '@/modules/data/field-contract'
 import { formatPersonName } from '@/modules/dives/format'
 import { AgencyMark } from '@/modules/profile/components/agency-mark'
 import { getAgencies } from '@/modules/profile/server/agencies'
+
+const buddyAgencyMembershipPresentation = presentationList(buddyAgencyMembershipContract)
 
 const paramsSchema = z.object({
   buddyId: z.string().uuid(),
@@ -80,10 +88,12 @@ function BuddyAgencyMembershipRoute() {
 
       <EntityForm
         key={buddyAgencyMembershipId}
-        entity="buddyAgencyMemberships"
+        presentation={buddyAgencyMembershipPresentation}
         recordId={buddyAgencyMembershipId}
         record={membership}
-        fixedValues={{ buddyId }}
+        onSubmit={(recordId, values) =>
+          saveBuddyAgencyMembershipRecord({ data: { buddyId, recordId, values } })
+        }
         selectOptions={{
           agencyId: agencyOptions.map((agency) => ({
             value: agency.id,
@@ -96,8 +106,11 @@ function BuddyAgencyMembershipRoute() {
 
       {!isNew && membership ? (
         <DeleteRecordButton
-          entity="buddyAgencyMemberships"
-          recordId={buddyAgencyMembershipId}
+          onDelete={() =>
+            deleteBuddyAgencyMembershipRecord({
+              data: { recordId: buddyAgencyMembershipId },
+            })
+          }
           label="Delete agency membership"
           confirmText={`Delete ${buddyName}'s ${membership.agency.name} number?`}
           onDeleted={() =>

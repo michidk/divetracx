@@ -1,17 +1,16 @@
 import '@tanstack/react-start/server-only'
 
-import { loadBuddyDetail } from '@/modules/buddies/server/queries.server'
-import {
-  type EditorValues,
-  type EntityKey,
-  entityDefinitions,
-} from '@/modules/data/entities'
-import { deleteDataRecord, saveDataRecord } from '@/modules/data/server/mutations.server'
+import { deleteBuddy, saveBuddy } from '@/modules/buddies/server/mutations.server'
 import { loadDiveEditor } from '@/modules/dives/server/editor.server'
 import type { DiveEntryInput } from '@/modules/dives/server/mutations'
 import { deleteDiveEntry, saveDiveEntry } from '@/modules/dives/server/mutations.server'
-import { deleteGearSet, saveGearSet } from '@/modules/gear/server/mutations.server'
-import { loadGearDetail, loadGearSetEditor } from '@/modules/gear/server/queries.server'
+import {
+  deleteEquipment,
+  deleteGearSet,
+  saveEquipment,
+  saveGearSet,
+} from '@/modules/gear/server/mutations.server'
+import { loadGearSetEditor } from '@/modules/gear/server/queries.server'
 import type {
   BuddyValues,
   CreateDiveToolInput,
@@ -21,31 +20,9 @@ import type {
   SiteValues,
   UpdateDiveToolInput,
 } from '@/modules/mcp/tool-inputs'
+import { saveDiver } from '@/modules/profile/server/mutations.server'
 import { loadProfile } from '@/modules/profile/server/queries.server'
-import { loadSiteDetail } from '@/modules/sites/server/queries.server'
-
-type McpValues = Record<string, string | number | boolean | null | undefined>
-
-function editorValue(value: unknown): string | boolean {
-  if (typeof value === 'boolean') return value
-  if (value === null || value === undefined) return ''
-  return String(value)
-}
-
-function mergedEditorValues(
-  entity: EntityKey,
-  current: Record<string, unknown> | null,
-  changes: McpValues,
-) {
-  return Object.fromEntries(
-    entityDefinitions[entity].fields.map((field) => [
-      field.key,
-      editorValue(
-        changes[field.key] === undefined ? current?.[field.key] : changes[field.key],
-      ),
-    ]),
-  ) satisfies EditorValues
-}
+import { deleteSite, saveSite } from '@/modules/sites/server/mutations.server'
 
 function diveText(value: unknown) {
   return value === null || value === undefined ? '' : String(value)
@@ -233,48 +210,38 @@ export async function updateDiveFromMcp(input: UpdateDiveToolInput) {
   return saveDiveEntry(applyDiveChanges(existingDiveInput(editor), input))
 }
 
-async function saveEntityFromMcp(
-  entity: Extract<EntityKey, 'sites' | 'buddies' | 'equipment' | 'divers'>,
-  id: string,
-  current: Record<string, unknown> | null,
-  changes: McpValues,
-) {
-  return saveDataRecord(entity, id, mergedEditorValues(entity, current, changes))
-}
+// Each entity's own domain command validates and applies a true partial
+// update, so unlike the old generic dispatcher these calls need no prior
+// fetch-and-merge of the current record — a field MCP omits is simply left
+// untouched.
 
 export async function createSiteFromMcp(input: SiteValues) {
-  return saveEntityFromMcp('sites', 'new', null, input)
+  return saveSite('new', input)
 }
 
 export async function updateSiteFromMcp(id: string, input: SiteValues) {
-  const detail = await loadSiteDetail(id)
-  if (!detail) throw new Error('Dive site was not found')
-  return saveEntityFromMcp('sites', id, detail.site, input)
+  return saveSite(id, input)
 }
 
 export async function createBuddyFromMcp(input: BuddyValues) {
-  return saveEntityFromMcp('buddies', 'new', null, input)
+  return saveBuddy('new', input)
 }
 
 export async function updateBuddyFromMcp(id: string, input: BuddyValues) {
-  const detail = await loadBuddyDetail(id)
-  if (!detail) throw new Error('Buddy was not found')
-  return saveEntityFromMcp('buddies', id, detail.buddy, input)
+  return saveBuddy(id, input)
 }
 
 export async function createGearFromMcp(input: GearValues) {
-  return saveEntityFromMcp('equipment', 'new', null, input)
+  return saveEquipment('new', input)
 }
 
 export async function updateGearFromMcp(id: string, input: GearValues) {
-  const detail = await loadGearDetail(id)
-  if (!detail) throw new Error('Gear item was not found')
-  return saveEntityFromMcp('equipment', id, detail.item, input)
+  return saveEquipment(id, input)
 }
 
 export async function updateProfileFromMcp(input: ProfileValues) {
   const profile = await loadProfile()
-  return saveEntityFromMcp('divers', profile.diver?.id ?? 'new', profile.diver, input)
+  return saveDiver(profile.diver?.id ?? 'new', input)
 }
 
 export async function createGearSetFromMcp(input: GearSetValues) {
@@ -308,7 +275,9 @@ export async function deleteEntityFromMcp(
   entity: 'sites' | 'buddies' | 'equipment',
   id: string,
 ) {
-  await deleteDataRecord(entity, id)
+  if (entity === 'sites') return deleteSite(id)
+  if (entity === 'buddies') return deleteBuddy(id)
+  return deleteEquipment(id)
 }
 
 export async function deleteGearSetFromMcp(id: string) {

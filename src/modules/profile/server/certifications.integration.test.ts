@@ -1,9 +1,15 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { eq } from 'drizzle-orm'
 import { closeDb, getDb } from '@/db'
-import { certifications } from '@/db/schema'
+import { agencies, certifications, divers } from '@/db/schema'
+import { getStorage } from '@/lib/storage'
 import {
+  deleteCertification,
   MAX_FEATURED_CERTIFICATIONS,
+  saveCertification,
   updateCertificationCardFeature,
 } from './certifications.server'
 
@@ -113,5 +119,95 @@ describe.skipIf(!enabled)('featured-certification limit database contract', () =
         .where(eq(certifications.featuredOnCard, true))
     ).length
     expect(featuredCount).toBe(MAX_FEATURED_CERTIFICATIONS)
+  })
+})
+
+describe.skipIf(!enabled)('manual certification mutations database contract', () => {
+  let agencyId: string
+  let storageDir: string
+
+  beforeAll(async () => {
+    storageDir = await mkdtemp(join(tmpdir(), 'divetracx-certification-mutations-'))
+    process.env.STORAGE_PROVIDER = 'local'
+    process.env.STORAGE_PATH = storageDir
+    process.env.STORAGE_URL = '/media'
+
+    const db = getDb()
+    await db.delete(certifications)
+    await db.delete(divers)
+    await db.insert(divers).values({ firstName: 'Primary' })
+    // Built-in agencies such as PADI are already seeded by migrations, so a
+    // distinct name avoids colliding with their unique normalized name.
+    await db
+      .delete(agencies)
+      .where(eq(agencies.normalizedName, 'test-certification-mutation-agency'))
+    const [agency] = await db
+      .insert(agencies)
+      .values({
+        name: 'Test Certification Mutation Agency',
+        normalizedName: 'test-certification-mutation-agency',
+      })
+      .returning({ id: agencies.id })
+    if (!agency) throw new Error('Seed agency was not created')
+    agencyId = agency.id
+  })
+
+  afterAll(async () => {
+    await closeDb()
+    await rm(storageDir, { recursive: true, force: true })
+  })
+
+  test('rejects a certification without an existing agency, assigns the primary diver, and cleans up stored scans on delete', async () => {
+    const db = getDb()
+    const [primaryDiver] = await db.select({ id: divers.id }).from(divers).limit(1)
+    if (!primaryDiver) throw new Error('Primary diver seed is missing')
+
+    await expect(saveCertification('new', { name: 'Open Water' })).rejects.toThrow(
+      'Agency is required',
+    )
+    await expect(
+      saveCertification('new', {
+        name: 'Open Water',
+        agencyId: '11111111-1111-4111-8111-111111111111',
+      }),
+    ).rejects.toThrow('Select an existing agency')
+
+    const certificationId = await saveCertification('new', {
+      name: 'Open Water',
+      agencyId,
+      certificationNumber: 'OW-123',
+    })
+    const [created] = await db
+      .select()
+      .from(certifications)
+      .where(eq(certifications.id, certificationId))
+    expect(created).toMatchObject({
+      name: 'Open Water',
+      agencyId,
+      organization: 'Test Certification Mutation Agency',
+      diverId: primaryDiver.id,
+    })
+
+    const storage = getStorage()
+    const scanPath = `certifications/${certificationId}-scan-1.jpg`
+    const thumbnailPath = `certifications/${certificationId}-scan-1-thumb.jpg`
+    await storage.upload(new Blob(['scan']), scanPath)
+    await storage.upload(new Blob(['thumb']), thumbnailPath)
+    expect(await storage.exists(scanPath)).toBe(true)
+    await db
+      .update(certifications)
+      .set({ scan1StoragePath: scanPath, scan1ThumbnailStoragePath: thumbnailPath })
+      .where(eq(certifications.id, certificationId))
+
+    await deleteCertification(certificationId)
+
+    expect(
+      await db
+        .select()
+        .from(certifications)
+        .where(eq(certifications.id, certificationId)),
+    ).toHaveLength(0)
+    expect(await storage.exists(scanPath)).toBe(false)
+    expect(await storage.exists(thumbnailPath)).toBe(false)
   })
 })
