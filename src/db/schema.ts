@@ -759,9 +759,19 @@ export const mcpAuditEvents = pgTable(
     outcome: text('outcome').notNull(),
     clientId: text('client_id'),
     toolName: text('tool_name'),
+    // Only populated for registration events, to bound how many clients a
+    // single requester can register without identifying ordinary API callers.
+    sourceIp: text('source_ip'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index('mcp_audit_events_created_at_index').on(table.createdAt)],
+  (table) => [
+    index('mcp_audit_events_created_at_index').on(table.createdAt),
+    index('mcp_audit_events_registration_source_index').on(
+      table.event,
+      table.sourceIp,
+      table.createdAt,
+    ),
+  ],
 )
 
 export const mcpSettings = pgTable('mcp_settings', {

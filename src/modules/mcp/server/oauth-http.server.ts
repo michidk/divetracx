@@ -85,6 +85,14 @@ function withPublicCors(response: Response) {
   return new Response(response.body, { status: response.status, headers })
 }
 
+function registrationSourceIp(request: Request) {
+  // Hodor and the ingress sit in front of this handler, so the direct peer
+  // address is never available here; fall back to the standard proxy header.
+  const forwardedFor = request.headers.get('x-forwarded-for')
+  const first = forwardedFor?.split(',')[0]?.trim()
+  return first || request.headers.get('x-real-ip') || 'unknown'
+}
+
 function redirectUriIsSafe(value: string) {
   let url: URL
   try {
@@ -309,16 +317,32 @@ export function createOAuthHttpHandler(
           )
         }
         const clientId = crypto.randomUUID()
-        await store.createClient({
-          id: clientId,
-          name: registration.client_name,
-          redirectUris: registration.redirect_uris,
-        })
-        await recordAudit(store, {
-          event: 'client_registered',
-          outcome: 'success',
-          clientId,
-        })
+        const sourceIp = registrationSourceIp(request)
+        const outcome = await store.registerClient(
+          {
+            id: clientId,
+            name: registration.client_name,
+            redirectUris: registration.redirect_uris,
+          },
+          { sourceIp },
+        )
+        if (outcome === 'rate_limited' || outcome === 'capacity_reached') {
+          await recordAudit(store, {
+            event: 'client_registration_rejected',
+            outcome: 'failure',
+            sourceIp,
+          })
+          return json(
+            {
+              error: 'temporarily_unavailable',
+              error_description:
+                outcome === 'rate_limited'
+                  ? 'Too many registration attempts from this source. Try again later.'
+                  : 'This instance has reached its maximum number of registered MCP clients.',
+            },
+            { status: outcome === 'rate_limited' ? 429 : 503 },
+          )
+        }
         return json(
           {
             client_id: clientId,

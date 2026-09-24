@@ -7,22 +7,66 @@ import type { McpConfig } from './config.server'
 import { MCP_READ_SCOPE } from './config.server'
 import { createMcpHttpHandler, handlesMcpHttpPath } from './http.server'
 import type {
+  ClientRegistrationOutcome,
   OAuthAuditEvent,
   OAuthStore,
+  RegistrationAdmission,
   StoredAuthorizationCode,
   StoredOAuthClient,
   StoredOAuthToken,
 } from './oauth-store.server'
-import { hashOAuthSecret } from './oauth-store.server'
+import {
+  hashOAuthSecret,
+  MAX_ACTIVE_OAUTH_CLIENTS,
+  MAX_REGISTRATIONS_PER_SOURCE,
+  REGISTRATION_WINDOW_MS,
+} from './oauth-store.server'
 
 class MemoryOAuthStore implements OAuthStore {
   clients = new Map<string, StoredOAuthClient>()
   codes = new Map<string, StoredAuthorizationCode>()
   tokens = new Map<string, StoredOAuthToken>()
-  audits: OAuthAuditEvent[] = []
+  audits: (OAuthAuditEvent & { createdAt: Date })[] = []
 
   async createClient(client: Omit<StoredOAuthClient, 'revokedAt'>) {
     this.clients.set(client.id, { ...client, revokedAt: null })
+  }
+  async registerClient(
+    client: Omit<StoredOAuthClient, 'revokedAt'>,
+    admission: RegistrationAdmission,
+  ): Promise<ClientRegistrationOutcome> {
+    const maxActiveClients = admission.maxActiveClients ?? MAX_ACTIVE_OAUTH_CLIENTS
+    const maxRegistrationsPerSource =
+      admission.maxRegistrationsPerSource ?? MAX_REGISTRATIONS_PER_SOURCE
+    const windowMs = admission.registrationWindowMs ?? REGISTRATION_WINDOW_MS
+    const since = Date.now() - windowMs
+
+    const recentFromSource = this.audits.filter(
+      (event) =>
+        event.event === 'client_registered' &&
+        event.outcome === 'success' &&
+        event.sourceIp === admission.sourceIp &&
+        event.createdAt.getTime() > since,
+    ).length
+    if (recentFromSource >= maxRegistrationsPerSource) return 'rate_limited'
+
+    const activeClients = [...this.clients.values()].filter(
+      (client) => !client.revokedAt,
+    ).length
+    if (activeClients >= maxActiveClients) return 'capacity_reached'
+
+    await this.createClient(client)
+    this.audits.push({
+      event: 'client_registered',
+      outcome: 'success',
+      clientId: client.id,
+      sourceIp: admission.sourceIp,
+      createdAt: new Date(),
+    })
+    return 'registered'
+  }
+  async pruneStaleClients() {
+    return { deletedClients: 0 }
   }
   async getClient(id: string) {
     return this.clients.get(id) ?? null
@@ -90,7 +134,7 @@ class MemoryOAuthStore implements OAuthStore {
     }
   }
   async audit(event: OAuthAuditEvent) {
-    this.audits.push(event)
+    this.audits.push({ ...event, createdAt: new Date() })
   }
 }
 
