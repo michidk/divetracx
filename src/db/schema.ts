@@ -780,3 +780,10 @@ export const mcpSettings = pgTable('mcp_settings', {
   disabledTools: jsonb('disabled_tools').$type<string[]>().notNull().default([]),
   ...auditColumns,
 })
+
+export const logbookSettings = pgTable('logbook_settings', {
+  id: text('id').primaryKey().default('instance'),
+  // Dives made before this logbook started; numbering continues after them.
+  priorDiveCount: integer('prior_dive_count').notNull().default(0),
+  ...auditColumns,
+})

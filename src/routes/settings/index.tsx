@@ -21,7 +21,8 @@ const sections = [
   {
     to: '/settings/data-verification',
     label: 'Data verification',
-    description: 'Check dive numbering and review entries that may be duplicates.',
+    description:
+      'Set dives made before this logbook, check numbering, and review duplicates.',
     icon: ShieldCheck,
   },
   {

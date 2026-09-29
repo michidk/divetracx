@@ -276,8 +276,12 @@ sources says whether it was logged by hand or from computer data.
 
 `/settings/data-verification` groups read-only logbook health checks into cards.
 Each check has a passed or review-count badge and explains the fields it compares.
-Dive numbering reports missing, repeated, and non-chronological numbers and keeps
-the confirmed renumber action beside its findings. Duplicate-entry candidates show
+Dive numbering starts with the “Dives before Divetracx” field: dives made before
+the logbook started offset every number, so the first logged dive follows them.
+Saving the count changes no dive by itself; the check then reports the dives
+whose numbers no longer match, and the confirmed renumber action beside its
+findings applies the offset. It also reports missing, repeated, and
+non-chronological numbers. Duplicate-entry candidates show
 both dive summaries, the signals that caused the match, and a link to the existing
 full-page merge review; detection never changes or deletes records by itself.
 

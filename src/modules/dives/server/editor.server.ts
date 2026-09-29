@@ -16,6 +16,7 @@ import {
   shops,
   tanks,
 } from '@/db/schema'
+import { priorDiveCountSql } from './logbook-settings.server'
 
 async function loadEditorOptions() {
   const db = getDb()
@@ -97,7 +98,9 @@ export async function loadDiveEditor(diveId: string | null) {
   const [options, [nextNumberRow]] = await Promise.all([
     loadEditorOptions(),
     db
-      .select({ nextNumber: sql<number>`coalesce(max(${dives.number}), 0) + 1` })
+      .select({
+        nextNumber: sql<number>`(coalesce(max(${dives.number}), ${priorDiveCountSql}) + 1)::integer`,
+      })
       .from(dives),
   ])
   const nextNumber = nextNumberRow?.nextNumber ?? 1

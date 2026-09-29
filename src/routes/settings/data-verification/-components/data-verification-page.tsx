@@ -8,6 +8,7 @@ import {
   TriangleAlert,
 } from 'lucide-react'
 import { useState } from 'react'
+import { SaveButton, useTransientSavedState } from '@/components/save-button'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,9 +18,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { formatDiveDate, formatDuration, formatMeters } from '@/modules/dives/format'
 import type { getDataVerificationStatus } from '@/modules/dives/server/maintenance'
-import { renumberDives } from '@/modules/dives/server/maintenance'
+import { renumberDives, updatePriorDiveCount } from '@/modules/dives/server/maintenance'
 import type { VerificationDive } from '@/modules/dives/verification'
 
 type Status = Awaited<ReturnType<typeof getDataVerificationStatus>>
@@ -47,16 +49,94 @@ function DiveIdentity({ dive }: { dive: VerificationDive }) {
   )
 }
 
+function PriorDiveCountForm({ priorDiveCount }: { priorDiveCount: number }) {
+  const router = useRouter()
+  const [value, setValue] = useState(String(priorDiveCount))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const { saved, clearSaved, markSaved } = useTransientSavedState()
+  const parsed = /^\d+$/.test(value.trim()) ? Number(value.trim()) : null
+
+  async function save(event: React.FormEvent) {
+    event.preventDefault()
+    if (parsed === null) {
+      setError('Enter a whole number of dives, or 0.')
+      return
+    }
+    setSaving(true)
+    setError(null)
+    clearSaved()
+    try {
+      await updatePriorDiveCount({ data: { priorDiveCount: parsed } })
+      await router.invalidate()
+      markSaved()
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Saving failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form
+      onSubmit={(event) => void save(event)}
+      className="grid gap-1.5 rounded-xl bg-muted/50 p-4"
+    >
+      <label htmlFor="prior-dive-count" className="text-sm font-medium">
+        Dives before Divetracx
+      </label>
+      <div className="flex flex-wrap items-center gap-3">
+        <Input
+          id="prior-dive-count"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          step={1}
+          value={value}
+          onChange={(event) => {
+            setValue(event.target.value)
+            setError(null)
+          }}
+          aria-describedby="prior-dive-count-help"
+          aria-invalid={error ? true : undefined}
+          className="w-32 font-mono"
+        />
+        <SaveButton
+          type="submit"
+          variant="outline"
+          saving={saving}
+          saved={saved}
+          disabled={parsed === priorDiveCount}
+        >
+          Save
+        </SaveButton>
+      </div>
+      <p id="prior-dive-count-help" className="text-xs text-muted-foreground">
+        Unlogged dives you made before starting this logbook. Your first logged dive
+        becomes #{((parsed ?? priorDiveCount) + 1).toLocaleString()}.
+      </p>
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+    </form>
+  )
+}
+
 function NumberingCheck({ status }: { status: Status['numbering'] }) {
   const router = useRouter()
   const [running, setRunning] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const clean = status.wouldChange === 0
+  const firstNumber = status.priorDiveCount + 1
+  const lastNumber = status.priorDiveCount + status.totalDives
+  const numberRange = `${firstNumber.toLocaleString()}–${lastNumber.toLocaleString()}`
 
   async function run() {
     if (
       !window.confirm(
-        `Renumber all ${status.totalDives} dives chronologically to 1–${status.totalDives}? ` +
+        `Renumber all ${status.totalDives} dives chronologically to ${numberRange}? ` +
           `${status.wouldChange} dives will get a new number. The new numbers are included in future exports.`,
       )
     ) {
@@ -88,10 +168,15 @@ function NumberingCheck({ status }: { status: Status['numbering'] }) {
           </Badge>
         </div>
         <CardDescription className="leading-6">
-          Checks for missing, repeated, and non-chronological dive numbers.
+          Checks for missing, repeated, and non-chronological dive numbers. Numbering
+          continues after the dives you made before starting this logbook.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
+        <PriorDiveCountForm
+          key={status.priorDiveCount}
+          priorDiveCount={status.priorDiveCount}
+        />
         {clean ? (
           <p className="flex items-start gap-2 text-sm text-muted-foreground">
             <CheckCircle2
@@ -99,8 +184,8 @@ function NumberingCheck({ status }: { status: Status['numbering'] }) {
               size={17}
               aria-hidden="true"
             />
-            All {status.totalDives.toLocaleString()} dives are numbered 1–
-            {status.totalDives.toLocaleString()} in chronological order.
+            All {status.totalDives.toLocaleString()} dives are numbered {numberRange} in
+            chronological order.
           </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-3">

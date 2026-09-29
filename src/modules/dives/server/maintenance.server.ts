@@ -4,15 +4,18 @@ import { sql } from 'drizzle-orm'
 import { getDb } from '@/db'
 import { diveSites, dives } from '@/db/schema'
 import { findDuplicateDiveCandidates } from '../verification'
+import { priorDiveCountSql } from './logbook-settings.server'
 
 const chronologicalNumbers = sql`
-  select id, number, row_number() over (
+  select id, number, (${priorDiveCountSql} + row_number() over (
     order by dive_date, entry_time nulls last, created_at
-  )::integer as chronological_number
+  ))::integer as chronological_number
   from dives
 `
 
 export interface NumberingStatus {
+  /** Dives made before this logbook; the first logged dive is this plus one. */
+  priorDiveCount: number
   totalDives: number
   duplicateNumbers: number
   duplicateGroups: Array<{
@@ -38,6 +41,7 @@ export async function loadNumberingStatus(): Promise<NumberingStatus> {
   return db.transaction(
     async (transaction) => {
       const rows = await transaction.execute<{
+        prior_dive_count: number
         total_dives: number
         duplicate_numbers: number
         unnumbered_dives: number
@@ -45,6 +49,7 @@ export async function loadNumberingStatus(): Promise<NumberingStatus> {
       }>(sql`
         with ordered as (${chronologicalNumbers})
         select
+          ${priorDiveCountSql}::integer as prior_dive_count,
           (select count(*) from dives)::integer as total_dives,
           (
             select count(*) from (
@@ -98,6 +103,7 @@ export async function loadNumberingStatus(): Promise<NumberingStatus> {
 
       const row = rows[0]
       return {
+        priorDiveCount: row?.prior_dive_count ?? 0,
         totalDives: row?.total_dives ?? 0,
         duplicateNumbers: row?.duplicate_numbers ?? 0,
         duplicateGroups,
