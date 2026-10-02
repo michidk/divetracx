@@ -40,6 +40,11 @@
 
 ![Divetracx overview with logbook statistics and recent dives](.github/images/overview.webp)
 
+> [!TIP]
+> **Planning your next dive?** [DiveCalc.app](https://divecalc.app/) offers free
+> scuba calculators and practical guides for MOD, SAC/RMV, gas planning,
+> Nitrox, unit conversions, and safer dive preparation.
+
 ## 🤿 What it is
 
 Divetracx is a self-hosted home for your dives, sites, buddies, equipment,
