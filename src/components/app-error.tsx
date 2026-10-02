@@ -1,20 +1,20 @@
-import { useRouter } from '@tanstack/react-router'
+import { type ErrorComponentProps, useRouter } from '@tanstack/react-router'
 import { AlertTriangle, Home, RefreshCw } from 'lucide-react'
 import { AppShell } from '@/components/app-shell'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getErrorDisplayState } from '@/lib/error-display'
 
-export function AppError({ error }: { error: Error }) {
+export function AppError(props: ErrorComponentProps) {
   return (
     <AppShell>
-      <AppRouteError error={error} />
+      <AppRouteError {...props} />
     </AppShell>
   )
 }
 
 /** Router-wide fallback for errors thrown by child routes during SSR. */
-export function AppRouteError({ error }: { error: Error }) {
+export function AppRouteError({ error }: ErrorComponentProps) {
   const router = useRouter()
   const errorState = getErrorDisplayState(error)
 
@@ -51,8 +51,8 @@ export function AppRouteError({ error }: { error: Error }) {
   )
 }
 
-function ErrorDetails({ error }: { error: Error }) {
-  const details = error.stack || error.message
+function ErrorDetails({ error }: { error: unknown }) {
+  const details = error instanceof Error ? error.stack || error.message : String(error)
 
   if (!details) return null
 
