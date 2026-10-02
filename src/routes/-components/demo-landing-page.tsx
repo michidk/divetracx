@@ -101,7 +101,7 @@ export function DemoLandingPage() {
           className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
         >
           <Code2 size={18} aria-hidden="true" />
-          <span className="hidden sm:inline">View source</span>
+          <span className="hidden sm:inline">Source on GitHub</span>
         </a>
       </header>
 
@@ -344,7 +344,7 @@ export function DemoLandingPage() {
                 href="https://github.com/michidk/divetracx"
                 className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-background/25 px-6 text-sm font-semibold transition-colors hover:bg-background/10"
               >
-                <Code2 size={17} aria-hidden="true" /> View source
+                <Code2 size={17} aria-hidden="true" /> Source on GitHub
               </a>
             </div>
           </div>

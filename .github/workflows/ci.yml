@@ -52,6 +52,9 @@ jobs:
       - name: Verify application and chart
         run: bun run verify
 
+      - name: Build public demo
+        run: bun run build:demo
+
       - name: Check generated route tree
         run: git diff --exit-code -- src/routeTree.gen.ts
 
