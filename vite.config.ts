@@ -53,13 +53,12 @@ export default defineConfig({
     tanstackStart(),
     nitro({
       preset: divetracxEdition === 'demo' ? 'vercel' : 'bun',
-      routes:
-        divetracxEdition === 'demo'
+      routes: {
+        ...(divetracxEdition === 'demo'
           ? {}
-          : {
-              '/media/**': './src/lib/server/media-handler.ts',
-              '/profile-card.png': './src/lib/server/profile-card-handler.ts',
-            },
+          : { '/media/**': './src/lib/server/media-handler.ts' }),
+        '/profile-card.png': './src/lib/server/profile-card-handler.ts',
+      },
     }),
     viteReact(),
   ],

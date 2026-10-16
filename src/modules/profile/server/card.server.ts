@@ -3,6 +3,7 @@ import '@tanstack/react-start/server-only'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import diverFallbackImage from '@/assets/diver-fallback.png?inline'
+import { DEMO_MODE } from '@/lib/build-mode'
 import { getStorage } from '@/lib/storage'
 import { formatPersonName } from '@/modules/dives/format'
 import { agencyCatalog, agencyInitials } from '@/modules/profile/agency-catalog'
@@ -47,9 +48,17 @@ function skillFontSize(label: string) {
 
 async function profileImageData(storagePath: string | null | undefined) {
   if (!storagePath) return null
-  const storage = getStorage()
-  if (!(await storage.exists(storagePath))) return null
-  const blob = await storage.download(storagePath)
+  let blob: Blob
+  if (DEMO_MODE) {
+    const image = (
+      await import('../../../../scripts/seed-assets/demo/profile-diver.webp?inline')
+    ).default
+    blob = await (await fetch(image)).blob()
+  } else {
+    const storage = getStorage()
+    if (!(await storage.exists(storagePath))) return null
+    blob = await storage.download(storagePath)
+  }
   const sharp = (await import('sharp')).default
   const image = await sharp(Buffer.from(await blob.arrayBuffer()))
     .rotate()

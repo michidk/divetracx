@@ -1,9 +1,9 @@
 import '@tanstack/react-start/server-only'
 
 import { defineHandler } from 'nitro'
-import { renderProfileCard } from '@/modules/profile/server/card.server'
 
 export default defineHandler(async (event) => {
+  const { renderProfileCard } = await import('@/modules/profile/server/card.server')
   const png = await renderProfileCard()
   const download = new URL(event.req.url).searchParams.get('download') === '1'
   return new Response(new Uint8Array(png), {
