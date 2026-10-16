@@ -113,7 +113,7 @@ export function SiteMap({
       }
 
       try {
-        const maplibregl = await import('maplibre-gl')
+        const maplibregl = await import('@/components/maplibre')
         if (disposed) return
         const map = new maplibregl.Map({
           container,
@@ -173,7 +173,7 @@ export function SiteMap({
 
     void (async () => {
       try {
-        const maplibregl = await import('maplibre-gl')
+        const maplibregl = await import('@/components/maplibre')
         if (disposed) return
         let focusedGroupKey: string | null = null
         for (const [groupKey, element] of markerElementsRef.current) {

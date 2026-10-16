@@ -38,7 +38,7 @@ export function CoordinatePicker({
 
     void (async () => {
       try {
-        const maplibregl = await import('maplibre-gl')
+        const maplibregl = await import('./maplibre')
         if (disposed) return
         const initial = coordinatesRef.current
         const map = new maplibregl.Map({
