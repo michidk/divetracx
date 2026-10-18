@@ -325,6 +325,53 @@ export async function loadDive(diveId: string) {
 
       if (!dive) return null
 
+      // Previous and next walk the logbook chronologically, so previous is the
+      // older dive and next the newer one. The window ordering is the exact
+      // reverse of the newest-first dive list, so both traverse the same chain.
+      const orderedDives = transaction.$with('ordered_dives').as(
+        transaction
+          .select({
+            id: dives.id,
+            previousId: sql<
+              string | null
+            >`lag(${dives.id}) over (order by ${dives.diveDate}, ${dives.entryTime}, ${dives.id})`.as(
+              'previous_id',
+            ),
+            nextId: sql<
+              string | null
+            >`lead(${dives.id}) over (order by ${dives.diveDate}, ${dives.entryTime}, ${dives.id})`.as(
+              'next_id',
+            ),
+          })
+          .from(dives),
+      )
+      const [neighbourIds] = await transaction
+        .with(orderedDives)
+        .select({ previousId: orderedDives.previousId, nextId: orderedDives.nextId })
+        .from(orderedDives)
+        .where(eq(orderedDives.id, diveId))
+        .limit(1)
+
+      const neighbourIdList = [neighbourIds?.previousId, neighbourIds?.nextId].filter(
+        (id): id is string => id !== null && id !== undefined,
+      )
+      const neighbourRows =
+        neighbourIdList.length > 0
+          ? await transaction
+              .select({
+                id: dives.id,
+                number: dives.number,
+                diveDate: dives.diveDate,
+                siteName: diveSites.name,
+              })
+              .from(dives)
+              .leftJoin(diveSites, eq(dives.siteId, diveSites.id))
+              .where(inArray(dives.id, neighbourIdList))
+          : []
+      const neighbourById = new Map(neighbourRows.map((row) => [row.id, row]))
+      const findNeighbour = (id: string | null | undefined) =>
+        (id ? neighbourById.get(id) : undefined) ?? null
+
       const diveBuddiesData = await transaction
         .select({
           id: buddies.id,
@@ -510,6 +557,8 @@ export async function loadDive(diveId: string) {
       return {
         ...dive,
         merges,
+        previousDive: findNeighbour(neighbourIds?.previousId),
+        nextDive: findNeighbour(neighbourIds?.nextId),
         buddies: diveBuddiesData,
         equipment: diveEquipmentData,
         tanks: diveTanks,

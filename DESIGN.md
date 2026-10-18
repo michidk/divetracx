@@ -316,6 +316,14 @@ adds `pb-[calc(6rem+env(safe-area-inset-bottom))]` and toasts are offset above
 the bar so neither is covered. Demo builds show an amber read-only banner
 directly under the header.
 
+A detail page that belongs to an ordered series pairs its back link with a
+prev/next control on the same row: outline buttons carrying a chevron, the word
+Previous or Next, and the neighbour's mono identifier. Previous means the older
+record and Next the newer one, so the pair reads chronologically even though the
+list it came from is newest-first. Both ends of the series keep their button
+visible as a `pointer-events-none opacity-40` span, so the control never shifts
+width, and each link carries an `aria-label` naming the neighbour.
+
 ### Error state
 
 `AppError` is a centered `max-w-lg` card with a `size-14 rounded-2xl

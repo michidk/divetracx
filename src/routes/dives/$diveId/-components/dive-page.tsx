@@ -2,6 +2,8 @@ import { Link } from '@tanstack/react-router'
 import {
   ArrowLeft,
   Bell,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Combine,
   Database,
@@ -102,6 +104,80 @@ function formatRecordTime(value: Date | string | null) {
   return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString()
 }
 
+type DiveNeighbour = DiveData['previousDive']
+
+function neighbourLabel(neighbour: NonNullable<DiveNeighbour>) {
+  return [
+    `Dive #${neighbour.number ?? '—'}`,
+    formatDiveDate(neighbour.diveDate),
+    neighbour.siteName,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
+
+const neighbourLinkClass =
+  'inline-flex min-h-11 items-center gap-2 rounded-xl border border-border px-4 text-sm font-semibold transition hover:bg-muted'
+
+function DiveNeighbourNav({
+  previousDive,
+  nextDive,
+}: {
+  previousDive: DiveNeighbour
+  nextDive: DiveNeighbour
+}) {
+  return (
+    <nav aria-label="Adjacent dives" className="flex items-center gap-2">
+      {previousDive ? (
+        <Link
+          to="/dives/$diveId"
+          params={{ diveId: previousDive.id }}
+          aria-label={`Previous dive: ${neighbourLabel(previousDive)}`}
+          title={neighbourLabel(previousDive)}
+          className={neighbourLinkClass}
+        >
+          <ChevronLeft size={16} aria-hidden="true" />
+          Previous
+          <span className="font-mono text-xs font-medium text-muted-foreground">
+            #{previousDive.number ?? '—'}
+          </span>
+        </Link>
+      ) : (
+        <span
+          aria-disabled="true"
+          className={`${neighbourLinkClass} pointer-events-none opacity-40`}
+        >
+          <ChevronLeft size={16} aria-hidden="true" />
+          Previous
+        </span>
+      )}
+      {nextDive ? (
+        <Link
+          to="/dives/$diveId"
+          params={{ diveId: nextDive.id }}
+          aria-label={`Next dive: ${neighbourLabel(nextDive)}`}
+          title={neighbourLabel(nextDive)}
+          className={neighbourLinkClass}
+        >
+          <span className="font-mono text-xs font-medium text-muted-foreground">
+            #{nextDive.number ?? '—'}
+          </span>
+          Next
+          <ChevronRight size={16} aria-hidden="true" />
+        </Link>
+      ) : (
+        <span
+          aria-disabled="true"
+          className={`${neighbourLinkClass} pointer-events-none opacity-40`}
+        >
+          Next
+          <ChevronRight size={16} aria-hidden="true" />
+        </span>
+      )}
+    </nav>
+  )
+}
+
 export function DivePage({ dive }: { dive: DiveData }) {
   const location = [dive.site?.region, dive.site?.country].filter(Boolean).join(', ')
   const diverName = dive.diver ? formatPersonName(dive.diver) : null
@@ -110,12 +186,15 @@ export function DivePage({ dive }: { dive: DiveData }) {
   return (
     <div className="space-y-7">
       <header>
-        <Link
-          to="/dives"
-          className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary"
-        >
-          <ArrowLeft size={16} aria-hidden="true" /> Back to dives
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            to="/dives"
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary"
+          >
+            <ArrowLeft size={16} aria-hidden="true" /> Back to dives
+          </Link>
+          <DiveNeighbourNav previousDive={dive.previousDive} nextDive={dive.nextDive} />
+        </div>
         <div
           className={
             heroPhoto
