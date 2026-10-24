@@ -1,0 +1,32 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>michidk/workflows//templates/renovate"
+  ],
+  "baseBranchPatterns": [
+    "main"
+  ],
+  "packageRules": [
+    {
+      "description": "Group non-major Bun dependencies",
+      "matchManagers": [
+        "bun"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "all non-major Bun dependencies",
+      "groupSlug": "all-minor-patch-bun"
+    },
+    {
+      "description": "Group container image updates",
+      "matchManagers": [
+        "dockerfile",
+        "docker-compose",
+        "helm-values"
+      ],
+      "groupName": "container images"
+    }
+  ]
+}
