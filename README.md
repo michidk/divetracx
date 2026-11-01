@@ -80,7 +80,7 @@ choice.
   and aggregate statistics.
 - 📤 **Your data, portable.** Export to DiveMate `.ddb`, Subsurface `.ssrf`,
   UDDF 3.2.3, CSV, or versioned Divetracx JSON at any time.
-- 🤖 **Ask your agent.** An optional OAuth-protected MCP endpoint with
+- 🤖 **Ask your agent.** An optional private MCP endpoint with
   owner-controlled read, write, and delete tools
   lets your own AI tools search dives, load details, list sites, and read
   statistics.
@@ -306,28 +306,16 @@ Divetracx exposes a scoped
 [Model Context Protocol](https://modelcontextprotocol.io) endpoint so your own
 AI tools can search and maintain dives, sites, buddies, gear, and your diver
 profile. Every tool can be switched on or off under **Settings → AI access**.
-Each connection then receives explicit `read`, `write`, and optional `delete`
-scopes on the consent screen. Existing clients, their active scopes, immediate
-revocation, and the last 100 authorization and tool events are managed in the
-same page.
+MCP uses stateless Streamable HTTP without OAuth. Deploy it behind a private
+network boundary or an outbound ChatGPT tunnel. In ChatGPT, choose the tunnel
+and No authentication. The Helm chart exposes a separate ClusterIP MCP Service
+and restricts port 3000 to explicitly allowed namespaces. Public ingress stays
+behind Hodor, including `/api/mcp`.
 
-It ships its own OAuth 2.1 authorization server —
-dynamic client registration, mandatory S256 PKCE, refresh-token rotation with
-replay detection, hashed token storage, immediate revocation — and uses your
-existing Hodor owner session for consent, so no external identity provider is
-needed.
-
-```bash
-codex mcp add divetracx --url https://dives.example.com/api/mcp
-codex mcp login divetracx
-```
-
-Tool results can contain private health, location, contact, and certification
-data. Write tools use the same validation and canonical mutation services as
-the web UI; delete tools are separately scoped and marked destructive. The
-endpoint is always part of Divetracx at `/api/mcp` and can be paused without
-deleting clients from **Settings → AI access**.
-Routing details are in [docs/deployment.md](docs/deployment.md#oauth-protected-mcp).
+Tool results may contain private dive and health data. Every enabled tool is
+available to every client allowed onto this private network. Disable tools you
+do not want assistants to use under Settings > AI access. You can pause all
+MCP access there and inspect the paginated tool activity history.
 
 ## 📸 Screenshots
 
@@ -464,7 +452,7 @@ migrations.
 src/routes/                 TanStack Router file routes and API endpoints
 src/components/             Shared application UI and shadcn/ui primitives
 src/modules/                Domain modules: dives, sites, gear, export, media, profile, …
-src/modules/mcp/            Scoped MCP tools, owner policy, and built-in OAuth 2.1 server
+src/modules/mcp/            Private MCP tools and owner policy
 src/modules/integrations/   Generic import service, runs, and provenance
 src/modules/divemate/       DiveMate .ddb reader, mapper, and writer
 src/modules/garmin/         Garmin Connect client, FIT mapping, and import flow

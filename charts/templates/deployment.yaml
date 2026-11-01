@@ -86,16 +86,8 @@ spec:
 {{- fail "hodor.trustProxy must be true when hodor.trustedProxyCidrs is set, because Hodor rejects that combination at startup" }}
 {{- end }}
 {{- if .Values.mcp.enabled }}
-            - name: HODOR_SECRET
-              valueFrom:
-                secretKeyRef:
-                  {{- if .Values.hodor.existingSecret }}
-                  name: {{ .Values.hodor.existingSecret }}
-                  key: {{ .Values.hodor.existingSecretSecretKey }}
-                  {{- else }}
-                  name: {{ include "divetracx.fullname" . }}-hodor
-                  key: secret
-                  {{- end }}
+            - name: MCP_ALLOWED_HOSTS
+              value: {{ join "," (concat (list "localhost" (printf "%s-mcp" (include "divetracx.fullname" .)) (printf "%s-mcp.%s.svc.cluster.local" (include "divetracx.fullname" .) .Release.Namespace)) (.Values.mcp.allowedHosts | default list)) | quote }}
             {{- if .Values.mcp.allowedOrigins }}
             - name: MCP_ALLOWED_ORIGINS
               value: {{ join "," .Values.mcp.allowedOrigins | quote }}

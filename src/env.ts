@@ -52,8 +52,8 @@ export function getServerEnv() {
         .int()
         .positive()
         .default(25 * 1024 * 1024),
+      MCP_ALLOWED_HOSTS: z.string().trim().optional(),
       MCP_ALLOWED_ORIGINS: z.string().trim().optional(),
-      HODOR_SECRET: z.string().trim().min(1).optional(),
       STORAGE_PROVIDER: z.enum(['local', 's3']).default('local'),
       STORAGE_PATH: z.string().trim().min(1).default('./uploads'),
       STORAGE_URL: z.string().trim().min(1).default('/media'),
@@ -77,8 +77,8 @@ export function getServerEnv() {
       GARMIN_INCREMENTAL_OVERLAP_SECONDS: process.env.GARMIN_INCREMENTAL_OVERLAP_SECONDS,
       GARMIN_MFA_CHALLENGE_TTL_SECONDS: process.env.GARMIN_MFA_CHALLENGE_TTL_SECONDS,
       GARMIN_MAX_FIT_BYTES: process.env.GARMIN_MAX_FIT_BYTES,
+      MCP_ALLOWED_HOSTS: process.env.MCP_ALLOWED_HOSTS,
       MCP_ALLOWED_ORIGINS: process.env.MCP_ALLOWED_ORIGINS,
-      HODOR_SECRET: process.env.HODOR_SECRET,
       STORAGE_PROVIDER: process.env.STORAGE_PROVIDER,
       STORAGE_PATH: process.env.STORAGE_PATH,
       STORAGE_URL: process.env.STORAGE_URL,

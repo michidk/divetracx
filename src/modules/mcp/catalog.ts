@@ -6,7 +6,7 @@ export const MCP_SCOPE_VALUES = [
   'divetracx:delete',
 ] as const
 
-export const mcpScopeSchema = z.enum(MCP_SCOPE_VALUES)
+const mcpScopeSchema = z.enum(MCP_SCOPE_VALUES)
 export type McpScope = z.infer<typeof mcpScopeSchema>
 
 export const MCP_SCOPE_DETAILS: Record<McpScope, { label: string; description: string }> =
@@ -223,12 +223,3 @@ export const MCP_TOOL_NAMES = MCP_TOOL_CATALOG.map((tool) => tool.name) as [
   ...McpToolName[],
 ]
 export const mcpToolNameSchema = z.enum(MCP_TOOL_NAMES)
-
-export function scopesForEnabledTools(disabledTools: readonly string[]) {
-  const disabled = new Set(disabledTools)
-  return MCP_SCOPE_VALUES.filter(
-    (scope) =>
-      scope === 'divetracx:read' ||
-      MCP_TOOL_CATALOG.some((tool) => tool.scope === scope && !disabled.has(tool.name)),
-  )
-}

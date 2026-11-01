@@ -89,37 +89,28 @@ PostgreSQL major versions cannot reuse an older server's data files directly.
 Before upgrading a release with bundled PostgreSQL to version 18, back up the
 database and restore it into a fresh PostgreSQL 18 PVC (or use `pg_upgrade`).
 
-## OAuth-protected MCP
+## Private MCP
 
-The optional MCP endpoint includes an instance-wide OAuth 2.1 authorization
-server. It uses the existing Hodor owner session for consent, dynamic client
-registration, mandatory S256 PKCE, refresh rotation, and revocation. No external
-OIDC provider settings are required. After deployment, the owner configures
-individual read, write, and delete tools, connected clients, and revocation in
-**Settings → AI access**.
-
-Enabling MCP adds its protocol endpoint, OAuth discovery documents, and token
-endpoints to Hodor's `BYPASS_PATHS`, so machine clients reach them without a
-login form while everything else stays gated. The MCP endpoint independently
-requires OAuth on every protocol request. `/oauth/authorize` is deliberately not
-public: it asks the owner to approve a client, so Hodor authenticates it first.
+MCP uses stateless Streamable HTTP without OAuth. Enable it only on a private
+network. The chart creates a dedicated ClusterIP Service on port 80, forwarding
+to the application on port 3000. Public MCP requests remain behind Hodor.
 
 ```yaml
 mcp:
   enabled: true
-  allowedOrigins:
-    - https://chatgpt.com
+  allowedNamespaces:
+    - vibepod
+  allowedHosts: []
+  allowedOrigins: []
 ```
 
-The MCP host must also be the normal Hodor-protected application host so the
-owner session can approve connections. Do not expose the dedicated MCP Service
-with unrestricted paths through an additional proxy. For browser-based MCP
-clients, `mcp.allowedOrigins` adds an explicit Origin allowlist; native clients
-normally omit the Origin header.
-
-Divetracx derives `https://<host>/api/mcp` from the incoming application URL.
-There is no separate MCP URL setting and the MCP Service is only a path-limited
-route to the same Divetracx application process.
+The Service hostname and localhost are allowed automatically. Add additional
+private hostnames through `allowedHosts`. Browser clients also require an
+explicit Origin allowlist. Keep `networkPolicy.enabled` and Hodor enabled when
+using public ingress. For ChatGPT, connect the outbound tunnel to
+`http://divetracx-mcp.divetracx.svc.cluster.local/api/mcp` and choose
+No authentication. Each connected client can use every tool enabled under
+Settings > AI access. That page also pauses access and lists tool activity.
 
 ## Validate
 

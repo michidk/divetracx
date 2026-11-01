@@ -31,10 +31,9 @@ pattern changes.
   into canonical entities and relationships.
 - Do not expose `DATABASE_URL`, `HODOR_SECRET`, or Google service-account
   credentials to browser code.
-- The MCP endpoint (`src/modules/mcp/`) is read-only and protected by the
-  built-in OAuth 2.1 server, which derives its signing key from `HODOR_SECRET`
-  and gates consent through the Hodor owner session. `/api/mcp`, `/oauth/*`,
-  and the `/.well-known/oauth-*` routes bypass Hodor; nothing else may.
+- The MCP endpoint uses stateless Streamable HTTP without OAuth. Keep it private
+  behind the dedicated ClusterIP Service and NetworkPolicy. Never bypass Hodor
+  for public `/api/mcp` traffic. Per-tool switches apply to every request.
 
 ## Commands
 

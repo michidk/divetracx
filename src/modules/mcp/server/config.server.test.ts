@@ -1,54 +1,13 @@
-import { describe, expect, test } from 'bun:test'
+import { expect, test } from 'bun:test'
 import { resolveMcpConfig } from './config.server'
 
-describe('MCP configuration', () => {
-  test('derives the endpoint and issuer from the application URL', () => {
-    expect(
-      resolveMcpConfig(
-        {
-          HODOR_SECRET: 'x'.repeat(64),
-          MCP_ALLOWED_ORIGINS: 'https://chatgpt.com, https://example.test/path',
-        },
-        'https://dives.example.com/settings/mcp?tab=tools',
-      ),
-    ).toMatchObject({
-      serverUrl: new URL('https://dives.example.com/api/mcp'),
-      issuer: new URL('https://dives.example.com/'),
-      allowedOrigins: ['https://chatgpt.com', 'https://example.test'],
-    })
+test('private MCP needs no signing secret and only permits configured hosts', () => {
+  const config = resolveMcpConfig({
+    MCP_ALLOWED_HOSTS: 'divetracx-mcp.divetracx.svc.cluster.local',
+    MCP_ALLOWED_ORIGINS: 'https://client.internal',
   })
-
-  test('requires owner-session verification and a secure application URL', () => {
-    expect(() => resolveMcpConfig({}, 'https://dives.example.com/settings/mcp')).toThrow(
-      'HODOR_SECRET',
-    )
-    expect(() =>
-      resolveMcpConfig(
-        { HODOR_SECRET: 'x'.repeat(64) },
-        'http://dives.example.com/settings/mcp',
-      ),
-    ).toThrow('HTTPS')
-  })
-
-  test('allows local HTTP development', () => {
-    expect(
-      resolveMcpConfig(
-        { HODOR_SECRET: 'x'.repeat(64) },
-        'http://localhost:3000/settings/mcp',
-      ).serverUrl.toString(),
-    ).toBe('http://localhost:3000/api/mcp')
-  })
-
-  test('uses the public origin forwarded by the application proxy', () => {
-    const request = new Request('http://app:3000/api/mcp', {
-      headers: {
-        Host: 'app:3000',
-        'X-Forwarded-Host': 'dives.example.com',
-        'X-Forwarded-Proto': 'https',
-      },
-    })
-    expect(
-      resolveMcpConfig({ HODOR_SECRET: 'x'.repeat(64) }, request).serverUrl.toString(),
-    ).toBe('https://dives.example.com/api/mcp')
-  })
+  expect(config.allowedHostnames).toContain('localhost')
+  expect(config.allowedHostnames).toContain('divetracx-mcp.divetracx.svc.cluster.local')
+  expect(config.allowedHostnames).not.toContain('dives.example.com')
+  expect(config.allowedOrigins).toContain('client.internal')
 })

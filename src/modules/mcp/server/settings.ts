@@ -1,12 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { mcpToolNameSchema } from '@/modules/mcp/catalog'
-import {
-  loadMcpAdminState,
-  loadMcpAuditPage,
-  revokeMcpClient,
-  saveMcpPolicy,
-} from './settings.server'
+import { loadMcpAdminState, loadMcpAuditPage, saveMcpPolicy } from './settings.server'
 
 export const getMcpAdminState = createServerFn({ method: 'GET' }).handler(() =>
   loadMcpAdminState(),
@@ -20,12 +15,6 @@ export const updateMcpPolicy = createServerFn({ method: 'POST' })
     }),
   )
   .handler(({ data }) => saveMcpPolicy(data))
-
-export const revokeMcpClientConnection = createServerFn({ method: 'POST' })
-  .validator(z.object({ clientId: z.string().uuid() }))
-  .handler(async ({ data }) => {
-    await revokeMcpClient(data.clientId)
-  })
 
 export const getMcpAuditPage = createServerFn({ method: 'GET' })
   .validator(z.object({ page: z.number().int().min(0).max(10_000) }))

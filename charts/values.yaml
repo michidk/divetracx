@@ -45,6 +45,8 @@ ingress:
 
 mcp:
   enabled: false
+  allowedHosts: []
+  allowedNamespaces: []
   # Optional browser Origin allowlist. Non-browser MCP clients omit Origin.
   allowedOrigins: []
 

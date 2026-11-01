@@ -69,31 +69,11 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 {{- end }}
 
-{{/*
-Paths Hodor serves without a password. MCP's discovery, registration, token, and
-protocol endpoints are reached by machines that cannot complete a login form.
-`/oauth/authorize` is deliberately absent: it asks the owner to approve a client,
-so it has to stay behind the gate.
-*/}}
+{{/* Public MCP paths remain behind the owner gate. */}}
 {{- define "divetracx.hodorBypassPaths" -}}
-{{- $paths := .Values.hodor.bypassPaths | default list -}}
-{{- if .Values.mcp.enabled -}}
-{{- $paths = concat $paths (list
-  "/api/mcp"
-  "/.well-known/oauth-protected-resource/api/mcp"
-  "/.well-known/oauth-authorization-server"
-  "/oauth/register"
-  "/oauth/token"
-  "/oauth/revoke") -}}
-{{- end -}}
-{{- join "," (uniq $paths) -}}
+{{- join "," (.Values.hodor.bypassPaths | default list) -}}
 {{- end -}}
 
-{{/*
-Whether Hodor forwards the original Host header. MCP validates the raw Host on
-its protocol and OAuth endpoints, so replacing it with the upstream authority
-makes every MCP request fail with "Invalid Host".
-*/}}
 {{- define "divetracx.hodorPreserveHost" -}}
-{{- or .Values.hodor.preserveHost .Values.mcp.enabled | ternary "true" "false" -}}
+{{- .Values.hodor.preserveHost | ternary "true" "false" -}}
 {{- end -}}
