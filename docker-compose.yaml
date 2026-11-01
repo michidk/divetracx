@@ -24,10 +24,9 @@ services:
       STORAGE_PROVIDER: local
       STORAGE_PATH: /uploads
       STORAGE_URL: /media
-      # The built-in MCP authorization server uses the existing Hodor owner
-      # session for consent and derives a separate OAuth signing key.
+      # Private MCP clients on this Compose network use the app hostname.
+      MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-app}
       MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-}
-      HODOR_SECRET: ${HODOR_SECRET:?Set HODOR_SECRET in .env}
     expose:
       - "3000"
     depends_on:

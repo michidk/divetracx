@@ -22,7 +22,7 @@ The one deliberate exception is the optional MCP endpoint: `/api/mcp`,
 `/oauth/*`, and the two `/.well-known/oauth-*` discovery routes must reach the
 application directly, because MCP clients cannot pass an interactive cookie
 gate. Those routes enforce OAuth 2.1 on every request instead. See
-[MCP](#oauth-protected-mcp) below.
+[MCP](#private-mcp) below.
 
 ## Docker image
 
@@ -143,51 +143,28 @@ lock and the `imports.timeoutMs` deadline.
 See [charts/README.md](../charts/README.md) for every value, including Secret
 layouts for DiveMate.
 
-## OAuth-protected MCP
+## Private MCP
 
-Divetracx serves its scoped MCP endpoint itself at `/api/mcp` and derives all
-OAuth URLs from the app's public origin. It ships its own OAuth 2.1
-authorization server: connecting a client opens the normal Hodor-protected app,
-where you approve access with your existing owner session.
-It supports dynamic client registration, requires S256 PKCE and an exact
-resource indicator, rotates refresh tokens with replay detection, stores codes
-and refresh tokens only as hashes, and supports immediate revocation. The
-signing key is derived from `HODOR_SECRET`, which must be at least 32
-characters.
-
-Docker Compose routes the MCP and OAuth paths past Hodor out of the box. In
-Helm, `mcp.enabled` adds them to Hodor's `BYPASS_PATHS`, so they are served over
-the normal application host without a second Ingress:
+MCP uses stateless Streamable HTTP without OAuth. Enable it only on a private
+network. The chart creates a dedicated ClusterIP Service on port 80, forwarding
+to the application on port 3000. Public MCP requests remain behind Hodor.
 
 ```yaml
 mcp:
   enabled: true
-  allowedOrigins:
-    - https://chatgpt.com
+  allowedNamespaces:
+    - vibepod
+  allowedHosts: []
+  allowedOrigins: []
 ```
 
-Machine endpoints — the protocol endpoint, OAuth discovery, registration, token,
-and revocation — skip the login form; the protocol endpoint still requires OAuth
-on every request. `/oauth/authorize` stays behind Hodor, because that is where
-the owner approves a client. For browser-based MCP clients,
-`MCP_ALLOWED_ORIGINS` adds an explicit Origin allowlist.
-
-After deployment, use **Settings → AI access** to pause or resume MCP, enable
-or disable each read, write, and delete tool, inspect granted client scopes,
-revoke clients, and review recent activity. The Helm switch only creates the
-path-limited route around Hodor; it does not configure or run another MCP
-server.
-
-Connect a client:
-
-```bash
-codex mcp add divetracx --url https://dives.example.com/api/mcp
-codex mcp login divetracx
-```
-
-Tool results can contain private health, location, contact, and certification
-data. Write access is explicit on the OAuth consent screen, delete access is a
-separate scope, and both remain subject to the per-tool owner policy.
+The Service hostname and localhost are allowed automatically. Add additional
+private hostnames through `allowedHosts`. Browser clients also require an
+explicit Origin allowlist. Keep `networkPolicy.enabled` and Hodor enabled when
+using public ingress. For ChatGPT, connect the outbound tunnel to
+`http://divetracx-mcp.divetracx.svc.cluster.local/api/mcp` and choose
+No authentication. Each connected client can use every tool enabled under
+Settings > AI access. That page also pauses access and lists tool activity.
 
 ## Storage
 

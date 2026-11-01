@@ -53,12 +53,13 @@ tokens remain in the server-only database.
 | Variable | Default | Required | Description |
 | --- | --- | --- | --- |
 | `MCP_ALLOWED_ORIGINS` | — | No | Comma-separated Origin allowlist for browser-based MCP clients |
-| `HODOR_SECRET` | — | Yes | Also used to derive the OAuth signing key; must be at least 32 characters |
+| `MCP_ALLOWED_HOSTS` | localhost only | No | Comma-separated hostname allowlist for private MCP clients |
 
-Divetracx derives its MCP endpoint from its own public origin and serves it at
-`/api/mcp`; no separate MCP URL is configured. Runtime access is managed in
-**Settings → AI access**, including the master switch, every individual tool,
-client revocation, granted scopes, and audit activity.
+MCP serves `/api/mcp` without OAuth. Use a private network or an outbound
+ChatGPT tunnel. Public traffic stays behind Hodor. The Helm chart configures
+its private Service hostname automatically. Settings > AI access controls the
+master switch, individual tools, and audit activity. Each client on the private
+network can call every enabled tool.
 
 ## Media storage
 
