@@ -1,10 +1,16 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "github>michidk/workflows//templates/presets/renovate"
+    "github>michidk/workflows//templates/presets/renovate",
+    ":enableVulnerabilityAlertsWithLabel('security')",
+    "helpers:pinGitHubActionDigests"
   ],
   "baseBranchPatterns": [
     "main"
+  ],
+  "labels": [
+    "no-stale",
+    "bot"
   ],
   "packageRules": [
     {
