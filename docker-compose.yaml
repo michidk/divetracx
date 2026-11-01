@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:18.6-alpine
+    image: postgres:18.6-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
     environment:
       POSTGRES_DB: divetracx
       POSTGRES_USER: divetracx
@@ -37,7 +37,7 @@ services:
       - divetracx-uploads:/uploads
 
   hodor:
-    image: ${HODOR_IMAGE:-ghcr.io/michidk/hodor@sha256:7e799702b0869a9d8eb34f47c8f93e1bfaf7ef5cd650900a82e72b7fe844f384}
+    image: ${HODOR_IMAGE:-ghcr.io/michidk/hodor@sha256:133a617076bea11ea1b7e41a93145bfd2867516f4b865e37fa3bf41638a65cf7}
     restart: unless-stopped
     depends_on:
       - app
