@@ -1,54 +1,31 @@
-# @orcastrate
-# template: node/ci
-# params:
-#   name: Checks and Build
-#   biome: false
-#   postgres: {image: "postgres:18", db: divetracx_test, user: divetracx, password: divetracx}
-#   verify_command: bun run verify
-#   steps:
-#     - name: Build public demo
-#       run: bun run build:demo
-#     - name: Check generated route tree
-#       run: git diff --exit-code -- src/routeTree.gen.ts
-#     - name: Apply database migrations
-#       run: bun run db:migrate
-#     - name: Test import integrations
-#       run: bun run test:integration:imports
-#     - name: Validate authenticated Docker Compose deployment
-#       run: HODOR_PASSWORD=ci-password HODOR_SECRET=ci-signing-secret docker compose config --quiet
-#   image:
-#     timeout_minutes: 30
-# @end-orcastrate
-
 name: Checks and Build
 
 on:
-  pull_request:
+  workflow_dispatch:
   push:
     branches: [main]
-    tags: ["v*"]
-  workflow_dispatch:
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 permissions:
   contents: read
- 
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: checks-build-${{ github.ref }}
   cancel-in-progress: ${{ github.ref_type != 'tag' }}
-
-defaults:
-  run:
-    shell: bash
 
 jobs:
   checks:
-    name: Checks
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
       postgres:
-        image: postgres:18
+        image: postgres:18@sha256:2ea8630df176ad090ec92136dee850397c5af8781e4bcf2e4162593691c61bbc
         env:
           POSTGRES_DB: divetracx_test
           POSTGRES_USER: divetracx
@@ -61,171 +38,156 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql://divetracx:divetracx@127.0.0.1:5432/divetracx_test
+      DATABASE_URL: postgresql://divetracx:divetracx@localhost:5432/divetracx_test
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.4.4
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-
-
-
-
-      - name: Verify
+      - name: Verify application and chart
         run: bun run verify
 
-
-
       - name: Build public demo
-        run: |
-          bun run build:demo
+        run: bun run build:demo
 
       - name: Check generated route tree
-        run: |
-          git diff --exit-code -- src/routeTree.gen.ts
+        run: git diff --exit-code -- src/routeTree.gen.ts
 
       - name: Apply database migrations
-        run: |
-          bun run db:migrate
+        run: bun run db:migrate
 
       - name: Test import integrations
-        run: |
-          bun run test:integration:imports
+        run: bun run test:integration:imports
 
       - name: Validate authenticated Docker Compose deployment
-        run: |
-          HODOR_PASSWORD=ci-password HODOR_SECRET=ci-signing-secret docker compose config --quiet
+        env:
+          HODOR_PASSWORD: ci-password
+          HODOR_SECRET: ci-signing-secret
+        run: docker compose config --quiet
 
-
-
-  # Each platform builds natively; the merge job joins the per-platform digests.
   build:
-    name: Build image (${{ matrix.platform }}${{ matrix.image.target && format(', {0}', matrix.image.target) || '' }})
-    needs: checks
-    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
-    timeout-minutes: 30
-    permissions:
-      contents: read
-      packages: write
+    name: build (${{ matrix.platform }})
     strategy:
       fail-fast: false
       matrix:
-        platform: ["linux/amd64", "linux/arm64"]
-        image: [{"suffix": "", "target": ""}]
+        include:
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    needs: checks
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - name: Set image name
-        env:
-          IMAGE: ghcr.io/${{ github.repository }}${{ matrix.image.suffix }}
-          PLATFORM: ${{ matrix.platform }}
-          TARGET: ${{ matrix.image.target || 'default' }}
-        run: |
-          echo "IMAGE=${IMAGE,,}" >> "$GITHUB_ENV"
-          echo "DIGEST_KEY=${TARGET}-${PLATFORM//\//-}" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      - name: Log in to GitHub Container Registry
+
+      - name: Log in to Container Registry
         if: github.event_name != 'pull_request'
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Extract image labels
-        id: meta
+        id: labels
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          images: ${{ env.IMAGE }}
-      - name: Build image
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push
         id: build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          file: Dockerfile
-          target: ${{ matrix.image.target }}
           platforms: ${{ matrix.platform }}
-          labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
-          cache-from: type=gha,scope=${{ env.DIGEST_KEY }}
-          cache-to: type=gha,mode=max,scope=${{ env.DIGEST_KEY }}
+          outputs: ${{ github.event_name != 'pull_request' && format('type=image,name={0}/{1},push-by-digest=true,name-canonical=true,push=true', env.REGISTRY, env.IMAGE_NAME) || '' }}
+          labels: ${{ steps.labels.outputs.labels }}
+          cache-from: type=gha,scope=build-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=build-${{ matrix.arch }}
+
       - name: Export image digest
         if: github.event_name != 'pull_request'
-        env:
-          DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           mkdir -p /tmp/digests
-          touch "/tmp/digests/${DIGEST#sha256:}"
+          digest='${{ steps.build.outputs.digest }}'
+          touch "/tmp/digests/${digest#sha256:}"
+
       - name: Upload image digest
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: digests-${{ env.DIGEST_KEY }}
+          name: digest-${{ matrix.arch }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
 
   merge:
-    name: Publish image${{ matrix.image.target && format(' ({0})', matrix.image.target) || '' }}
+    name: publish multi-platform image
     if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: build
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
     permissions:
       contents: read
       packages: write
-    strategy:
-      fail-fast: false
-      matrix:
-        image: [{"suffix": "", "target": ""}]
     steps:
-      - name: Set image name
-        env:
-          IMAGE: ghcr.io/${{ github.repository }}${{ matrix.image.suffix }}
-        run: echo "IMAGE=${IMAGE,,}" >> "$GITHUB_ENV"
       - name: Download image digests
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
+          pattern: digest-*
           path: /tmp/digests
-          pattern: digests-${{ matrix.image.target || 'default' }}-*
           merge-multiple: true
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      - name: Log in to GitHub Container Registry
+
+      - name: Log in to Container Registry
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Extract image metadata
+
+      - name: Extract metadata
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          images: ${{ env.IMAGE }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
             type=sha,prefix=sha-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable={{is_default_branch}}
+
       - name: Create multi-platform manifest
         working-directory: /tmp/digests
         env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           tag_args=()
           while IFS= read -r tag; do
             tag_args+=(--tag "$tag")
           done <<< "$TAGS"
+
           sources=()
           for digest in *; do
             sources+=("$IMAGE@sha256:$digest")
           done
+
           docker buildx imagetools create "${tag_args[@]}" "${sources[@]}"
