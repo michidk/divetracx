@@ -25,9 +25,8 @@
 <p align="center">
 <a href="https://github.com/michidk/divetracx/actions/workflows/ci.yml">
 <img alt="Checks and Build" src="https://github.com/michidk/divetracx/actions/workflows/ci.yml/badge.svg"></a>
-<img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg">
-<img alt="Self-hosted" src="https://img.shields.io/badge/self--hosted-yes-0d9aa8.svg">
-<img alt="Bun 1.4" src="https://img.shields.io/badge/bun-1.4-f9f1e1.svg?logo=bun&logoColor=black">
+<a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+<a href="https://bun.sh/"><img alt="Bun 1.4" src="https://img.shields.io/badge/bun-1.4-f9f1e1.svg?logo=bun&logoColor=black"></a>
 </p>
 
 ---
@@ -38,7 +37,7 @@
 > anonymized sample dives with complete profiles — no account, no database,
 > nothing to install.
 
-![Divetracx overview with logbook statistics and recent dives](.github/images/overview.webp)
+<img src=".github/images/overview.webp" alt="Divetracx overview with logbook statistics and recent dives" width="800">
 
 > [!TIP]
 > **Planning your next dive?** [DiveCalc.app](https://divecalc.app/) offers free
@@ -233,7 +232,7 @@ scripts and backups.
 | Format | Endpoint | Best for | What it contains |
 | --- | --- | --- | --- |
 | **DiveMate backup** `.ddb` | `/api/export/divemate` | Opening your whole logbook in DiveMate again | A DiveMate-compatible SQLite database rebuilt from canonical data, including Garmin-imported and hand-logged dives |
-| **Divetracx backup** `.json` | `/api/export/json` | Complete, lossless backups | Every table in the database as versioned JSON (`divetracx-backup`, currently version 17) |
+| **Divetracx backup** `.json` | `/api/export/json` | Complete, lossless backups | Every table in the database as versioned JSON (`divetracx-backup`, currently version 19) |
 | **Dive spreadsheet** `.csv` | `/api/export/csv` | Spreadsheets and data analysis | One joined row per dive: site, buddies, equipment, tanks, conditions, notes, and the full profile as inline samples |
 | **Universal dive log** `.uddf` | `/api/export/uddf` | Other logbook software | UDDF 3.2.3 with diver, sites, and dives including depth profiles |
 | **Subsurface logbook** `.ssrf` | `/api/export/subsurface` | Opening the logbook in Subsurface, or a Subsurface ⇄ Divetracx round trip | Native Subsurface XML (format 3) with sites and GPS, cylinders, weights, buddies and dive team, tags, gas-change events, and full profiles with per-tank pressure and deco ceiling |
@@ -392,7 +391,7 @@ dives or head to **Settings → Integrations** to connect DiveMate or Garmin.
 
 ## 🔧 Local development
 
-Divetracx uses Bun 1.4.0. With PostgreSQL available at the `DATABASE_URL` from
+Divetracx uses Bun 1.4.4. With PostgreSQL available at the `DATABASE_URL` from
 `.env`:
 
 ```bash
@@ -474,6 +473,5 @@ charts/                     Helm chart
 
 <p align="center">
   Open-source software for people who care about their dives. 🌊<br>
-  <sub><a href="https://divetracx.vercel.app/">Try the demo</a> ·
-  <a href="https://github.com/michidk/divetracx">Star it on GitHub</a></sub>
+  <sub><a href="https://divetracx.vercel.app/">Try the demo</a></sub>
 </p>
